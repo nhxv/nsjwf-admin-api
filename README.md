@@ -12,13 +12,13 @@ Install dependencies:
 
 Create .env in root folder:
 
-    DATABASE_URL="postgresql://username:password@localhost:5432/db?schema=public"
+    DATABASE_URL="postgresql://{your_username}:{your_password}@localhost:5432/{your_db}?schema=public"
     NODE_ENV=dev
     PORT=8000
 Run local dev server:
     
     npm run dev
-Local dev server will automatically restart after detecting changes.    
+Local dev server will automatically restart when detecting changes to source code.    
 
 ## Migration
 After modify prisma/schema.prisma, run:
