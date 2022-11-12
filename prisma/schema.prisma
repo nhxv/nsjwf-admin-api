@@ -22,7 +22,5 @@ model Account {
   password String
   role_id Int
   role Role @relation(fields: [role_id], references: [id])
-  access_token String?
-  refresh_token String?
 }
 

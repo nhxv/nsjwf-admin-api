@@ -8,10 +8,6 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const tokens = await login(req.body);
-      // res.cookie(
-      //   "refresh_token", 
-      //   tokens.refreshToken, 
-      //   { maxAge: 60 * 60 * 1000, httpOnly: true, secure: (process.env.COOKIE_SECURE === "true")});
       res.send({accessToken: tokens.accessToken});
     } catch (error) {
       next(error);

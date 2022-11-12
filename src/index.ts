@@ -1,7 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import routes from "./routes/routes";
-import cookieParser from "cookie-parser";
 import createError from "http-errors";
 import { HttpException } from "./commons/http.exception";
 
@@ -13,7 +12,6 @@ app.use(cors({
   origin: process.env.CORS,
 }));
 
-app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(routes);
