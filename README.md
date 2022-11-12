@@ -31,4 +31,8 @@ Review SQL scripts, modify if needed, then run:
 
     npm run prisma:migration-apply
 
+After applying sql scripts, run:
+
+    npm run prisma:generate
+
 ## Deploy to Digital Ocean
