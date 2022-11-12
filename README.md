@@ -13,8 +13,13 @@ Install dependencies:
 Create .env file:
 
     DATABASE_URL="postgresql://{your_username}:{your_password}@localhost:5432/{your_db}?schema=public"
-    NODE_ENV=dev
-    PORT=8000
+    CORS="*"
+    COOKIE_SECURE=false
+    ACCESS_TOKEN_SECRET={your_secret}
+    ACCESS_TOKEN_EXPIRE=600s
+    REFRESH_TOKEN_SECRET={your_secret}
+    REFRESH_TOKEN_EXPIRE=86400s
+    PORT={your_port}
 
 Run dev server:
     
