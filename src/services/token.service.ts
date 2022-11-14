@@ -3,7 +3,7 @@ import createError from "http-errors";
 import JWT from "jsonwebtoken";
 
 export const signAccessToken = (accountId: number, roleId: number) => {
-  return new Promise((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     const payload = { account: {id: accountId, roleId: roleId} };
     const secret = process.env.ACCESS_TOKEN_SECRET || "nhxv";
     const options = {
