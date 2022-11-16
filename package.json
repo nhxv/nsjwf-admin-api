@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --pretty --transpile-only src/index.ts dev",
     "build": "tsc",
-    "prod": "node dist/src/index.js",
+    "server": "node dist/src/index.js",
     "prisma:migrate-draft": "prisma migrate dev --create-only --skip-seed",
     "prisma:migrate-apply": "prisma migrate dev --skip-seed",
     "prisma:format": "prisma format",
@@ -17,7 +17,7 @@
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
     "prisma:deploy": "prisma migrate deploy",
-    "start": "concurrently \"npm run prisma:deploy\" \"npm run prod\""
+    "start": "concurrently \"npm run prisma:deploy\" \"npm run server\""
   },
   "author": "nhxv",
   "license": "ISC",
