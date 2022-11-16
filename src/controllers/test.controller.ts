@@ -7,6 +7,13 @@ import { Role } from "../commons/role.enum";
 const router = Router();
 
 router.get(
+  "/test/hello",
+  async (req: Request, res: Response, next: NextFunction) => {
+    res.json({content: "hello from test api"});
+  }
+)
+
+router.get(
   "/test/roles",
   async (req: Request, res: Response, next: NextFunction) => {
     try {

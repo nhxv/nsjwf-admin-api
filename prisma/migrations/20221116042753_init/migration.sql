@@ -12,8 +12,6 @@ CREATE TABLE "Account" (
     "username" VARCHAR(32) NOT NULL,
     "password" TEXT NOT NULL,
     "role_id" INTEGER NOT NULL,
-    "access_token" TEXT,
-    "refresh_token" TEXT,
 
     CONSTRAINT "Account_pkey" PRIMARY KEY ("id")
 );
