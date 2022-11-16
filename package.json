@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --pretty --transpile-only src/index.ts dev",
     "build": "tsc",
-    "start": "node dist/src/index.js",
+    "start": "node dist/src/index.js prisma deploy",
     "prisma:migrate-draft": "prisma migrate dev --create-only --skip-seed",
     "prisma:migrate-apply": "prisma migrate dev --skip-seed",
     "prisma:format": "prisma format",
