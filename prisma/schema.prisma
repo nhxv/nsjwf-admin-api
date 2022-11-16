@@ -20,7 +20,7 @@ model Account {
   id Int @id @default(autoincrement())
   username String @unique @db.VarChar(32)
   password String
-  roleId Int
-  role Role @relation(fields: [roleId], references: [id])
+  role_id Int
+  role Role @relation(fields: [role_id], references: [id])
 }
 

@@ -5,11 +5,24 @@ Built with Typescript, ExpressJS, Prisma, PostgreSQL
     NodeJS 18+
     PostgreSQL 15+
 
-## Install project dependencies
+## Local setup
+Install dependencies:
+
     npm i
 
-## Run local dev server
+Create .env file:
+
+    DATABASE_URL="postgresql://{your_username}:{your_password}@localhost:5432/{your_db}?schema=public"
+    CORS="*"
+    ACCESS_TOKEN_SECRET={your_secret}
+    ACCESS_TOKEN_EXPIRE=86400s
+    PORT={your_port_number}
+
+Run dev server:
+    
     npm run dev
+
+Dev server will automatically restart when detecting changes to source code.    
 
 ## Migration
 After modify prisma/schema.prisma, run:
@@ -20,4 +33,8 @@ Review SQL scripts, modify if needed, then run:
 
     npm run prisma:migration-apply
 
-## Deploy to Digital Ocean
+After applying sql scripts, run:
+
+    npm run prisma:generate
+
+## Deployment

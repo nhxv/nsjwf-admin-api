@@ -1,0 +1,1 @@
+export type HttpException = Error & { status: number };
