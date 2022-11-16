@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --pretty --transpile-only src/index.ts dev",
     "build": "tsc",
-    "server": "node dist/src/index.js",
+    "start": "node dist/src/index.js",
     "prisma:migrate-draft": "prisma migrate dev --create-only --skip-seed",
     "prisma:migrate-apply": "prisma migrate dev --skip-seed",
     "prisma:format": "prisma format",
@@ -16,15 +16,13 @@
     "prisma:seed": "prisma db seed --preview-feature",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
-    "prisma:deploy": "prisma migrate deploy",
-    "start": "concurrently \"npm run prisma:deploy\" \"npm run server\""
+    "prisma:deploy": "prisma migrate deploy"
   },
   "author": "nhxv",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^4.6.1",
     "bcryptjs": "^2.4.3",
-    "concurrently": "^7.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
