@@ -39,3 +39,25 @@ After applying sql scripts, run:
     npm run prisma:generate
 
 ## Deployment
+Create Managed Database on Digital Ocean, setup App in App platform as trust sources, then copy connection string:
+
+    postgresql://{username}:{password}@db-postgresql-{your_region}.b.db.ondigitalocean.com:{your_port}/defaultdb?sslmode=require
+
+Link repo on App Platform, then setup env variables:
+
+    DATABASE_URL={paste_db_connection_string_here}
+    NODE_ENV=stage
+    CORS="https://sjwh-admin.vercel.app"
+    ACCESS_TOKEN_SECRET={your_secret}
+    ACCESS_TOKEN_EXPIRE=86400s
+    PORT={your_port_number}
+
+After the app finished deployment, run db migration:
+
+    npm run prisma:deploy
+
+Make call to test API to check if it's working:
+
+    GET {your_url}.ondigitalocean.app/api/test/hello
+    GET {your_url}.ondigitalocean.app/api/test/roles
+    
