@@ -47,7 +47,7 @@ Link repo on App Platform, then setup env variables:
 
     DATABASE_URL={paste_db_connection_string_here}
     NODE_ENV=stage
-    CORS="https://sjwh-admin.vercel.app"
+    CORS="https://nsjwf.vercel.app"
     ACCESS_TOKEN_SECRET={your_secret}
     ACCESS_TOKEN_EXPIRE=86400s
     PORT={your_port_number}
