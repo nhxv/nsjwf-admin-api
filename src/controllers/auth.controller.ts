@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { LoginResponseDto } from "../dto/login-response.dto";
-import { login } from "../services/authentication.service";
+import { LoginResponseDto } from "../dto/responses/login-response.dto";
+import { login } from "../services/auth/authentication.service";
 
 const router = Router();
 

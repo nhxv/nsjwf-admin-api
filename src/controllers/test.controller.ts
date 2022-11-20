@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/authorization.service";
+import { hasAnyRole } from "../services/auth/authorization.service";
 import { getRoleByName, getRoles } from "../services/role.service";
-import { verifyAccessToken } from "../services/token.service";
+import { verifyAccessToken } from "../services/auth/token.service";
 import { Role } from "../commons/role.enum";
 
 const router = Router();
