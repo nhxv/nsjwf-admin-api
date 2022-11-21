@@ -27,12 +27,9 @@ model Account {
 
 // Configure
 model Product {
-  id                     Int                      @id @default(autoincrement())
-  name                   String                   @unique @db.VarChar(255)
-  discontinued           Boolean                  @default(false)
-  customerProductListing CustomerProductListing[]
-  customerProductOrders  CustomerProductOrder[]
-  productStocks          ProductStock[]
+  id           Int     @id @default(autoincrement())
+  name         String  @unique @db.VarChar(255)
+  discontinued Boolean @default(false)
 }
 
 model Vendor {
@@ -46,109 +43,20 @@ model Vendor {
 }
 
 model Customer {
-  id                Int                 @id @default(autoincrement())
-  name              String              @unique @db.VarChar(255)
-  address           String?
-  phone             String?             @db.VarChar(20)
-  email             String?             @db.VarChar(320)
-  discontinued      Boolean             @default(false)
-  orders            CustomerOrder[]
-  customerPriceList CustomerPriceList[]
+  id           Int     @id @default(autoincrement())
+  name         String  @unique @db.VarChar(255)
+  address      String?
+  phone        String? @db.VarChar(20)
+  email        String? @db.VarChar(320)
+  presentative String? @db.VarChar(255)
+  discontinued Boolean @default(false)
 }
 
 model Vehicle {
-  id               Int               @id @default(autoincrement())
-  license_plate    String            @unique @db.VarChar(20)
-  nickname         String?           @db.VarChar(255)
-  volume           Int?
-  available        Boolean           @default(true)
-  discontinued     Boolean           @default(false)
-  CustomerShipment CustomerShipment?
-}
-
-// Finance
-model CustomerPriceList {
-  id                     Int                      @id @default(autoincrement())
-  time_created           DateTime                 @default(now())
-  time_applied           DateTime                 @db.Date
-  customer_name          String                   @db.VarChar(255)
-  customer               Customer                 @relation(fields: [customer_name], references: [name])
-  customerProductListing CustomerProductListing[]
-}
-
-model CustomerProductListing {
-  id                Int               @id @default(autoincrement())
-  product_name      String            @db.VarChar(255)
-  product           Product           @relation(fields: [product_name], references: [name])
-  unit_price        Decimal
-  price_list_id     Int
-  customerPriceList CustomerPriceList @relation(fields: [price_list_id], references: [id])
-}
-
-model CustomerOrder {
-  id               Int                    @id @default(autoincrement())
-  code             String                 @unique @db.VarChar(20)
-  customer_name    String                 @db.VarChar(255)
-  customer         Customer               @relation(fields: [customer_name], references: [name])
-  time_created     DateTime               @default(now())
-  time_completed   DateTime?
-  status           String
-  order_status     OrderStatus            @relation(fields: [status], references: [name])
-  shipment_id      Int
-  shipment         CustomerShipment       @relation(fields: [shipment_id], references: [id])
-  total_amount     Decimal
-  counted          Boolean                @default(true)
-  pay_due          DateTime?
-  productOrders    CustomerProductOrder[]
-  customerPayments CustomerPayment[]
-}
-
-model CustomerProductOrder {
-  id                Int           @id @default(autoincrement())
-  product_name      String        @db.VarChar(255)
-  product           Product       @relation(fields: [product_name], references: [name])
-  quantity          Int
-  unit_price        Decimal
-  customer_order_id Int
-  order             CustomerOrder @relation(fields: [customer_order_id], references: [id])
-}
-
-model OrderStatus {
-  id             Int             @id @default(autoincrement())
-  name           String          @unique @db.VarChar(20)
-  customerOrders CustomerOrder[]
-}
-
-model CustomerPayment {
-  id                Int           @id @default(autoincrement())
-  customer_name     String        @db.VarChar(255)
-  amount            Decimal
-  time_received     DateTime
-  customer_order_id Int
-  customerOrder     CustomerOrder @relation(fields: [customer_order_id], references: [id])
-}
-
-// Logistics
-model ProductStock {
-  id           Int     @id @default(autoincrement())
-  product_name String  @db.VarChar(255)
-  product      Product @relation(fields: [product_name], references: [name])
-  quantity     Int
-}
-
-model CustomerShipment {
-  id              Int             @id @default(autoincrement())
-  orders          CustomerOrder[]
-  by_vehicle      String          @unique @db.VarChar(20)
-  vehicle         Vehicle         @relation(fields: [by_vehicle], references: [license_plate])
-  status          String          @db.VarChar(20)
-  shipping_status ShippingStatus  @relation(fields: [status], references: [name])
-  time_started    DateTime
-  time_delivered  DateTime?
-}
-
-model ShippingStatus {
-  id                Int                @id @default(autoincrement())
-  name              String             @unique @db.VarChar(20)
-  customerShipments CustomerShipment[]
+  id            Int     @id @default(autoincrement())
+  license_plate String  @unique @db.VarChar(20)
+  nickname      String? @db.VarChar(255)
+  volume        Int?
+  available     Boolean @default(true)
+  discontinued  Boolean @default(false)
 }

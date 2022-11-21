@@ -8,6 +8,7 @@ export class ProductRequestDto {
 }
 
 export const productSchema = Joi.object<ProductRequestDto>({
+  // exclude characters: $,(,),<,>
   name: Joi.string().required().max(255).regex(/[$\(\)<>]/, { invert: true }),
   discontinued: Joi.boolean().required(),
 });

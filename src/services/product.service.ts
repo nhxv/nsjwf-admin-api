@@ -1,22 +1,12 @@
 import createError from "http-errors";
 import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
 import prisma from "../../prisma/prisma-client";
-export const findAll = async () => {
-  try {
-    const products = await prisma.product.findMany();
-    return products;
-  } catch (error) {
-    throw new createError.BadRequest("Cannot find product with the given data");
-  }
-}
 
-export const findProductsByName = async (keyword: string, discontinuedStr: string) => {
+export const findProductsByName = async (keyword: string) => {
   try {
-    const discontinued = (discontinuedStr === "true");
     const products = await prisma.$queryRaw`
     SELECT * FROM "Product"
     WHERE name iLIKE ${`%${keyword}%`}
-    AND discontinued = ${discontinued}
     ORDER BY id;
     `;
     return products;

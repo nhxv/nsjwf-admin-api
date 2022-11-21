@@ -1,28 +1,10 @@
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { 
-  findProductsByName, 
-  findAll, 
-  createProduct, 
-  updateProduct } from "../services/product.service";
+import { findProductsByName, createProduct, updateProduct } from "../services/product.service";
 import { Role } from "../commons/role.enum";
 
 const router = Router();
-
-// find all
-router.get(
-  `/products`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findAll();
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 
 // find products with data from product table
 router.get(
@@ -30,10 +12,7 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findProductsByName(
-        req.query.keyword as string,
-        req.query.discontinued as string,
-      );
+      const response = await findProductsByName(req.query.keyword as string);
       res.send(response);
     } catch (error) {
       next(error);
