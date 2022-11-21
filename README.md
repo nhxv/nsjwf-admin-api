@@ -28,11 +28,15 @@ Dev server will automatically restart when detecting changes to source code.
 ## Migration
 After modify prisma/schema.prisma, run:
 
-    npm run prisma:migration-draft
+    npm run prisma:format
+
+After formatting schema, run:
+
+    npm run prisma:draft
 
 Review SQL scripts, modify if needed, then run:
 
-    npm run prisma:migration-apply
+    npm run prisma:apply
 
 After applying sql scripts, run:
 

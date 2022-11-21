@@ -10,17 +10,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Authenticate
 model Role {
-  id Int @id @default(autoincrement())
-  name String @unique @db.VarChar(32)
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(32)
   accounts Account[]
 }
 
 model Account {
-  id Int @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   username String @unique @db.VarChar(32)
   password String
-  role_id Int
-  role Role @relation(fields: [role_id], references: [id])
+  role_id  Int
+  role     Role   @relation(fields: [role_id], references: [id])
 }
 
+// Configure
+model Product {
+  id           Int     @id @default(autoincrement())
+  name         String  @unique @db.VarChar(255)
+  discontinued Boolean @default(false)
+}
+
+model Vendor {
+  id           Int     @id @default(autoincrement())
+  name         String  @unique @db.VarChar(255)
+  address      String?
+  phone        String? @db.VarChar(20)
+  email        String? @db.VarChar(320)
+  presentative String? @db.VarChar(255)
+  discontinued Boolean @default(false)
+}
+
+model Customer {
+  id           Int     @id @default(autoincrement())
+  name         String  @unique @db.VarChar(255)
+  address      String?
+  phone        String? @db.VarChar(20)
+  email        String? @db.VarChar(320)
+  presentative String? @db.VarChar(255)
+  discontinued Boolean @default(false)
+}
+
+model Vehicle {
+  id            Int     @id @default(autoincrement())
+  license_plate String  @unique @db.VarChar(20)
+  nickname      String? @db.VarChar(255)
+  volume        Int?
+  available     Boolean @default(true)
+  discontinued  Boolean @default(false)
+}

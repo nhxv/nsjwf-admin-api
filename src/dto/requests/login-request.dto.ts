@@ -8,6 +8,6 @@ export class LoginRequestDto {
 }
 
 export const loginSchema = Joi.object<LoginRequestDto>({
-  username: Joi.string().required(),
-  password: Joi.string().required(),
+  username: Joi.string().required().max(32).regex(/[$\(\)<>]/, { invert: true }),
+  password: Joi.string().required().regex(/[$\(\)<>]/, { invert: true }),
 });
