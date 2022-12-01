@@ -11,7 +11,7 @@ export const findCustomersByName = async (keyword: string) => {
     `;
     return customers;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find customer with the given data");
+    throw new createError.BadRequest("Cannot find customer with the given data.");
   }
 }
 
@@ -30,7 +30,7 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
     });
     return newCustomer;
   } catch (error) {
-    throw new createError.BadRequest("Cannot add customer with the given data");
+    throw new createError.BadRequest("Cannot add customer with the given data.");
   }
 }
 
@@ -52,6 +52,6 @@ export const updateCustomer = async (customerDto: CustomerRequestDto, id: number
     });
     return updatedCustomer;
   } catch (error) {
-    throw new createError.BadRequest("Cannot update customer with the given data");
+    throw new createError.BadRequest("Cannot update customer with the given data.");
   }
 }

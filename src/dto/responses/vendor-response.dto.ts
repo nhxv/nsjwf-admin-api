@@ -7,6 +7,5 @@ export class VendorResponseDto {
     public phone?: string,
     public email?: string,
     public presentative?: string,
-
   ) {}
 }

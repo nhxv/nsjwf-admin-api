@@ -1,3 +1,4 @@
+import { findActiveProducts } from './../services/product.service';
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
@@ -6,7 +7,21 @@ import { Role } from "../commons/role.enum";
 
 const router = Router();
 
-// find products with data from product table
+// find active products from product table
+router.get(
+  `/products/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findActiveProducts();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// find products by name from product table
 router.get(
   `/products/basic-search`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -26,6 +41,7 @@ router.post(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // TODO: set product stock to 0
       const response = await createProduct(req.body);
       res.send(response);
     } catch (error) {

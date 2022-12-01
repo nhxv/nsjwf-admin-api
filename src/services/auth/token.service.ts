@@ -12,7 +12,7 @@ export const signAccessToken = (accountId: number, roleId: number) => {
     };
     JWT.sign(payload, secret, options, async (err, token) => {
       if (err) {
-        reject(new createError.InternalServerError("Fail to sign token"));
+        reject(new createError.InternalServerError("Fail to sign token."));
         return;
       }
       resolve(token);

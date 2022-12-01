@@ -11,7 +11,7 @@ export const findVehiclesByName = async (keyword: string) => {
     `;
     return vehicles;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find vehicle with the given data");
+    throw new createError.BadRequest("Cannot find vehicle with the given data.");
   }
 }
 
@@ -30,7 +30,7 @@ export const createVehicle = async (vehicleDto: VehicleRequestDto) => {
     return newVehicle;
   } catch (error) {
     console.log(error);
-    throw new createError.BadRequest("Cannot add vehicle with the given data");
+    throw new createError.BadRequest("Cannot add vehicle with the given data.");
   }
 }
 
@@ -51,6 +51,6 @@ export const updateVehicle = async (vehicleDto: VehicleRequestDto, id: number) =
     });
     return updatedVehicle;
   } catch (error) {
-    throw new createError.BadRequest("Cannot update vehicle with the given data");
+    throw new createError.BadRequest("Cannot update vehicle with the given data.");
   }
 }
