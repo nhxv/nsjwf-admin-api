@@ -22,6 +22,14 @@ export const nukeConfigure = async () => {
     const deletedVendors = await prisma.vendor.deleteMany({});
     const deletedVehicles = await prisma.vehicle.deleteMany({});
   } catch (error) {
-    throw new createError.BadRequest("Try again, master");
+    throw new createError.BadRequest("Try again, master.");
+  }
+}
+
+export const nukeStock = async () => {
+  try {
+    const deletedProductStockChangeHistory = await prisma.productStockChangeHistory.deleteMany({});
+  } catch (error) {
+    throw new createError.BadRequest("Try again, master.");
   }
 }

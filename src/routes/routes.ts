@@ -5,6 +5,7 @@ import productController from "../controllers/product.controller";
 import customerController from "../controllers/customer.controller";
 import vendorController from "../controllers/vendor.controller";
 import vehicleController from "../controllers/vehicle.controller";
+import productStockController from "../controllers/product-stock.controller";
 
 const api = Router()
 .use(testController)
@@ -12,6 +13,7 @@ const api = Router()
 .use(productController)
 .use(customerController)
 .use(vendorController)
-.use(vehicleController);
+.use(vehicleController)
+.use(productStockController)
 
 export default Router().use("/api", api);

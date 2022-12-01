@@ -12,7 +12,7 @@ export class VendorRequestDto {
 }
 
 export const vendorSchema = Joi.object<VendorRequestDto>({
-  name: Joi.string().required().max(255).regex(/[$\(\)<>]/, { invert: true }),
+  name: Joi.string().required().trim().max(255).regex(/[$\(\)<>]/, { invert: true }),
   discontinued: Joi.boolean().required(),
   address: Joi.string().allow("").regex(/[$\(\)<>]/, { invert: true }),
   phone: Joi.string().allow("").max(20).regex(/[$\(\)<>]/, { invert: true }),

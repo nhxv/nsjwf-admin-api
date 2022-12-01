@@ -2,12 +2,26 @@ import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { Role } from "../commons/role.enum";
-import { findVendorsByName, createVendor, updateVendor } from "../services/vendor.service";
+import { findActiveVendors, findVendorsByName, createVendor, updateVendor } from "../services/vendor.service";
 import { VendorResponseDto } from "../dto/responses/vendor-response.dto";
 
 const router = Router();
 
-// find vendors with data from vehicle table
+// find active vendors
+router.get(
+  `/vendors/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findActiveVendors();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// find vendors by name from vehicle table
 router.get(
   `/vendors/basic-search`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],

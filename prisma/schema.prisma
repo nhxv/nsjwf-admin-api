@@ -27,9 +27,10 @@ model Account {
 
 // Configure
 model Product {
-  id           Int     @id @default(autoincrement())
-  name         String  @unique @db.VarChar(255)
-  discontinued Boolean @default(false)
+  id           Int           @id @default(autoincrement())
+  name         String        @unique @db.VarChar(255)
+  discontinued Boolean       @default(false)
+  productStock ProductStock?
 }
 
 model Vendor {
@@ -59,4 +60,37 @@ model Vehicle {
   volume        Int?
   available     Boolean @default(true)
   discontinued  Boolean @default(false)
+}
+
+// Logistics
+model ProductStock {
+  id                  Int                  @id @default(autoincrement())
+  product_name        String               @unique @db.VarChar(255)
+  product             Product              @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  quantity            Int                  @default(0)
+  created_at          DateTime             @default(now())
+  updated_at          DateTime?            @default(now())
+  productStockChanges ProductStockChange[]
+}
+
+model ProductStockChangeHistory {
+  id                       Int                      @id @default(autoincrement())
+  created_at               DateTime                 @default(now())
+  productStockChanges      ProductStockChange[]
+  reason                   String                   @db.VarChar(32)
+  productStockChangeReason ProductStockChangeReason @relation(fields: [reason], references: [name])
+}
+
+model ProductStockChange {
+  id                        Int                       @id @default(autoincrement())
+  stock_id                  Int
+  productStock              ProductStock              @relation(fields: [stock_id], references: [id], onDelete: Cascade)
+  change_id                 Int
+  productStockChangeHistory ProductStockChangeHistory @relation(fields: [change_id], references: [id], onDelete: Cascade)
+}
+
+model ProductStockChangeReason {
+  id                          Int                         @id @default(autoincrement())
+  name                        String                      @unique @db.VarChar(32)
+  productStockChangeHistories ProductStockChangeHistory[]
 }

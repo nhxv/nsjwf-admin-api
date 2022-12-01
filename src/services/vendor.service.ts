@@ -2,6 +2,19 @@ import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { VendorRequestDto, vendorSchema } from "../dto/requests/vendor-request.dto";
 
+export const findActiveVendors = async () => {
+  try {
+    const vendors = await prisma.vendor.findMany({
+      where: {
+        discontinued: false,
+      }
+    });
+    return vendors;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendors.");
+  }
+}
+
 export const findVendorsByName = async (keyword: string) => {
   try {
     const vendors = await prisma.$queryRaw`
@@ -11,7 +24,7 @@ export const findVendorsByName = async (keyword: string) => {
     `;
     return vendors;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find vendor with the given data");
+    throw new createError.BadRequest("Cannot find vendor with the given data.");
   }
 }
 
@@ -30,7 +43,7 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
     });
     return newVendor;
   } catch (error) {
-    throw new createError.BadRequest("Cannot add vendor with the given data");
+    throw new createError.BadRequest("Cannot add vendor with the given data.");
   }
 }
 
@@ -52,6 +65,6 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
     });
     return updatedVendor;
   } catch (error) {
-    throw new createError.BadRequest("Cannot update vendor with the given data");
+    throw new createError.BadRequest("Cannot update vendor with the given data.");
   }
 }
