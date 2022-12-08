@@ -7,6 +7,9 @@ export const findActiveVendors = async () => {
     const vendors = await prisma.vendor.findMany({
       where: {
         discontinued: false,
+      },
+      orderBy: {
+        name: "asc"
       }
     });
     return vendors;
@@ -20,7 +23,7 @@ export const findVendorsByName = async (keyword: string) => {
     const vendors = await prisma.$queryRaw`
     SELECT * FROM "Vendor"
     WHERE name iLIKE ${`%${keyword}%`}
-    ORDER BY id;
+    ORDER BY name;
     `;
     return vendors;
   } catch (error) {

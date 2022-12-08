@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Authenticate
 model Role {
   id       Int       @id @default(autoincrement())
   name     String    @unique @db.VarChar(32)
@@ -25,32 +21,37 @@ model Account {
   role     Role   @relation(fields: [role_id], references: [id])
 }
 
-// Configure
 model Product {
-  id           Int           @id @default(autoincrement())
-  name         String        @unique @db.VarChar(255)
-  discontinued Boolean       @default(false)
-  productStock ProductStock?
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @unique @db.VarChar(255)
+  discontinued         Boolean                @default(false)
+  ProductBackorder     ProductBackorder[]
+  ProductCustomerOrder ProductCustomerOrder[]
+  productStock         ProductStock?
+  ProductVendorOrder   ProductVendorOrder[]
 }
 
 model Vendor {
-  id           Int     @id @default(autoincrement())
-  name         String  @unique @db.VarChar(255)
+  id           Int           @id @default(autoincrement())
+  name         String        @unique @db.VarChar(255)
   address      String?
-  phone        String? @db.VarChar(20)
-  email        String? @db.VarChar(320)
-  presentative String? @db.VarChar(255)
-  discontinued Boolean @default(false)
+  phone        String?       @db.VarChar(20)
+  email        String?       @db.VarChar(320)
+  presentative String?       @db.VarChar(255)
+  discontinued Boolean       @default(false)
+  VendorOrder  VendorOrder[]
 }
 
 model Customer {
-  id           Int     @id @default(autoincrement())
-  name         String  @unique @db.VarChar(255)
-  address      String?
-  phone        String? @db.VarChar(20)
-  email        String? @db.VarChar(320)
-  presentative String? @db.VarChar(255)
-  discontinued Boolean @default(false)
+  id            Int             @id @default(autoincrement())
+  name          String          @unique @db.VarChar(255)
+  address       String?
+  phone         String?         @db.VarChar(20)
+  email         String?         @db.VarChar(320)
+  presentative  String?         @db.VarChar(255)
+  discontinued  Boolean         @default(false)
+  Backorder     Backorder[]
+  CustomerOrder CustomerOrder[]
 }
 
 model Vehicle {
@@ -62,35 +63,130 @@ model Vehicle {
   discontinued  Boolean @default(false)
 }
 
-// Logistics
 model ProductStock {
   id                  Int                  @id @default(autoincrement())
   product_name        String               @unique @db.VarChar(255)
-  product             Product              @relation(fields: [product_name], references: [name], onDelete: Cascade)
   quantity            Int                  @default(0)
-  created_at          DateTime             @default(now())
-  updated_at          DateTime?            @default(now())
+  created_at          DateTime
+  updated_at          DateTime?
+  product             Product              @relation(fields: [product_name], references: [name], onDelete: Cascade)
   productStockChanges ProductStockChange[]
 }
 
 model ProductStockChangeHistory {
   id                       Int                      @id @default(autoincrement())
-  created_at               DateTime                 @default(now())
-  productStockChanges      ProductStockChange[]
+  created_at               DateTime
   reason                   String                   @db.VarChar(32)
+  productStockChanges      ProductStockChange[]
   productStockChangeReason ProductStockChangeReason @relation(fields: [reason], references: [name])
 }
 
 model ProductStockChange {
   id                        Int                       @id @default(autoincrement())
   stock_id                  Int
-  productStock              ProductStock              @relation(fields: [stock_id], references: [id], onDelete: Cascade)
   change_id                 Int
+  quantity_change           Int
   productStockChangeHistory ProductStockChangeHistory @relation(fields: [change_id], references: [id], onDelete: Cascade)
+  productStock              ProductStock              @relation(fields: [stock_id], references: [id], onDelete: Cascade)
 }
 
 model ProductStockChangeReason {
   id                          Int                         @id @default(autoincrement())
   name                        String                      @unique @db.VarChar(32)
   productStockChangeHistories ProductStockChangeHistory[]
+}
+
+// Order
+model VendorOrder {
+  id                  Int                  @id @default(autoincrement())
+  code                String               @unique @db.VarChar(20)
+  vendor_name         String               @db.VarChar(255)
+  vendor              Vendor               @relation(fields: [vendor_name], references: [name], onDelete: Cascade)
+  status              String               @db.VarChar(32)
+  orderStatus         OrderStatus          @relation(fields: [status], references: [name])
+  created_at          DateTime
+  updated_at          DateTime?
+  is_test             Boolean              @default(false)
+  is_invoice          Boolean              @default(false)
+  productVendorOrders ProductVendorOrder[]
+
+  @@unique([code, is_invoice], name: "VendorOrderInvoice_key")
+}
+
+model ProductVendorOrder {
+  id           Int         @id @default(autoincrement())
+  product_name String      @db.VarChar(255)
+  product      Product     @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  order_code   String      @db.VarChar(20)
+  vendorOrder  VendorOrder @relation(fields: [order_code], references: [code], onDelete: Cascade)
+  quantity     Int
+  unit_price   Decimal
+  created_at   DateTime
+  updated_at   DateTime?
+
+  @@unique([product_name, order_code], name: "ProductVendorOrder_product_name_order_code_key")
+}
+
+model CustomerOrder {
+  id                    Int                    @id @default(autoincrement())
+  code                  String                 @unique @db.VarChar(20)
+  customer_name         String                 @db.VarChar(255)
+  customer              Customer               @relation(fields: [customer_name], references: [name], onDelete: Cascade)
+  status                String                 @db.VarChar(32)
+  orderStatus           OrderStatus            @relation(fields: [status], references: [name])
+  created_at            DateTime
+  updated_at            DateTime?
+  is_test               Boolean                @default(false)
+  is_invoice            Boolean                @default(false)
+  productCustomerOrders ProductCustomerOrder[]
+
+  @@unique([code, is_invoice], name: "CustomerOrderInvoice_key")
+}
+
+model ProductCustomerOrder {
+  id            Int           @id @default(autoincrement())
+  product_name  String        @db.VarChar(255)
+  product       Product       @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  order_code    String        @db.VarChar(20)
+  customerOrder CustomerOrder @relation(fields: [order_code], references: [code], onDelete: Cascade)
+  quantity      Int
+  unit_price    Decimal
+  created_at    DateTime
+  updated_at    DateTime?
+
+  @@unique([product_name, order_code], name: "ProductCustomerOrder_product_name_order_code_key")
+}
+
+model OrderStatus {
+  id             Int             @id @default(autoincrement())
+  name           String          @unique @db.VarChar(32)
+  customerOrders CustomerOrder[]
+  vendorOrders   VendorOrder[]
+}
+
+model Backorder {
+  id                Int                @id @default(autoincrement())
+  customer_name     String             @db.VarChar(255)
+  customer          Customer           @relation(fields: [customer_name], references: [name], onDelete: Cascade)
+  created_at        DateTime
+  updated_at        DateTime?
+  is_test           Boolean            @default(false)
+  is_archived       Boolean            @default(false)
+  productBackorders ProductBackorder[]
+
+  @@unique([id, is_archived], name: "BackorderArchive_key")
+}
+
+model ProductBackorder {
+  id           Int       @id @default(autoincrement())
+  product_name String    @db.VarChar(255)
+  product      Product   @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  backorder_id Int
+  backorder    Backorder @relation(fields: [backorder_id], references: [id], onDelete: Cascade)
+  quantity     Int
+  unit_price   Decimal
+  created_at   DateTime
+  updated_at   DateTime?
+
+  @@unique([product_name, backorder_id], name: "ProductBackorder_product_name_backorder_id_key")
 }

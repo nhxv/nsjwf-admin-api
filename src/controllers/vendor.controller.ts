@@ -21,7 +21,7 @@ router.get(
   }
 );
 
-// find vendors by name from vehicle table
+// find vendors by name from vendor table
 router.get(
   `/vendors/basic-search`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -35,7 +35,7 @@ router.get(
   }
 );
 
-// add vehicle
+// add vendor
 router.post(
   `/vendors`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
