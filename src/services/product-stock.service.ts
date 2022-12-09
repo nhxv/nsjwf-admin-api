@@ -1,7 +1,8 @@
-import { ProductStockChangeReason } from './../commons/product-stock-change-reason.enum';
+import { generateCurrentTime } from "./../commons/time.util";
+import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
 import createError from "http-errors";
 import { ProductStockRequestDto, productStockSchema } from "./../dto/requests/product-stock-request.dto";
-import { ProductStock } from '@prisma/client';
+import { ProductStock } from "@prisma/client";
 
 export const findAllProductStock = async () => {
   try {
@@ -36,33 +37,45 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
 
     return await prisma.$transaction(async (tx) => {
       const updatedResult = [];
+      const time = generateCurrentTime();
 
-      // 1. add change history
+      // 1. create product stock change history
       const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
         data: {
-          created_at: new Date(),
+          created_at: time,
           reason: reason,
         }
       });
 
-      // 2. update stock in product stock table
       for (const stock of productStockData) {
+        // 2. compare current stock with new stock
+        const currentProductStock = await tx.productStock.findUniqueOrThrow({
+          where: {
+            id: stock.id
+          },
+        });
+        const stockQuantityChange = stock.quantity - currentProductStock.quantity;
+
+        // 3. update stock in product stock table
         const updatedProductStock = await tx.productStock.update({
           where: {
             id: stock.id
           },
           data: {
-            quantity: stock.quantity,
-            updated_at: new Date(),
+            quantity: {
+              increment: stockQuantityChange,
+            },
+            updated_at: time,
           }
         });
         updatedResult.push(updatedProductStock);
 
-        // 3. add stock change
+        // 4. add stock change
         const addedProductStockChange = await tx.productStockChange.create({
           data: {
             stock_id: updatedProductStock.id,
             change_id: addedProductStockChangeHistory.id,
+            quantity_change: stockQuantityChange,
           }
         });
       }

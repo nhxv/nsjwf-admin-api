@@ -19,6 +19,10 @@ Create .env file:
     ACCESS_TOKEN_EXPIRE=86400s
     PORT={your_port_number}
 
+(Optional) Enable SQL logging in prisma-client.ts:
+
+    const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});    
+
 Run dev server:
     
     npm run dev
@@ -46,6 +50,10 @@ After applying sql scripts, run:
 Create Managed Database on Digital Ocean, setup App in App platform as trust sources, then copy connection string:
 
     postgresql://{username}:{password}@db-postgresql-{your_region}.b.db.ondigitalocean.com:{your_port}/defaultdb?sslmode=require
+
+Comment out SQL logging in prisma-client.ts:
+
+    // const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});
 
 Link repo on App Platform, then setup env variables:
 

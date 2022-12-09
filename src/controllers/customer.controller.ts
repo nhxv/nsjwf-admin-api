@@ -2,10 +2,24 @@ import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { Role } from "../commons/role.enum";
-import { findCustomersByName, createCustomer, updateCustomer } from "../services/customer.service";
+import { findActiveCustomers, findCustomersByName, createCustomer, updateCustomer } from "../services/customer.service";
 import { CustomerResponseDto } from "../dto/responses/customer-response.dto";
 
 const router = Router();
+
+// find active customers
+router.get(
+  `/customers/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findActiveCustomers();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // find customers with data from customer table
 router.get(

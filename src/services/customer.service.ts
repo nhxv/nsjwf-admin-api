@@ -2,12 +2,28 @@ import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { CustomerRequestDto, customerSchema } from "../dto/requests/customer-request.dto";
 
+export const findActiveCustomers = async () => {
+  try {
+    const customers = await prisma.customer.findMany({
+      where: {
+        discontinued: false,
+      },
+      orderBy: {
+        name: "asc"
+      }
+    });
+    return customers;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find customers.");
+  }
+}
+
 export const findCustomersByName = async (keyword: string) => {
   try {
     const customers = await prisma.$queryRaw`
     SELECT * FROM "Customer"
     WHERE name iLIKE ${`%${keyword}%`}
-    ORDER BY id;
+    ORDER BY name;
     `;
     return customers;
   } catch (error) {
