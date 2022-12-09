@@ -74,7 +74,6 @@ export const createProduct = async (productDto: ProductRequestDto) => {
       });
     })
   } catch (error) {
-    console.log(error);
     throw new createError.BadRequest("Cannot add product with the given data.");
   }
 }
