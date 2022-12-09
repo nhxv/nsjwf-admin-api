@@ -6,6 +6,7 @@ export class BackorderResponseDto {
     public isTest: boolean,
     public productBackorders: ProductBackorderResponseDto[],
     public isArchived: boolean,
+    public expectedAt: Date,
     public id: number,
     public createdAt?: Date,
     public updatedAt?: Date,

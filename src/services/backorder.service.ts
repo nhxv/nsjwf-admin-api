@@ -3,7 +3,7 @@ import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.
 import { Prisma } from "@prisma/client";
 import prisma from "../../prisma/prisma-client";
 import createError  from "http-errors";
-import { generateCurrentTime } from "../commons/time.util";
+import { generateCurrentTime, convertExpectedTime } from "../commons/time.util";
 import { generateOrderCode } from "../commons/order.util";
 import { BackorderRequestDto, backorderSchema } from "../dto/requests/backorder-request.dto";
 import { customerOrderSchema } from "../dto/requests/customer-order-request.dto";
@@ -23,12 +23,15 @@ export const findBackorderByStatus = async (status: string) => {
     const backorders = await prisma.backorder.findMany({
       where: {
         is_archived: isArchived,
+        expected_at: {
+          gte: new Date(),
+        }
       },
       include: {
         productBackorders: true,
       },
       orderBy: {
-        created_at: "asc",
+        expected_at: "asc",
       }
     });
     return backorders;
@@ -84,6 +87,7 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
       data: {
         customer_name: backorderData.customerName,
         created_at: time,
+        expected_at: convertExpectedTime(backorderData.expectedAt),
         is_test: backorderData.isTest,
         is_archived: backorderData.isArchived,
         productBackorders: {
@@ -139,6 +143,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
           data: {
             customer_name: backorderData.customerName,
             updated_at: time,
+            expected_at: backorderData.expectedAt,
             is_test: backorderData.isTest,
           }
         });
@@ -232,6 +237,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
       backorderData.customerName,
       backorderData.productBackorders,
       backorderData.isTest,
+      backorderData.expectedAt,
       code,
       OrderStatus.PICKING,
       time,
@@ -300,6 +306,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           customer_name: customerOrderData.customerName,
           status: customerOrderData.status,
           created_at: time,
+          expected_at: convertExpectedTime(customerOrderData.expectedAt),
           is_test: customerOrderData.isTest,
           is_invoice: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {

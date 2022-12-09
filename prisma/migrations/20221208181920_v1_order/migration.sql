@@ -22,6 +22,7 @@ CREATE TABLE "VendorOrder" (
     "status" VARCHAR(32) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL,
     "updated_at" TIMESTAMP(3),
+    "expected_at" TIMESTAMP(3) NOT NULL,
     "is_test" BOOLEAN NOT NULL DEFAULT false,
     "is_invoice" BOOLEAN NOT NULL DEFAULT false,
 
@@ -49,6 +50,7 @@ CREATE TABLE "CustomerOrder" (
     "status" VARCHAR(32) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL,
     "updated_at" TIMESTAMP(3),
+    "expected_at" TIMESTAMP(3) NOT NULL,
     "is_test" BOOLEAN NOT NULL DEFAULT false,
     "is_invoice" BOOLEAN NOT NULL DEFAULT false,
 
@@ -82,6 +84,7 @@ CREATE TABLE "Backorder" (
     "customer_name" VARCHAR(255) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL,
     "updated_at" TIMESTAMP(3),
+    "expected_at" TIMESTAMP(3) NOT NULL,
     "is_test" BOOLEAN NOT NULL DEFAULT false,
     "is_archived" BOOLEAN NOT NULL DEFAULT false,
 

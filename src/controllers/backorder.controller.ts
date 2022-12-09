@@ -26,6 +26,7 @@ router.get(
             )
           }),
           order.is_archived,
+          order.expected_at,
           order.id,
           order.created_at,
         )

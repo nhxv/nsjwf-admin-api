@@ -1,4 +1,4 @@
-import { generateCurrentTime } from "./../commons/time.util";
+import { generateCurrentTime, convertExpectedTime } from "./../commons/time.util";
 import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
 import { generateOrderCode } from "./../commons/order.util";
 import { VendorOrderRequestDto, vendorOrderSchema } from "./../dto/requests/vendor-order-request.dto";
@@ -15,12 +15,15 @@ export const findVendorOrderByStatus = async (status: string) => {
     const vendorOrders = await prisma.vendorOrder.findMany({
       where: {
         status: status,
+        expected_at: {
+          gte: new Date(),
+        }
       },
       include: {
         productVendorOrders: true,
       },
       orderBy: {
-        created_at: "asc",
+        expected_at: "asc",
       },
     });
     return vendorOrders;
@@ -74,6 +77,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
         vendor_name: vendorOrderData.vendorName,
         status: vendorOrderData.status,
         created_at: time,
+        expected_at: convertExpectedTime(vendorOrderData.expectedAt),
         is_test: vendorOrderData.isTest,
         is_invoice: (vendorOrderData.status === OrderStatus.DELIVERED),
         productVendorOrders: {
@@ -131,6 +135,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             vendor_name: vendorOrderData.vendorName,
             status: vendorOrderData.status,
             updated_at: time,
+            expected_at: convertExpectedTime(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
             is_invoice: isDelivered
           }

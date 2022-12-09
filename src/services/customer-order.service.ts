@@ -1,4 +1,4 @@
-import { generateCurrentTime } from './../commons/time.util';
+import { generateCurrentTime, convertExpectedTime } from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
@@ -15,12 +15,15 @@ export const findCustomerOrderByStatus = async (status: string) => {
     const customerOrders = await prisma.customerOrder.findMany({
       where: {
         status: status,
+        expected_at: {
+          gte: new Date(),
+        }
       },
       include: {
         productCustomerOrders: true,
       },
       orderBy: {
-        created_at: "asc",
+        expected_at: "asc",
       },
     });
     return customerOrders;
@@ -78,6 +81,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           customer_name: customerOrderData.customerName,
           status: customerOrderData.status,
           created_at: time,
+          expected_at: convertExpectedTime(customerOrderData.expectedAt),
           is_test: customerOrderData.isTest,
           is_invoice: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {
@@ -178,7 +182,8 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             status: customerOrderData.status,
             updated_at: time,
             is_test: customerOrderData.isTest,
-            is_invoice: isDelivered
+            is_invoice: isDelivered,
+            expected_at: convertExpectedTime(customerOrderData.expectedAt),
           }
         });
       } catch (e) {
@@ -327,6 +332,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
                 updated_at: time,
               }
             });
+            
             // create stock change
             const addedProductStockChange = await tx.productStockChange.create({
               data: {

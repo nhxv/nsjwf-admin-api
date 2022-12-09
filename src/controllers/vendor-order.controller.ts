@@ -28,6 +28,7 @@ router.get(
               productOrder.quantity,
             )
           }),
+          order.expected_at,
           order.created_at,
         );
       }));

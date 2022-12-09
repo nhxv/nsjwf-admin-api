@@ -22,13 +22,13 @@ model Account {
 }
 
 model Product {
-  id                   Int                    @id @default(autoincrement())
-  name                 String                 @unique @db.VarChar(255)
-  discontinued         Boolean                @default(false)
-  ProductBackorder     ProductBackorder[]
-  ProductCustomerOrder ProductCustomerOrder[]
-  productStock         ProductStock?
-  ProductVendorOrder   ProductVendorOrder[]
+  id                    Int                    @id @default(autoincrement())
+  name                  String                 @unique @db.VarChar(255)
+  discontinued          Boolean                @default(false)
+  productBackorders     ProductBackorder[]
+  productCustomerOrders ProductCustomerOrder[]
+  productStock          ProductStock?
+  productVendorOrders   ProductVendorOrder[]
 }
 
 model Vendor {
@@ -39,19 +39,19 @@ model Vendor {
   email        String?       @db.VarChar(320)
   presentative String?       @db.VarChar(255)
   discontinued Boolean       @default(false)
-  VendorOrder  VendorOrder[]
+  vendorOrders VendorOrder[]
 }
 
 model Customer {
-  id            Int             @id @default(autoincrement())
-  name          String          @unique @db.VarChar(255)
-  address       String?
-  phone         String?         @db.VarChar(20)
-  email         String?         @db.VarChar(320)
-  presentative  String?         @db.VarChar(255)
-  discontinued  Boolean         @default(false)
-  Backorder     Backorder[]
-  CustomerOrder CustomerOrder[]
+  id             Int             @id @default(autoincrement())
+  name           String          @unique @db.VarChar(255)
+  address        String?
+  phone          String?         @db.VarChar(20)
+  email          String?         @db.VarChar(320)
+  presentative   String?         @db.VarChar(255)
+  discontinued   Boolean         @default(false)
+  backorders     Backorder[]
+  customerOrders CustomerOrder[]
 }
 
 model Vehicle {
@@ -96,7 +96,7 @@ model ProductStockChangeReason {
   productStockChangeHistories ProductStockChangeHistory[]
 }
 
-// Order
+// Vendor order
 model VendorOrder {
   id                  Int                  @id @default(autoincrement())
   code                String               @unique @db.VarChar(20)
@@ -106,6 +106,7 @@ model VendorOrder {
   orderStatus         OrderStatus          @relation(fields: [status], references: [name])
   created_at          DateTime
   updated_at          DateTime?
+  expected_at         DateTime
   is_test             Boolean              @default(false)
   is_invoice          Boolean              @default(false)
   productVendorOrders ProductVendorOrder[]
@@ -127,6 +128,7 @@ model ProductVendorOrder {
   @@unique([product_name, order_code], name: "ProductVendorOrder_product_name_order_code_key")
 }
 
+// Customer order
 model CustomerOrder {
   id                    Int                    @id @default(autoincrement())
   code                  String                 @unique @db.VarChar(20)
@@ -136,6 +138,7 @@ model CustomerOrder {
   orderStatus           OrderStatus            @relation(fields: [status], references: [name])
   created_at            DateTime
   updated_at            DateTime?
+  expected_at           DateTime
   is_test               Boolean                @default(false)
   is_invoice            Boolean                @default(false)
   productCustomerOrders ProductCustomerOrder[]
@@ -164,12 +167,14 @@ model OrderStatus {
   vendorOrders   VendorOrder[]
 }
 
+// Backorder
 model Backorder {
   id                Int                @id @default(autoincrement())
   customer_name     String             @db.VarChar(255)
   customer          Customer           @relation(fields: [customer_name], references: [name], onDelete: Cascade)
   created_at        DateTime
   updated_at        DateTime?
+  expected_at       DateTime
   is_test           Boolean            @default(false)
   is_archived       Boolean            @default(false)
   productBackorders ProductBackorder[]
