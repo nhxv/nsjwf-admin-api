@@ -29,7 +29,6 @@ export const createVehicle = async (vehicleDto: VehicleRequestDto) => {
     });
     return newVehicle;
   } catch (error) {
-    console.log(error);
     throw new createError.BadRequest("Cannot add vehicle with the given data.");
   }
 }

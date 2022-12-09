@@ -1,3 +1,5 @@
+import { ProductStockChangeReason } from './../commons/product-stock-change-reason.enum';
+import { generateCurrentTime } from "./../commons/time.util";
 import createError from "http-errors";
 import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
 import prisma from "../../prisma/prisma-client";
@@ -7,6 +9,9 @@ export const findActiveProducts = async () => {
     const products = await prisma.product.findMany({
       where: {
         discontinued: false,
+      },
+      orderBy: {
+        name: "asc"
       }
     });
     return products;
@@ -20,7 +25,7 @@ export const findProductsByName = async (keyword: string) => {
     const products = await prisma.$queryRaw`
     SELECT * FROM "Product" as p
     WHERE p.name iLIKE ${`%${keyword}%`}
-    ORDER BY p.id;
+    ORDER BY p.name;
     `;
     return products;
   } catch (error) {
@@ -31,24 +36,45 @@ export const findProductsByName = async (keyword: string) => {
 export const createProduct = async (productDto: ProductRequestDto) => {
   try {
     const productData: ProductRequestDto = await productSchema.validateAsync(productDto);
-    // add product & product stock
-    const [newProduct, productStock] = await prisma.$transaction([
-      prisma.product.create({
+    return await prisma.$transaction(async (tx) => {
+      const time = generateCurrentTime();
+      
+      // 1. create product
+      const addedProduct = await tx.product.create({
         data: {
           name: productData.name,
           discontinued: productData.discontinued
         }
-      }),
-      prisma.productStock.create({
+      });
+
+      // 2. create product stock
+      const addedProductStock = await tx.productStock.create({
         data: {
           product_name: productData.name,
           quantity: 0,
-          created_at: new Date(),
+          created_at: time,
         }
-      })
-    ]);
-    return newProduct;
+      });
+
+      // 3. create product stock change history
+      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: ProductStockChangeReason.SELF_CREATE,
+        }
+      });
+
+      // 4. create product stock change
+      const addedProductStockChange = await tx.productStockChange.create({
+        data: {
+          stock_id: addedProductStock.id,
+          change_id: addedProductStockChangeHistory.id,
+          quantity_change: 0,
+        }
+      });
+    })
   } catch (error) {
+    console.log(error);
     throw new createError.BadRequest("Cannot add product with the given data.");
   }
 }
