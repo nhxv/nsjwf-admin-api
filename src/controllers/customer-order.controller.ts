@@ -12,7 +12,7 @@ const router = Router();
 // find customer orders by status
 router.get(
   `/customer-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findCustomerOrderByStatus(req.params.status);

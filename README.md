@@ -72,4 +72,6 @@ Make call to test API to check if it's working:
 
     GET {your_url}.ondigitalocean.app/api/test/hello
     GET {your_url}.ondigitalocean.app/api/test/roles
-    
+
+## Related
+https://github.com/nhxv/sjwh-admin        
