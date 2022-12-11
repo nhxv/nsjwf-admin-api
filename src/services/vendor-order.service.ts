@@ -71,21 +71,74 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
         created_at: time,
       })
     );
-    const newVendorOrder = await prisma.vendorOrder.create({
-      data: {
-        code: code,
-        vendor_name: vendorOrderData.vendorName,
-        status: vendorOrderData.status,
-        created_at: time,
-        expected_at: convertExpectedTime(vendorOrderData.expectedAt),
-        is_test: vendorOrderData.isTest,
-        is_invoice: (vendorOrderData.status === OrderStatus.DELIVERED),
-        productVendorOrders: {
-          create: productOrders
+
+    if (vendorOrderData.status === OrderStatus.DELIVERED) {
+      // if vendor order is delivered, update stock
+      return await prisma.$transaction(async (tx) => {
+        // create new order
+        const newVendorOrder = await prisma.vendorOrder.create({
+          data: {
+            code: code,
+            vendor_name: vendorOrderData.vendorName,
+            status: vendorOrderData.status,
+            created_at: time,
+            expected_at: convertExpectedTime(vendorOrderData.expectedAt),
+            is_test: vendorOrderData.isTest,
+            is_invoice: true,
+            productVendorOrders: {
+              create: productOrders
+            }
+          }
+        });
+        // create product stock change history
+        const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: ProductStockChangeReason.VENDOR_ORDER_DELIVERED,
+          }
+        });
+        
+        for (const productOrder of productOrders) {
+           // update product stock
+           const updatedProductStock = await tx.productStock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: {
+                increment: productOrder.quantity,
+              },
+              updated_at: time,
+            }
+          });
+
+          // create stock change
+          const addedProductStockChange = await tx.productStockChange.create({
+            data: {
+              stock_id: updatedProductStock.id,
+              change_id: addedProductStockChangeHistory.id,
+              quantity_change: productOrder.quantity,
+            }
+          });          
         }
-      }
-    });
-    return newVendorOrder;
+      });
+    } else {
+      const newVendorOrder = await prisma.vendorOrder.create({
+        data: {
+          code: code,
+          vendor_name: vendorOrderData.vendorName,
+          status: vendorOrderData.status,
+          created_at: time,
+          expected_at: convertExpectedTime(vendorOrderData.expectedAt),
+          is_test: vendorOrderData.isTest,
+          is_invoice: false,
+          productVendorOrders: {
+            create: productOrders
+          }
+        }
+      });
+      return newVendorOrder;
+    }
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
