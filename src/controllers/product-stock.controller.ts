@@ -10,7 +10,7 @@ const router = Router();
 
 router.get(
   `/product-stock`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findAllProductStock();

@@ -12,7 +12,7 @@ const router = Router();
 // find vendor order by status
 router.get(
   `/vendor-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findVendorOrderByStatus(req.params.status);
