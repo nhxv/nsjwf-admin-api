@@ -17,13 +17,13 @@ export class VendorOrderRequestDto {
 }
 
 export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
-  vendorName: Joi.string().required().max(255).regex(/[$\(\)<>]/, { invert: true }),
+  vendorName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
   productVendorOrders: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[$\(\)<>]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),
-    orderCode: Joi.string().max(20).regex(/[$\(\)<>]/, { invert: true }),
+    orderCode: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),
@@ -31,8 +31,8 @@ export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive().allow(0),
-  code: Joi.string().max(20).regex(/[$\(\)<>]/, { invert: true }),
-  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[$\(\)<>]/, { invert: true }),
+  code: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });
