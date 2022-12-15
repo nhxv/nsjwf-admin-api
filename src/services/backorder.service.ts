@@ -3,7 +3,7 @@ import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.
 import { Prisma } from "@prisma/client";
 import prisma from "../../prisma/prisma-client";
 import createError  from "http-errors";
-import { generateCurrentTime, convertExpectedTime } from "../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart } from "../commons/time.util";
 import { generateOrderCode } from "../commons/order.util";
 import { BackorderRequestDto, backorderSchema } from "../dto/requests/backorder-request.dto";
 import { customerOrderSchema } from "../dto/requests/customer-order-request.dto";
@@ -24,7 +24,7 @@ export const findBackorderByStatus = async (status: string) => {
       where: {
         is_archived: isArchived,
         expected_at: {
-          gte: new Date(),
+          gte: convertLocalStart(),
         }
       },
       include: {
@@ -87,7 +87,7 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
       data: {
         customer_name: backorderData.customerName,
         created_at: time,
-        expected_at: convertExpectedTime(backorderData.expectedAt),
+        expected_at: convertLocalExpected(backorderData.expectedAt, 22),
         is_test: backorderData.isTest,
         is_archived: backorderData.isArchived,
         productBackorders: {
@@ -306,7 +306,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           customer_name: customerOrderData.customerName,
           status: customerOrderData.status,
           created_at: time,
-          expected_at: convertExpectedTime(customerOrderData.expectedAt),
+          expected_at: convertLocalExpected(customerOrderData.expectedAt, 22),
           is_test: customerOrderData.isTest,
           is_invoice: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {

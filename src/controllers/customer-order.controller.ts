@@ -26,10 +26,12 @@ router.get(
             return new ProductCustomerOrderResponseDto(
               productOrder.product_name,
               productOrder.quantity,
+              productOrder.unit_price,
             )
           }),
           order.expected_at,
           order.created_at,
+          order.updated_at,
         );
       }));
     } catch (error) {
