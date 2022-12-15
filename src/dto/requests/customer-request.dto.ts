@@ -12,10 +12,10 @@ export class CustomerRequestDto {
 }
 
 export const customerSchema = Joi.object<CustomerRequestDto>({
-  name: Joi.string().trim().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  name: Joi.string().trim().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   discontinued: Joi.boolean().required(),
-  address: Joi.string().allow("").regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
-  phone: Joi.string().allow("").max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
-  email: Joi.string().allow("").email().max(320).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
-  presentative: Joi.string().allow("").max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  address: Joi.string().allow("").regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  phone: Joi.string().allow("").max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  email: Joi.string().allow("").email().max(320).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  presentative: Joi.string().allow("").max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
 });

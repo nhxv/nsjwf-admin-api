@@ -31,8 +31,8 @@ export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive().allow(0),
-  code: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
-  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  code: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });

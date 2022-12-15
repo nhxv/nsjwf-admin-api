@@ -11,9 +11,9 @@ export class VehicleRequestDto {
 }
 
 export const vehicleSchema = Joi.object<VehicleRequestDto>({
-  licensePlate: Joi.string().trim().required().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  licensePlate: Joi.string().trim().required().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   available: Joi.boolean().required(),
   discontinued: Joi.boolean().required(),
-  nickname: Joi.string().allow("").max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  nickname: Joi.string().allow("").max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   volume: Joi.number().min(0),
 });
