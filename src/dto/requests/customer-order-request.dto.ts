@@ -17,13 +17,13 @@ export class CustomerOrderRequestDto {
 }
 
 export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
-  customerName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  customerName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   productCustomerOrders: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),
-    orderCode: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+    orderCode: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),
@@ -31,8 +31,8 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive().allow(0),
-  code: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
-  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  code: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });
