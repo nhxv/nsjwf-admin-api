@@ -1,4 +1,4 @@
-import { generateCurrentTime, convertExpectedTime } from "./../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd } from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
@@ -12,20 +12,40 @@ export const findCustomerOrderByStatus = async (status: string) => {
     if (!(Object.values(OrderStatus) as string[]).includes(status)) {
       throw `Please don't attack us.`;
     }
-    const customerOrders = await prisma.customerOrder.findMany({
-      where: {
-        status: status,
-        expected_at: {
-          gte: new Date(),
-        }
-      },
-      include: {
-        productCustomerOrders: true,
-      },
-      orderBy: {
-        expected_at: "asc",
-      },
-    });
+    let customerOrders;
+    if (status === OrderStatus.DELIVERED) {
+      customerOrders = await prisma.customerOrder.findMany({
+        where: {
+          status: status,
+          updated_at: {
+            gte: convertLocalStart(),
+            lte: convertLocalEnd(),
+          }
+        },
+        include: {
+          productCustomerOrders: true,
+        },
+        orderBy: {
+          updated_at: "asc",
+        },
+      });
+    } else {
+      customerOrders = await prisma.customerOrder.findMany({
+        where: {
+          status: status,
+          expected_at: {
+            gte: convertLocalStart(),
+          }
+        },
+        include: {
+          productCustomerOrders: true,
+        },
+        orderBy: {
+          expected_at: "asc",
+        },
+      });
+    }
+
     return customerOrders;
   } catch (error) {
     if (typeof error === "string") {
@@ -81,7 +101,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           customer_name: customerOrderData.customerName,
           status: customerOrderData.status,
           created_at: time,
-          expected_at: convertExpectedTime(customerOrderData.expectedAt),
+          expected_at: convertLocalExpected(customerOrderData.expectedAt, 22),
           is_test: customerOrderData.isTest,
           is_invoice: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {
@@ -183,7 +203,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             updated_at: time,
             is_test: customerOrderData.isTest,
             is_invoice: isDelivered,
-            expected_at: convertExpectedTime(customerOrderData.expectedAt),
+            expected_at: convertLocalExpected(customerOrderData.expectedAt, 22),
           }
         });
       } catch (e) {

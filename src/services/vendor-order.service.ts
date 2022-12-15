@@ -1,4 +1,4 @@
-import { generateCurrentTime, convertExpectedTime } from "./../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart } from "./../commons/time.util";
 import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
 import { generateOrderCode } from "./../commons/order.util";
 import { VendorOrderRequestDto, vendorOrderSchema } from "./../dto/requests/vendor-order-request.dto";
@@ -16,7 +16,7 @@ export const findVendorOrderByStatus = async (status: string) => {
       where: {
         status: status,
         expected_at: {
-          gte: new Date(),
+          gte: convertLocalStart(),
         }
       },
       include: {
@@ -82,7 +82,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
             vendor_name: vendorOrderData.vendorName,
             status: vendorOrderData.status,
             created_at: time,
-            expected_at: convertExpectedTime(vendorOrderData.expectedAt),
+            expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
             is_test: vendorOrderData.isTest,
             is_invoice: true,
             productVendorOrders: {
@@ -129,7 +129,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
           vendor_name: vendorOrderData.vendorName,
           status: vendorOrderData.status,
           created_at: time,
-          expected_at: convertExpectedTime(vendorOrderData.expectedAt),
+          expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
           is_test: vendorOrderData.isTest,
           is_invoice: false,
           productVendorOrders: {
@@ -188,7 +188,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             vendor_name: vendorOrderData.vendorName,
             status: vendorOrderData.status,
             updated_at: time,
-            expected_at: convertExpectedTime(vendorOrderData.expectedAt),
+            expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
             is_test: vendorOrderData.isTest,
             is_invoice: isDelivered
           }
