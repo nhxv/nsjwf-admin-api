@@ -10,7 +10,7 @@ export class VendorOrderResponseDto {
     public expectedAt: Date,
     public createdAt?: Date,
     public updatedAt?: Date,
+    public fullReturn?: boolean,
     public id?: number,
-    public isInvoice?: boolean,
   ) {}
 }

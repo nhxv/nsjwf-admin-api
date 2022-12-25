@@ -1,51 +1,31 @@
-import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd } from "./../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd, convertLocalInterval } from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
 import createError  from "http-errors";
 import { Prisma } from "@prisma/client";
-import { generateOrderCode } from "../commons/order.util";
+import { generateCode } from "../commons/code.util";
 import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
 
 export const findCustomerOrderByStatus = async (status: string) => {
   try {
-    if (!(Object.values(OrderStatus) as string[]).includes(status)) {
-      throw `Please don't attack us.`;
+    if (!(Object.values(OrderStatus) as string[]).includes(status) || status === OrderStatus.COMPLETED) {
+      throw `Please don't hack us.`;
     }
-    let customerOrders;
-    if (status === OrderStatus.DELIVERED) {
-      customerOrders = await prisma.customerOrder.findMany({
-        where: {
-          status: status,
-          updated_at: {
-            gte: convertLocalStart(),
-            lte: convertLocalEnd(),
-          }
-        },
-        include: {
-          productCustomerOrders: true,
-        },
-        orderBy: {
-          updated_at: "asc",
-        },
-      });
-    } else {
-      customerOrders = await prisma.customerOrder.findMany({
-        where: {
-          status: status,
-          expected_at: {
-            gte: convertLocalStart(),
-          }
-        },
-        include: {
-          productCustomerOrders: true,
-        },
-        orderBy: {
-          expected_at: "asc",
-        },
-      });
-    }
-
+    const customerOrders = await prisma.customerOrder.findMany({
+      where: {
+        status: status,
+        expected_at: {
+          gte: convertLocalStart(),
+        }
+      },
+      include: {
+        productCustomerOrders: true,
+      },
+      orderBy: {
+        expected_at: "asc",
+      },
+    });
     return customerOrders;
   } catch (error) {
     if (typeof error === "string") {
@@ -71,25 +51,154 @@ export const findCustomerOrderByCode = async (code: string) => {
   }
 }
 
+export const findCustomerSale = async (customerName: string, date: string) => {
+  try {
+    const { start, end } = convertLocalInterval(new Date(date));
+    const customerSolds = await prisma.customerOrder.findMany({
+      where: {
+        customer_name: {
+          contains: customerName,
+          mode: "insensitive",
+        },
+        status: OrderStatus.COMPLETED,
+        updated_at: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        productCustomerOrders: true,
+      },
+      orderBy: {
+        updated_at: "asc",
+      },
+    });
+    for (let i = 0; i < customerSolds.length; i++) {
+      const saleReturn = await prisma.customerSaleReturn.findUnique({
+        where: {
+          sale_code: customerSolds[i].code
+        },
+        include: {
+          productCustomerSaleReturns: true,
+        }
+      });
+      if (!saleReturn || saleReturn.productCustomerSaleReturns.find(p => p.quantity !== 0)) {
+        customerSolds[i]["fullReturn"] = false;
+      } else {
+        customerSolds[i]["fullReturn"] = true;
+      }
+    }
+    return customerSolds;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find customer sale with the given data.");    
+  }
+}
+
+export const reportCustomerSale = async () => {
+  try {
+    // find daily solds
+    const customerSolds = await prisma.customerOrder.findMany({
+      where: {
+        status: OrderStatus.COMPLETED,
+        updated_at: {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),
+        }
+      },
+      include: {
+        productCustomerOrders: true,
+      },
+      orderBy: {
+        updated_at: "asc",
+      },
+    });
+    // find daily return
+    const returns = await prisma.customerReturn.findMany({
+      where: {
+        created_at: {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),          
+        }
+      },
+      include: {
+        productCustomerReturns: true,
+      },
+      orderBy: {
+        created_at: "asc",
+      }
+    })
+    const reports = [];
+    for (const sold of customerSolds) {
+      reports.push({
+        is_test: sold.is_test,
+        order_code: sold.code,
+        customer_name: sold.customer_name,
+        sale: sold.productCustomerOrders.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0),
+        refund: 0,
+        refund_order: "",
+        date: sold.updated_at,
+        productCustomerOrders: sold.productCustomerOrders,
+      });
+    }
+    for (const customerReturn of returns) {
+      let found = false;
+      for (let i = 0; i < reports.length; i++) {
+        if (customerReturn.customer_name === reports[i].customer_name) {
+          const sum = customerReturn.productCustomerReturns.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0);
+          const newRefund = reports[i].refund + sum - sum*(customerReturn.sale_off)/100;
+          if (newRefund <= reports[i].sale) {
+            found = true;
+            reports[i] = {
+              ...reports[i], 
+              refund: newRefund,
+              refund_order: customerReturn.order_code,
+            }
+            break;
+          }
+        }
+      }
+      if (!found) {
+        const sum = customerReturn.productCustomerReturns.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0);
+        reports.push({
+          is_test: false,
+          order_code: "NONE",
+          customer_name: customerReturn.customer_name,
+          sale: -1,
+          refund: sum - sum*(customerReturn.sale_off)/100,
+          refund_order: customerReturn.order_code,
+          date: customerReturn.created_at,
+          productCustomerOrders: [],
+        })
+      }
+    }
+    return reports;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot report.");
+  }
+}
+
 export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequestDto) => {
   try {
     // Validate customer order
     const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
-    if (!Object.keys(OrderStatus).includes(customerOrderData.status)) {
+    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
-    const notRemovedList = customerOrderData.productCustomerOrders.filter(po => po.quantity > 0);
-    if (notRemovedList.length < 1) {
+    const notZero = customerOrderData.productCustomerOrders.filter(
+      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
+    );
+    if (notZero.length < 1) {
       throw `Hollow order.`;
     }
-    const { code, time } = generateOrderCode();
-    const productOrders = customerOrderData.productCustomerOrders.map(
+    const { code, time } = generateCode();
+    const productOrders = notZero.map(
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
         unit_price: new Prisma.Decimal(productOrder.unitPrice),
         quantity: productOrder.quantity,
         created_at: time,
+        updated_at: time,
       })
     );
 
@@ -101,9 +210,10 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           customer_name: customerOrderData.customerName,
           status: customerOrderData.status,
           created_at: time,
-          expected_at: convertLocalExpected(customerOrderData.expectedAt, 22),
+          updated_at: time,
+          expected_at: convertLocalExpected(customerOrderData.expectedAt),
           is_test: customerOrderData.isTest,
-          is_invoice: (customerOrderData.status === OrderStatus.DELIVERED),
+          is_sold: (customerOrderData.status === OrderStatus.COMPLETED),
           productCustomerOrders: {
             create: productOrders
           }
@@ -164,14 +274,16 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
   try {
     // Validate customer order
     const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
-    if (!Object.keys(OrderStatus).includes(customerOrderData.status)) {
+    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
     if (customerOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
-    const notRemovedList = customerOrderData.productCustomerOrders.filter(po => !po.isRemove && po.quantity > 0);
-    if (notRemovedList.length < 1) {
+    const notZero = customerOrderData.productCustomerOrders.filter(
+      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
+    );
+    if (notZero.length < 1) {
       throw `Hollow order.`;
     }
     const time = generateCurrentTime();
@@ -182,35 +294,46 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
         unit_price: new Prisma.Decimal(productOrder.unitPrice),
         quantity: productOrder.quantity,
         updated_at: time,
-        is_remove: productOrder.isRemove,
       })
     );
 
     return await prisma.$transaction(async (tx) => {
-      // update customer order table if that order IS NOT delivered
-      const isDelivered = (customerOrderData.status === OrderStatus.DELIVERED);
+      // update customer order if that order IS NOT completed
+      let existingOrder;
       try {
-        const updatedOrder = await tx.customerOrder.update({
+        existingOrder = await tx.customerOrder.update({
           where: {
-            CustomerOrderInvoice_key: {
+            CustomerOrderSold_key: {
               code: customerOrderData.code,
-              is_invoice: false,
+              is_sold: false,
             }
+          },
+          include: {
+            productCustomerOrders: true,
           },
           data: {
             customer_name: customerOrderData.customerName,
             status: customerOrderData.status,
             updated_at: time,
             is_test: customerOrderData.isTest,
-            is_invoice: isDelivered,
-            expected_at: convertLocalExpected(customerOrderData.expectedAt, 22),
+            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            expected_at: convertLocalExpected(customerOrderData.expectedAt),
           }
         });
       } catch (e) {
         throw `This order cannot be changed.`;
       }
+      const existingProductOrders = new Map();
+      for (const product of existingOrder.productCustomerOrders) {
+        existingProductOrders.set(product.product_name, {
+          product_name: product.product_name,
+          quantity: product.quantity,
+          unit_price: product.unit_price,
+          updated_at: product.updated_at,
+        });
+      }
 
-      // update product stock change history
+      // create stock change history
       const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
         data: {
           created_at: time,
@@ -223,66 +346,62 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
         let stockQuantityChange = 0;
         
         // find current product order
-        const currentProductOrder = await tx.productCustomerOrder.findUnique({
-          where: {
-            ProductCustomerOrder_product_name_order_code_key: {
-              product_name: productOrder.product_name,
-              order_code: productOrder.order_code,
-            }              
-          } 
-        });
+        const currentProductOrder = existingProductOrders.get(productOrder.product_name);
 
         if (!currentProductOrder) {
-          // 1. insert product order if not exist
-          orderQuantityChange = productOrder.quantity;
-          stockQuantityChange = 0 - productOrder.quantity;
-
-          // check product stock
-          const currentProductStock = await tx.productStock.findUniqueOrThrow({
-            where: {
-              product_name: productOrder.product_name,
-            },
-          });
-          if (currentProductStock.quantity + stockQuantityChange < 0) {
-            throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
-          }
-          const newProductOrder = await tx.productCustomerOrder.create({
-            data: {
-              product_name: productOrder.product_name,
-              order_code: productOrder.order_code,
-              quantity: productOrder.quantity,
-              unit_price: productOrder.unit_price,
-              created_at: time,
-            }
-          });
-          // update product stock
-          const updatedProductStock = await tx.productStock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: {
-                increment: stockQuantityChange,
+          // 1. insert product order. if product not in current order and quantity || price = 0, skip.
+          if (productOrder.quantity > 0 && productOrder.unit_price.greaterThan(new Prisma.Decimal(0))) {
+            orderQuantityChange = productOrder.quantity;
+            stockQuantityChange = 0 - productOrder.quantity;
+  
+            // check product stock
+            const currentProductStock = await tx.productStock.findUniqueOrThrow({
+              where: {
+                product_name: productOrder.product_name,
               },
-              updated_at: time,
+            });
+            if (currentProductStock.quantity + stockQuantityChange < 0) {
+              throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
             }
-          });
-          // create stock change
-          const addedProductStockChange = await tx.productStockChange.create({
-            data: {
-              stock_id: updatedProductStock.id,
-              change_id: addedProductStockChangeHistory.id,
-              quantity_change: stockQuantityChange,
-            }
-          });
+            const newProductOrder = await tx.productCustomerOrder.create({
+              data: {
+                product_name: productOrder.product_name,
+                order_code: productOrder.order_code,
+                quantity: productOrder.quantity,
+                unit_price: productOrder.unit_price,
+                created_at: time,
+                updated_at: time,
+              }
+            });
+            // update product stock
+            const updatedProductStock = await tx.productStock.update({
+              where: {
+                product_name: productOrder.product_name,
+              },
+              data: {
+                quantity: {
+                  increment: stockQuantityChange,
+                },
+                updated_at: time,
+              }
+            });
+            // create stock change
+            const addedProductStockChange = await tx.productStockChange.create({
+              data: {
+                stock_id: updatedProductStock.id,
+                change_id: addedProductStockChangeHistory.id,
+                quantity_change: stockQuantityChange,
+              }
+            });
+          }
         } else {
-          // if product exist
-          if (productOrder.is_remove) {
+          // if product existing in current order
+          if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
             stockQuantityChange = currentProductOrder.quantity;
-            // 2. remove existing product order
+            // 2. remove existing product order - auto throw if not exist
             const deletedProductOrder = await tx.productCustomerOrder.delete({
               where: {
-                ProductCustomerOrder_product_name_order_code_key: {
+                ProductCustomerOrder_key: {
                   product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
                 }  
@@ -326,7 +445,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             // update product order
             const updatedProductOrder = await tx.productCustomerOrder.update({
               where: {
-                ProductCustomerOrder_product_name_order_code_key: {
+                ProductCustomerOrder_key: {
                   product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
                 }                  
