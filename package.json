@@ -22,14 +22,14 @@
   "author": "nhxv",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^4.7.0",
+    "@prisma/client": "^4.8.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "http-errors": "^2.0.0",
     "joi": "^17.7.0",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "luxon": "^3.1.1"
   },
   "devDependencies": {
@@ -40,7 +40,7 @@
     "@types/jsonwebtoken": "^8.5.9",
     "@types/luxon": "^3.1.0",
     "@types/node": "^18.11.9",
-    "prisma": "^4.7.0",
+    "prisma": "^4.8.0",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^4.8.4"
