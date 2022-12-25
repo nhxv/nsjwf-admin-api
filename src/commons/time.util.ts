@@ -5,8 +5,8 @@ export const generateCurrentTime = () => {
 }
 
 // https://stackoverflow.com/questions/15141762/how-to-initialize-a-javascript-date-to-a-particular-time-zone
-export const convertLocalExpected = (date: Date, offset: number) => {
-  const initialTime = DateTime.fromJSDate(date, {zone: "America/Los_Angeles"}).plus({hour: offset}).toUTC().toISO();
+export const convertLocalExpected = (date: Date) => {
+  const initialTime = DateTime.fromJSDate(date, {zone: "America/Los_Angeles"}).toUTC().endOf("day").toISO();
   return DateTime.fromISO(initialTime.replace("Z", ""), {zone: "America/Los_Angeles"}).toUTC().toJSDate();
 }
 
@@ -16,4 +16,13 @@ export const convertLocalStart = () => {
 
 export const convertLocalEnd = () => {
   return DateTime.local().setZone("America/Los_Angeles").endOf("day").toUTC().toJSDate();
+}
+
+export const convertLocalInterval = (date: Date) => {
+  const startDay = DateTime.fromJSDate(date, {zone: "America/Los_Angeles"}).toUTC().startOf("day").toISO();
+  const endDay = DateTime.fromJSDate(date, {zone: "America/Los_Angeles"}).toUTC().endOf("day").toISO();
+  return {
+    start: DateTime.fromISO(startDay.replace("Z", ""), {zone: "America/Los_Angeles"}).toUTC().toJSDate(), 
+    end: DateTime.fromISO(endDay.replace("Z", ""), {zone: "America/Los_Angeles"}).toUTC().toJSDate()
+  };
 }

@@ -1,6 +1,6 @@
 import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
 import { VendorOrderResponseDto } from "./../dto/responses/vendor-order-response.dto";
-import { findVendorOrderByStatus, findVendorOrderByCode } from "./../services/vendor-order.service";
+import { findVendorOrderByStatus, findVendorOrderByCode, findVendorSale } from "./../services/vendor-order.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
@@ -46,6 +46,39 @@ router.get(
     try {
       const response = await findVendorOrderByCode(req.params.code);
       res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// search vendor sale
+router.get(
+  `/vendor-orders/sold/search`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response: any = await findVendorSale(req.query.keyword as string, req.query.date as string);
+      res.send(response.map(
+        order => {
+        return new VendorOrderResponseDto(
+          order.vendor_name,
+          order.is_test,
+          order.code,
+          order.status,
+          order.productVendorOrders.map(productOrder => {
+            return new ProductVendorOrderResponseDto(
+              productOrder.product_name,
+              productOrder.quantity,
+              productOrder.unit_price,
+            )
+          }),
+          order.expected_at,
+          order.created_at,
+          order.updated_at,
+          !!order.fullReturn,
+        );
+      }));
     } catch (error) {
       next(error);
     }

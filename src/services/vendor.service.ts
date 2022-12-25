@@ -20,11 +20,17 @@ export const findActiveVendors = async () => {
 
 export const findVendorsByName = async (keyword: string) => {
   try {
-    const vendors = await prisma.$queryRaw`
-    SELECT * FROM "Vendor"
-    WHERE name iLIKE ${`%${keyword}%`}
-    ORDER BY name;
-    `;
+    const vendors = await prisma.vendor.findMany({
+      where: {
+        name: {
+          contains: keyword,
+          mode: "insensitive",
+        }
+      },
+      orderBy: {
+        name: "asc",
+      }
+    });
     return vendors;
   } catch (error) {
     throw new createError.BadRequest("Cannot find vendor with the given data.");
