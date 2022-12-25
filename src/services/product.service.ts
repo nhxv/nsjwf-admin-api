@@ -22,11 +22,17 @@ export const findActiveProducts = async () => {
 
 export const findProductsByName = async (keyword: string) => {
   try {
-    const products = await prisma.$queryRaw`
-    SELECT * FROM "Product" as p
-    WHERE p.name iLIKE ${`%${keyword}%`}
-    ORDER BY p.name;
-    `;
+    const products = await prisma.product.findMany({
+      where: {
+        name: {
+          contains: keyword,
+          mode: "insensitive",
+        }
+      },
+      orderBy: {
+        name: "asc",
+      }
+    });
     return products;
   } catch (error) {
     throw new createError.BadRequest("Cannot find product with the given data.");
@@ -53,6 +59,7 @@ export const createProduct = async (productDto: ProductRequestDto) => {
           product_name: productData.name,
           quantity: 0,
           created_at: time,
+          updated_at: time,
         }
       });
 

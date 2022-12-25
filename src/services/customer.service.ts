@@ -20,11 +20,17 @@ export const findActiveCustomers = async () => {
 
 export const findCustomersByName = async (keyword: string) => {
   try {
-    const customers = await prisma.$queryRaw`
-    SELECT * FROM "Customer"
-    WHERE name iLIKE ${`%${keyword}%`}
-    ORDER BY name;
-    `;
+    const customers = await prisma.customer.findMany({
+      where: {
+        name: {
+          contains: keyword,
+          mode: "insensitive",
+        }
+      },
+      orderBy: {
+        name: "asc",
+      }
+    });
     return customers;
   } catch (error) {
     throw new createError.BadRequest("Cannot find customer with the given data.");

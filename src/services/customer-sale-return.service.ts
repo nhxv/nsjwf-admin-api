@@ -1,0 +1,39 @@
+import createError  from "http-errors";
+
+export const findCustomerSaleReturnByCode = async (code: string) => {
+  let customerSaleReturn;
+  try {
+    customerSaleReturn = await prisma.customerSaleReturn.findUnique({
+      where: {
+        sale_code: code,
+      },
+      include: {
+        productCustomerSaleReturns: true,
+      }
+    });
+    if (!customerSaleReturn) {
+      // get order sold instead
+      const orderSold = await prisma.customerOrder.findUniqueOrThrow({
+        where: {
+          code: code,
+        },
+        include: {
+          productCustomerOrders: true,
+        }
+      });
+      customerSaleReturn = {
+        sale_code: orderSold.code,
+        customer_name: orderSold.customer_name,
+        sold_at: orderSold.updated_at,
+        productCustomerSaleReturns: orderSold.productCustomerOrders.map(p => ({
+          product_name: p.product_name,
+          quantity: p.quantity,
+          unit_price: p.unit_price,
+        })),
+      }
+    }
+    return customerSaleReturn;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot get customer sale return with the given data.");
+  }
+}

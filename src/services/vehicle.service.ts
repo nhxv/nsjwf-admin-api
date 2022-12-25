@@ -4,11 +4,17 @@ import { VehicleRequestDto, vehicleSchema } from "../dto/requests/vehicle-reques
 
 export const findVehiclesByName = async (keyword: string) => {
   try {
-    const vehicles: any[] = await prisma.$queryRaw`
-    SELECT * FROM "Vehicle"
-    WHERE license_plate iLIKE ${`%${keyword}%`}
-    ORDER BY id;
-    `;
+    const vehicles = await prisma.vehicle.findMany({
+      where: {
+        license_plate: {
+          contains: keyword,
+          mode: "insensitive",
+        }
+      },
+      orderBy: {
+        id: "asc",
+      }
+    });
     return vehicles;
   } catch (error) {
     throw new createError.BadRequest("Cannot find vehicle with the given data.");

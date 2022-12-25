@@ -1,6 +1,6 @@
-import { generateCurrentTime, convertLocalExpected, convertLocalStart } from "./../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalInterval } from "./../commons/time.util";
 import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
-import { generateOrderCode } from "./../commons/order.util";
+import { generateCode } from "../commons/code.util";
 import { VendorOrderRequestDto, vendorOrderSchema } from "./../dto/requests/vendor-order-request.dto";
 import createError  from "http-errors";
 import prisma from "../../prisma/prisma-client";
@@ -51,29 +51,75 @@ export const findVendorOrderByCode = async (code: string) => {
   }
 }
 
+export const findVendorSale = async (vendorName: string, date: string) => {
+  try {
+    const { start, end } = convertLocalInterval(new Date(date));
+    const vendorSolds = await prisma.vendorOrder.findMany({
+      where: {
+        vendor_name: {
+          contains: vendorName,
+          mode: "insensitive",
+        },
+        status: OrderStatus.COMPLETED,
+        updated_at: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        productVendorOrders: true,
+      },
+      orderBy: {
+        updated_at: "asc",
+      },
+    });
+    for (let i = 0; i < vendorSolds.length; i++) {
+      const saleReturn = await prisma.vendorSaleReturn.findUnique({
+        where: {
+          sale_code: vendorSolds[i].code
+        },
+        include: {
+          productVendorSaleReturns: true,
+        }
+      });
+      if (!saleReturn || saleReturn.productVendorSaleReturns.find(p => p.quantity !== 0)) {
+        vendorSolds[i]["fullReturn"] = false;
+      } else {
+        vendorSolds[i]["fullReturn"] = true;
+      }
+    }
+    return vendorSolds;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendor sale with the given data.");    
+  }
+}
+
 export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) => {
   try {
     const vendorOrderData: VendorOrderRequestDto = await vendorOrderSchema.validateAsync(vendorOrderDto);
-    if (!Object.keys(OrderStatus).includes(vendorOrderData.status)) {
+    if (!(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)) {
       throw `Please don't attack us.`;
     }
-    const notRemovedList = vendorOrderData.productVendorOrders.filter(po => po.quantity > 0);
-    if (notRemovedList.length < 1) {
+    const notZero = vendorOrderData.productVendorOrders.filter(
+      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
+    );
+    if (notZero.length < 1) {
       throw `Hollow order.`;
     }
-    const { code, time } = generateOrderCode();
-    const productOrders = vendorOrderData.productVendorOrders.map(
+    const { code, time } = generateCode();
+    const productOrders = notZero.map(
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
         unit_price: new Prisma.Decimal(productOrder.unitPrice),
         quantity: productOrder.quantity,
         created_at: time,
+        updated_at: time,
       })
     );
 
-    if (vendorOrderData.status === OrderStatus.DELIVERED) {
-      // if vendor order is delivered, update stock
+    if (vendorOrderData.status === OrderStatus.COMPLETED) {
+      // if vendor order is completed, update stock
       return await prisma.$transaction(async (tx) => {
         // create new order
         const newVendorOrder = await prisma.vendorOrder.create({
@@ -82,9 +128,10 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
             vendor_name: vendorOrderData.vendorName,
             status: vendorOrderData.status,
             created_at: time,
-            expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
+            updated_at: time,
+            expected_at: convertLocalExpected(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
-            is_invoice: true,
+            is_sold: true,
             productVendorOrders: {
               create: productOrders
             }
@@ -94,7 +141,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
         const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
           data: {
             created_at: time,
-            reason: ProductStockChangeReason.VENDOR_ORDER_DELIVERED,
+            reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
           }
         });
         
@@ -129,9 +176,10 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
           vendor_name: vendorOrderData.vendorName,
           status: vendorOrderData.status,
           created_at: time,
-          expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
+          updated_at: time,
+          expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
-          is_invoice: false,
+          is_sold: false,
           productVendorOrders: {
             create: productOrders
           }
@@ -151,14 +199,16 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
   try {
     // Validate
     const vendorOrderData: VendorOrderRequestDto = await vendorOrderSchema.validateAsync(vendorOrderDto);
-    if (!Object.keys(OrderStatus).includes(vendorOrderData.status)) {
+    if (!(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)) {
       throw `Please don't attack us.`;
     }
     if (vendorOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
-    const notRemovedList = vendorOrderData.productVendorOrders.filter(po => !po.isRemove && po.quantity > 0);
-    if (notRemovedList.length < 1) {
+    const notZero = vendorOrderData.productVendorOrders.filter(
+      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
+    );
+    if (notZero.length < 1) {
       throw `Hollow order.`;
     }
 
@@ -170,58 +220,75 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
         unit_price: new Prisma.Decimal(productOrder.unitPrice),
         order_code: vendorOrderData.code,
         updated_at: time,
-        isRemove: productOrder.isRemove,
       })
     );
     return await prisma.$transaction(async (tx) => {
-      const isDelivered = (vendorOrderData.status === OrderStatus.DELIVERED);
-      // update vendor order table if that order IS NOT delivered
+      const isCompleted = (vendorOrderData.status === OrderStatus.COMPLETED);
+      // update vendor order table if that order IS NOT completed
+      let existingOrder;
       try {
-        const updatedOrder = await tx.vendorOrder.update({
+        existingOrder = await tx.vendorOrder.update({
           where: {
-            VendorOrderInvoice_key: {
+            VendorOrderSold_key: {
               code: vendorOrderData.code,
-              is_invoice: false,
+              is_sold: false,
             }
+          },
+          include: {
+            productVendorOrders: true,
           },
           data: {
             vendor_name: vendorOrderData.vendorName,
             status: vendorOrderData.status,
             updated_at: time,
-            expected_at: convertLocalExpected(vendorOrderData.expectedAt, 22),
+            expected_at: convertLocalExpected(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
-            is_invoice: isDelivered
+            is_sold: isCompleted
           }
         });
       } catch (e) {
         throw `This order cannot be changed.`;
       }
+
+      const existingProductOrders = new Map();
+      for (const product of existingOrder.productVendorOrders) {
+        existingProductOrders.set(product.product_name, {
+          product_name: product.product_name,
+          quantity: product.quantity,
+          unit_price: product.unit_price,
+          updated_at: product.updated_at,
+        });
+      }
+
       let addedProductStockChangeHistory;
-      if (isDelivered) {
-        // update product stock change history if order is delivered
+      if (isCompleted) {
+        // create stock change history only if order is completed
         addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
           data: {
             created_at: time,
-            reason: ProductStockChangeReason.VENDOR_ORDER_DELIVERED,
+            reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
           }
         });
       }
       for (const productOrder of productOrders) {
-        // remove product vendor order
-        if (productOrder.isRemove) {
-          const deletedProductOrder = await tx.productVendorOrder.delete({
-            where: {
-              ProductVendorOrder_product_name_order_code_key: {
-                product_name: productOrder.product_name,
-                order_code: productOrder.order_code,
-              }              
-            }
-          });
+        // remove product order. when quantity || price = 0 & product is not in existing order, skip.
+        if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
+          const existingProductOrder = existingProductOrders.get(productOrder.product_name);
+          if (existingProductOrder) {
+            const deletedProductOrder = await tx.productVendorOrder.delete({
+              where: {
+                ProductVendorOrder_key: {
+                  product_name: productOrder.product_name,
+                  order_code: productOrder.order_code,
+                }              
+              }
+            });
+          }
         } else {
           // upsert product vendor order
           const updatedProductOrder = await tx.productVendorOrder.upsert({
             where: {
-              ProductVendorOrder_product_name_order_code_key: {
+              ProductVendorOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
               }
@@ -237,10 +304,11 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
               quantity: productOrder.quantity,
               unit_price: productOrder.unit_price,
               created_at: time,
+              updated_at: time,
             },
           });
           
-          if (isDelivered) {
+          if (isCompleted) {
             // update product stock
             const updatedProductStock = await tx.productStock.update({
               where: {
@@ -270,6 +338,6 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot update vendor order with the given data.")
+    throw new createError.BadRequest("Cannot update vendor order with the given data.");
   }
 }
