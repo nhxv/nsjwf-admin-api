@@ -217,7 +217,8 @@ model VendorReturn {
   order_code           String                @db.VarChar(20)
   vendorOrder          VendorOrder           @relation(fields: [order_code], references: [code], onDelete: Cascade)
   created_at           DateTime
-  sale_off             Int
+  recommended_price    Decimal
+  final_price          Decimal
   productVendorReturns ProductVendorReturn[]
 }
 
@@ -262,7 +263,8 @@ model CustomerReturn {
   order_code             String                  @db.VarChar(20)
   customerOrder          CustomerOrder           @relation(fields: [order_code], references: [code], onDelete: Cascade)
   created_at             DateTime
-  sale_off               Int
+  recommended_price      Decimal
+  final_price            Decimal
   productCustomerReturns ProductCustomerReturn[]
 }
 
