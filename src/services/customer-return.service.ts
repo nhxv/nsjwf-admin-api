@@ -150,7 +150,8 @@ export const createCustomerReturn = async (customerReturnRequestDto: CustomerRet
           customer_name: customerReturnData.customerName,
           order_code: customerReturnData.orderCode, 
           created_at: time,
-          sale_off: customerReturnData.saleOff,
+          recommended_price: customerReturnData.recommendedPrice,
+          final_price: customerReturnData.finalPrice,
           productCustomerReturns: {
             create: productReturns
           }
