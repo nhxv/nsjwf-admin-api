@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export class VehicleRequestDto {
   constructor(
@@ -11,9 +12,9 @@ export class VehicleRequestDto {
 }
 
 export const vehicleSchema = Joi.object<VehicleRequestDto>({
-  licensePlate: Joi.string().trim().required().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  licensePlate: Joi.string().trim().required().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
   available: Joi.boolean().required(),
   discontinued: Joi.boolean().required(),
-  nickname: Joi.string().allow("").max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  nickname: Joi.string().allow("").max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   volume: Joi.number().min(0),
 });

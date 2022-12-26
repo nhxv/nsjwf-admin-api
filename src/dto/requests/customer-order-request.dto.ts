@@ -1,6 +1,7 @@
 import Joi from "joi";
 import { ProductCustomerOrderRequestDto } from "./product-customer-order-request.dto";
 import { OrderStatus } from "../../commons/order-status.enum";
+import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export class CustomerOrderRequestDto {
   constructor(
@@ -17,13 +18,13 @@ export class CustomerOrderRequestDto {
 }
 
 export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
-  customerName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  customerName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productCustomerOrders: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),
-    orderCode: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+    orderCode: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),
@@ -31,8 +32,8 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive().allow(0),
-  code: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
-  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  code: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
+  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(GENERAL_TEXT_REGEX, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });
