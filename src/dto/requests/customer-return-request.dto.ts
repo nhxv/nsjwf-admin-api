@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { ProductCustomerReturnRequestDto } from "./product-customer-return-request.dto";
 import Joi from "joi";
 
@@ -6,7 +7,8 @@ export class CustomerReturnRequestDto {
     public customerName: string,
     public productCustomerReturns: ProductCustomerReturnRequestDto[],
     public orderCode: string,
-    public saleOff: number,
+    public recommendedPrice: Prisma.Decimal,
+    public finalPrice: Prisma.Decimal,
     public status?: string,
     public createdAt?: Date,
     public id?: number,
@@ -26,7 +28,8 @@ export const customerReturnSchema = Joi.object<CustomerReturnRequestDto>({
     isRemove: Joi.boolean(),
   }).required().min(1),
   orderCode: Joi.string().required().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
-  saleOff: Joi.number().min(0).max(100).required(),
+  recommendedPrice: Joi.number().min(0).required(),
+  finalPrice: Joi.number().min(0).required(),
   id: Joi.number().integer().positive().allow(0),
   createdAt: Joi.date(),
 });

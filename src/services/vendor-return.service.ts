@@ -149,7 +149,8 @@ export const createVendorReturn = async (vendorReturnRequestDto: VendorReturnReq
           vendor_name: vendorReturnData.vendorName,
           order_code: vendorReturnData.orderCode, 
           created_at: time,
-          sale_off: vendorReturnData.saleOff,
+          recommended_price: vendorReturnData.recommendedPrice,
+          final_price: vendorReturnData.finalPrice,
           productVendorReturns: {
             create: productReturns
           }

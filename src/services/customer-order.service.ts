@@ -144,8 +144,7 @@ export const reportCustomerSale = async () => {
       let found = false;
       for (let i = 0; i < reports.length; i++) {
         if (customerReturn.customer_name === reports[i].customer_name) {
-          const sum = customerReturn.productCustomerReturns.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0);
-          const newRefund = reports[i].refund + sum - sum*(customerReturn.sale_off)/100;
+          const newRefund = customerReturn.final_price;
           if (newRefund <= reports[i].sale) {
             found = true;
             reports[i] = {
@@ -164,7 +163,7 @@ export const reportCustomerSale = async () => {
           order_code: "NONE",
           customer_name: customerReturn.customer_name,
           sale: -1,
-          refund: sum - sum*(customerReturn.sale_off)/100,
+          refund: customerReturn.final_price,
           refund_order: customerReturn.order_code,
           date: customerReturn.created_at,
           productCustomerOrders: [],
