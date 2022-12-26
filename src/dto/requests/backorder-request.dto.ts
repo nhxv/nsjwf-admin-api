@@ -1,6 +1,6 @@
 import { ProductBackorderRequestDto } from "./product-backorder.dto";
 import Joi from "joi";
-import { OrderStatus } from "../../commons/order-status.enum";
+import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export class BackorderRequestDto {
   constructor(
@@ -16,9 +16,9 @@ export class BackorderRequestDto {
 }
 
 export const backorderSchema = Joi.object<BackorderRequestDto>({
-  customerName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  customerName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productBackorders: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),

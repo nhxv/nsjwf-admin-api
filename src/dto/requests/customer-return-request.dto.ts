@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ProductCustomerReturnRequestDto } from "./product-customer-return-request.dto";
 import Joi from "joi";
+import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export class CustomerReturnRequestDto {
   constructor(
@@ -16,18 +17,18 @@ export class CustomerReturnRequestDto {
 }
 
 export const customerReturnSchema = Joi.object<CustomerReturnRequestDto>({
-  customerName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  customerName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productCustomerReturns: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),
-    returnCode: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+    returnCode: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),
   }).required().min(1),
-  orderCode: Joi.string().required().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  orderCode: Joi.string().required().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
   recommendedPrice: Joi.number().min(0).required(),
   finalPrice: Joi.number().min(0).required(),
   id: Joi.number().integer().positive().allow(0),

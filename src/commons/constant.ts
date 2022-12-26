@@ -1,0 +1,1 @@
+export const GENERAL_TEXT_REGEX = /[!$%^&\*\_+<>?:"{}\[\];/\t]/;

@@ -1,6 +1,7 @@
 import Joi from "joi";
 import { ProductVendorOrderRequestDto } from "./product-vendor-order-request.dto";
 import { OrderStatus } from "../../commons/order-status.enum";
+import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export class VendorOrderRequestDto {
   constructor(
@@ -31,8 +32,8 @@ export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive().allow(0),
-  code: Joi.string().max(20).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
-  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(/[!#$%^&\*\_+<>?:"{}\[\];,/\t]/, { invert: true }),
+  code: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
+  status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(GENERAL_TEXT_REGEX, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });
