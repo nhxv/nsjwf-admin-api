@@ -30,11 +30,11 @@ router.get(
 
 // update product stock by product name & status
 router.put(
-  `/product-stock/:reason`,
+  `/product-stock`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await updateProductStock(req.body, req.params.reason);
+      const response = await updateProductStock(req.body.stock, req.body.reason);
       res.send(response.map((productStock) => {
         return new ProductStockResponseDto(
           productStock.product_name,
