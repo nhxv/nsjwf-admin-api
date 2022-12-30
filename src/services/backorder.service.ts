@@ -94,6 +94,7 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
         expected_at: convertLocalExpected(backorderData.expectedAt),
         is_test: backorderData.isTest,
         is_archived: backorderData.isArchived,
+        assign_to: backorderData.assignTo,
         productBackorders: {
           create: productOrders
         }
@@ -154,6 +155,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
             updated_at: time,
             expected_at: convertLocalExpected(backorderData.expectedAt),
             is_test: backorderData.isTest,
+            assign_to: backorderData.assignTo,
           }
         });
       } catch (e) {
@@ -264,6 +266,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
       backorderData.productBackorders,
       backorderData.isTest,
       backorderData.expectedAt,
+      backorderData.assignTo,
       code,
       OrderStatus.PICKING,
       time,
@@ -396,6 +399,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           created_at: time,
           updated_at: time,
           expected_at: convertLocalExpected(customerOrderData.expectedAt),
+          assign_to: customerOrderData.assignTo,
           is_test: customerOrderData.isTest,
           is_sold: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {

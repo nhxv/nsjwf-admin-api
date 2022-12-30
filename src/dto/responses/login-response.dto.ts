@@ -1,8 +1,7 @@
 export class LoginResponseDto {
   constructor(
-    public username: string,
+    public nickname: string,
     public roleId: number,
     public token: string,
   ) {}
-
 }

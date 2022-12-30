@@ -176,6 +176,31 @@ export const reportCustomerSale = async () => {
   }
 }
 
+export const findEmployeeTask = async (nickname: string, status: string) => {
+  try {
+    // validate status
+    if (status !== OrderStatus.PICKING && status !== OrderStatus.SHIPPING) {
+      throw `Please don't hack us.`;
+    }
+    const tasks = await prisma.customerOrder.findMany({
+      where: {
+        assign_to: nickname,
+        is_sold: false,
+        status: status,
+      },
+      include: {
+        productCustomerOrders: true,
+      }
+    });
+    return tasks;
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot find task by the given data");
+  }
+}
+
 export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequestDto) => {
   try {
     // Validate customer order
@@ -189,6 +214,11 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
     if (notZero.length < 1) {
       throw `Hollow order.`;
     }
+    const employee = await prisma.account.findUniqueOrThrow({
+      where: {
+        nickname: customerOrderData.assignTo,
+      }
+    });
     const { code, time } = generateCode();
     const productOrders = notZero.map(
       productOrder => ({
@@ -212,6 +242,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           updated_at: time,
           expected_at: convertLocalExpected(customerOrderData.expectedAt),
           is_test: customerOrderData.isTest,
+          assign_to: employee.nickname,
           is_sold: (customerOrderData.status === OrderStatus.COMPLETED),
           productCustomerOrders: {
             create: productOrders
@@ -285,6 +316,11 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
     if (notZero.length < 1) {
       throw `Hollow order.`;
     }
+    const employee = await prisma.account.findUniqueOrThrow({
+      where: {
+        nickname: customerOrderData.assignTo,
+      }
+    });
     const time = generateCurrentTime();
     const productOrders = customerOrderData.productCustomerOrders.map(
       productOrder => ({
@@ -315,6 +351,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             status: customerOrderData.status,
             updated_at: time,
             is_test: customerOrderData.isTest,
+            assign_to: employee.nickname,
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
           }
@@ -488,5 +525,49 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot update customer order with the given data.");
+  }
+}
+
+export const finishTask = async (code: string) => {
+  try {
+    const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
+      where: {
+        code: code,
+      },
+      include: {
+        productCustomerOrders: true,
+      }
+    });
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+      throw `Please don't hack us.`;
+    }
+    const time = generateCurrentTime();
+    return await prisma.$transaction(async (tx) => {
+      // update order
+      const updatedOrder = await tx.customerOrder.update({
+        where: {
+          code: code,
+        },
+        data: {
+          status: (currentOrder.status === OrderStatus.PICKING ? OrderStatus.CHECKING : OrderStatus.DELIVERED),
+          updated_at: time,
+        }
+      });
+
+      // register task history
+      const createdTask = await tx.orderTaskHistory.create({
+        data: {
+          order_code: updatedOrder.code,
+          employee_name: updatedOrder.assign_to,
+          type: currentOrder.status,
+          created_at: time,
+        }
+      });
+    });
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot register finished task.");
   }
 }
