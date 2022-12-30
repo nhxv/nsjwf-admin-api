@@ -12,7 +12,7 @@ const router = Router();
 // find vendor order by status
 router.get(
   `/vendor-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findVendorOrderByStatus(req.params.status);
@@ -26,6 +26,7 @@ router.get(
             return new ProductVendorOrderResponseDto(
               productOrder.product_name,
               productOrder.quantity,
+              productOrder.unit_price,
             )
           }),
           order.expected_at,
