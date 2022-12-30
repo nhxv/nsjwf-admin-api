@@ -9,13 +9,13 @@ export const login = async (loginDto: LoginRequestDto) => {
     const { username, password } = loginData;
     const account = await prisma.account.findUniqueOrThrow({
       where: {username},
-      select: {password: true, id: true, username: true, role_id: true},
+      select: {password: true, id: true, username: true, role_id: true, nickname: true},
     });
     if (!account) throw new createError.Unauthorized("Wrong username or password.");
     const isMatch = await bcrypt.compare(password, account?.password || "");
     if (!isMatch) throw new createError.Unauthorized("Wrong username or password.");
     const accessToken = await signAccessToken(account.id, account.role_id);
-    return { "username": account.username, "roleId": account.role_id, "token": accessToken };
+    return { "account": account, "token": accessToken };
   } catch (e) {
     throw new createError.Unauthorized("Wrong username or password.");
   }

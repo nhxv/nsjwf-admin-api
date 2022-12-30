@@ -9,7 +9,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const loginRes = await login(req.body);
-      res.send(new LoginResponseDto(loginRes.username, loginRes.roleId, loginRes.token));
+      res.send(new LoginResponseDto(loginRes.account.nickname, loginRes.account.role_id, loginRes.token));
     } catch (error) {
       next(error);
     }

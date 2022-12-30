@@ -13,6 +13,7 @@ import customerReturnController from "../controllers/customer-return.controller"
 import customerSaleReturnController from "../controllers/customer-sale-return.controller";
 import vendorReturnController from "../controllers/vendor-return.controller";
 import vendorSaleReturnController from "../controllers/vendor-sale-return.controller";
+import accountController from "../controllers/account.controller";
 
 const api = Router()
 .use(testController)
@@ -28,6 +29,7 @@ const api = Router()
 .use(customerReturnController)
 .use(customerSaleReturnController)
 .use(vendorReturnController)
-.use(vendorSaleReturnController);
+.use(vendorSaleReturnController)
+.use(accountController);
 
 export default Router().use("/api", api);

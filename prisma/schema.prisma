@@ -14,11 +14,15 @@ model Role {
 }
 
 model Account {
-  id       Int    @id @default(autoincrement())
-  username String @unique @db.VarChar(32)
-  password String
-  role_id  Int
-  role     Role   @relation(fields: [role_id], references: [id])
+  id                 Int                @id @default(autoincrement())
+  username           String             @unique @db.VarChar(32)
+  password           String
+  nickname           String?            @unique @db.VarChar(255)
+  role_id            Int
+  role               Role               @relation(fields: [role_id], references: [id])
+  orderTaskHistories OrderTaskHistory[]
+  customerOrders     CustomerOrder[]
+  backorders         Backorder[]
 }
 
 model Product {
@@ -152,9 +156,12 @@ model CustomerOrder {
   expected_at           DateTime
   is_test               Boolean                @default(false)
   is_sold               Boolean                @default(false)
+  assign_to             String                 @db.VarChar(32)
+  account               Account                @relation(fields: [assign_to], references: [nickname])
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
   customerSaleReturn    CustomerSaleReturn?
+  orderTaskHistories    OrderTaskHistory[]
 
   @@unique([code, is_sold], name: "CustomerOrderSold_key")
 }
@@ -190,6 +197,8 @@ model Backorder {
   expected_at       DateTime
   is_test           Boolean            @default(false)
   is_archived       Boolean            @default(false)
+  assign_to         String             @db.VarChar(32)
+  account           Account            @relation(fields: [assign_to], references: [nickname])
   productBackorders ProductBackorder[]
 
   @@unique([id, is_archived], name: "BackorderArchive_key")
@@ -299,4 +308,22 @@ model ProductCustomerSaleReturn {
   unit_price                Decimal
 
   @@unique([customer_sale_return_code, product_name], name: "ProductCustomerSaleReturn_key")
+}
+
+// Task history
+model OrderTaskHistory {
+  id            Int           @id @default(autoincrement())
+  order_code    String        @db.VarChar(20)
+  customerOrder CustomerOrder @relation(fields: [order_code], references: [code], onDelete: Cascade)
+  employee_name String        @db.VarChar(255)
+  account       Account       @relation(fields: [employee_name], references: [nickname], onDelete: Cascade)
+  type          String        @db.VarChar(32)
+  orderTaskType OrderTaskType @relation(fields: [type], references: [name], onDelete: Cascade)
+  created_at    DateTime
+}
+
+model OrderTaskType {
+  id                 Int                @id @default(autoincrement())
+  name               String             @unique @db.VarChar(32)
+  orderTaskHistories OrderTaskHistory[]
 }

@@ -1,18 +1,19 @@
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
-import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale } from "./../services/customer-order.service";
+import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, finishTask } from "./../services/customer-order.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { Role } from "../commons/role.enum";
 import { createCustomerOrder, updateCustomerOrder } from "../services/customer-order.service";
+import { findEmployeeTask } from "./../services/customer-order.service";
 
 const router = Router();
 
 // find customer orders by status
 router.get(
   `/customer-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response: any = await findCustomerOrderByStatus(req.params.status);
@@ -31,6 +32,7 @@ router.get(
             )
           }),
           order.expected_at,
+          order.assign_to,
           order.created_at,
           order.updated_at,
         );
@@ -80,6 +82,7 @@ router.get(
             )
           }),
           order.expected_at,
+          order.assign_to,
           order.created_at,
           order.updated_at,
           !!order.fullReturn,
@@ -102,7 +105,42 @@ router.get(
       next(error);
     }
   }
-)
+);
+
+router.get(
+  `/customer-orders/tasks/search`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findEmployeeTask(
+        req.query.nickname as string,
+        req.query.status as string, 
+      );
+      res.send(response.map(
+        order => {
+        return new CustomerOrderResponseDto(
+          order.customer_name,
+          order.is_test,
+          order.code,
+          order.status,
+          order.productCustomerOrders.map(productOrder => {
+            return new ProductCustomerOrderResponseDto(
+              productOrder.product_name,
+              productOrder.quantity,
+              productOrder.unit_price,
+            )
+          }),
+          order.expected_at,
+          order.assign_to,
+          order.created_at,
+          order.updated_at,
+        );
+      }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // create order to customer
 router.post(
@@ -125,6 +163,20 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updateCustomerOrder(req.params.code, req.body);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// when employee finish task assigned to them
+router.put(
+  `/customer-orders/tasks/:code`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await finishTask(req.params.code);
       res.send(response);
     } catch (error) {
       next(error);

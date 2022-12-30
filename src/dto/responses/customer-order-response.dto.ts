@@ -8,6 +8,7 @@ export class CustomerOrderResponseDto {
     public status: string,
     public productCustomerOrders: ProductCustomerOrderResponseDto[],
     public expectedAt: Date,
+    public assignTo: string,
     public createdAt?: Date,
     public updatedAt?: Date,
     public fullReturn?: boolean,
