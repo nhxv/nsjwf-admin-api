@@ -20,25 +20,35 @@ export const findAllProductStock = async () => {
   }
 }
 
+// change stock manually
 export const updateProductStock = async (productStockDto: ProductStockRequestDto[], reason: string) => {
   try {
     const productStockData = [];
+    // validate each product stock
     for (const s of productStockDto) {
       try {
         const validatedStock = await productStockSchema.validateAsync(s);
         productStockData.push(validatedStock);
       } catch (validationError) {
-        throw new createError.BadRequest(validationError.message);
+        throw `Please don't hack us.`;
       }
     }
-    if (!Object.keys(ProductStockChangeReason).includes(reason)) {
-      throw "Invalid reason";
-    }
 
+    // validate reason
+    if (
+      !(Object.values(ProductStockChangeReason) as string[]).includes(reason) ||
+      reason === ProductStockChangeReason.CUSTOMER_ORDER_CREATE ||
+      reason === ProductStockChangeReason.CUSTOMER_ORDER_EDIT ||
+      reason === ProductStockChangeReason.CUSTOMER_RETURN_RECEIVED ||
+      reason === ProductStockChangeReason.VENDOR_ORDER_COMPLETED ||
+      reason === ProductStockChangeReason.VENDOR_RETURN_RECEIVED ||
+      reason === ProductStockChangeReason.EMPLOYEE_BORROW
+    ) {
+      throw `Please don't hack us.`;
+    }
+    const time = generateCurrentTime();
     return await prisma.$transaction(async (tx) => {
       const updatedResult = [];
-      const time = generateCurrentTime();
-
       // 1. create product stock change history
       const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
         data: {
@@ -55,6 +65,14 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
           },
         });
         const stockQuantityChange = stock.quantity - currentProductStock.quantity;
+
+        // validate if quantity change make sense
+        if (
+          reason === ProductStockChangeReason.SELF_CREATE && stockQuantityChange < 0 ||
+          reason === ProductStockChangeReason.DAMAGED && stockQuantityChange > 0
+        ) {
+          throw `Change doesn't make sense with reason ${reason}.`;
+        }
 
         // 3. update stock in product stock table
         const updatedProductStock = await tx.productStock.update({
@@ -82,6 +100,9 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
       return updatedResult;
     });
   } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
     throw new createError.BadRequest("Cannot update product stock with the given data.");
   }
 }
