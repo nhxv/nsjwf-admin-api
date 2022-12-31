@@ -30,7 +30,7 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
         const validatedStock = await productStockSchema.validateAsync(s);
         productStockData.push(validatedStock);
       } catch (validationError) {
-        throw `Please don't hack us.`;
+        throw `Funny negativity.`;
       }
     }
 
@@ -65,6 +65,9 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
           },
         });
         const stockQuantityChange = stock.quantity - currentProductStock.quantity;
+        if (stockQuantityChange === 0) {
+          continue;
+        }
 
         // validate if quantity change make sense
         if (

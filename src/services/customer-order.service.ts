@@ -224,7 +224,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -326,7 +326,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
       productOrder => ({
         product_name: productOrder.productName,
         order_code: customerOrderData.code,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
         quantity: productOrder.quantity,
         updated_at: time,
       })
