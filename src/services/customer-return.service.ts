@@ -45,7 +45,7 @@ export const createCustomerReturn = async (customerReturnRequestDto: CustomerRet
       productReturn => ({
         product_name: productReturn.productName,
         return_id: productReturn.returnId,
-        unit_price: new Prisma.Decimal(productReturn.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productReturn.unitPrice).toPrecision(2)),
         quantity: productReturn.quantity,
         created_at: time,
       })
@@ -150,8 +150,8 @@ export const createCustomerReturn = async (customerReturnRequestDto: CustomerRet
           customer_name: customerReturnData.customerName,
           order_code: customerReturnData.orderCode, 
           created_at: time,
-          recommended_price: customerReturnData.recommendedPrice,
-          final_price: customerReturnData.finalPrice,
+          recommended_price: new Prisma.Decimal(new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)),
+          final_price: new Prisma.Decimal(new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)),
           productCustomerReturns: {
             create: productReturns
           }
