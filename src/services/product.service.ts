@@ -62,23 +62,6 @@ export const createProduct = async (productDto: ProductRequestDto) => {
           updated_at: time,
         }
       });
-
-      // 3. create product stock change history
-      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: ProductStockChangeReason.SELF_CREATE,
-        }
-      });
-
-      // 4. create product stock change
-      const addedProductStockChange = await tx.productStockChange.create({
-        data: {
-          stock_id: addedProductStock.id,
-          change_id: addedProductStockChangeHistory.id,
-          quantity_change: 0,
-        }
-      });
     })
   } catch (error) {
     throw new createError.BadRequest("Cannot add product with the given data.");

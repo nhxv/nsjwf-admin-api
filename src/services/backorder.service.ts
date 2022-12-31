@@ -79,7 +79,7 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
     const productOrders = notRemovedList.map(
       productOrder => ({
         product_name: productOrder.productName,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -131,7 +131,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
         product_name: productOrder.productName,
         backorder_id: backorderData.id,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
         updated_at: time,
       })
     );
@@ -288,7 +288,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice),
+        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
