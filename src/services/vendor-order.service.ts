@@ -335,6 +335,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
     });
 
   } catch (error) {
+    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
