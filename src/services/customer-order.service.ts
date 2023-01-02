@@ -1,4 +1,4 @@
-import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd, convertLocalInterval } from "./../commons/time.util";
+import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd, convertLocalInterval, convertLocalMonthStart, convertLocalMonthEnd, convertLocalWeekStart, convertLocalWeekEnd } from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
@@ -555,12 +555,22 @@ export const finishTask = async (code: string) => {
       });
 
       // register task history
-      const createdTask = await tx.orderTaskHistory.create({
-        data: {
+      const createdTask = await tx.orderTaskHistory.upsert({
+        where: {
+          OrderTask_key: {
+            order_code: updatedOrder.code,
+            type: currentOrder.status,
+          }
+        },
+        update: {
+          updated_at: time,
+        },
+        create: {
           order_code: updatedOrder.code,
           employee_name: updatedOrder.assign_to,
           type: currentOrder.status,
           created_at: time,
+          updated_at: time,
         }
       });
     });
@@ -569,5 +579,67 @@ export const finishTask = async (code: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot register finished task.");
+  }
+}
+
+export const reportTask = async (nickname: string) => {
+  try {
+    const daily = await prisma.orderTaskHistory.findMany({
+      where: {
+        updated_at: {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),
+        }
+      }
+    });
+    const weekly = await prisma.orderTaskHistory.findMany({
+      where: {
+        updated_at: {
+          gte: convertLocalWeekStart(),
+          lte: convertLocalWeekEnd(),
+        }
+      }
+    });
+    const monthly = await prisma.orderTaskHistory.findMany({
+      where: {
+        updated_at: {
+          gte: convertLocalMonthStart(),
+          lte: convertLocalMonthEnd(),
+        }
+      }
+    });
+    const pickingDaily = daily.filter(task => task.type === OrderStatus.PICKING);
+    const pickingWeekly = weekly.filter(task => task.type === OrderStatus.PICKING);
+    const pickingMonthly = monthly.filter(task => task.type === OrderStatus.PICKING);
+
+    const shippingDaily = daily.filter(task => task.type === OrderStatus.SHIPPING);
+    const shippingWeekly = weekly.filter(task => task.type === OrderStatus.SHIPPING);
+    const shippingMonthly = monthly.filter(task => task.type === OrderStatus.SHIPPING);
+
+    const employeePickingDaily = pickingDaily.filter(task => task.employee_name !== nickname);
+    const employeeShippingDaily = shippingDaily.filter(task => task.employee_name !== nickname);
+    const employeePickingWeekly = pickingWeekly.filter(task => task.employee_name !== nickname);
+    const employeeShippingWeekly = shippingWeekly.filter(task => task.employee_name !== nickname);
+    const employeePickingMonthly = pickingMonthly.filter(task => task.employee_name !== nickname);
+    const employeeShippingMonthly = shippingMonthly.filter(task => task.employee_name !== nickname);
+    return {
+      employeePickingDaily: employeePickingDaily.length,
+      employeeShippingDaily: employeeShippingDaily.length,
+      employeePickingWeekly: employeePickingWeekly.length,
+      employeeShippingWeekly: employeeShippingWeekly.length,
+      employeePickingMonthly: employeePickingMonthly.length,
+      employeeShippingMonthly: employeeShippingMonthly.length,
+      pickingDaily: pickingDaily.length,
+      pickingWeekly: pickingWeekly.length,
+      pickingMonthly: pickingMonthly.length,
+      shippingDaily: shippingDaily.length,
+      shippingWeekly: shippingWeekly.length,
+      shippingMonthly: shippingMonthly.length,
+    }
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot find task report.");    
   }
 }
