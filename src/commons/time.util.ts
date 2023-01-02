@@ -26,3 +26,19 @@ export const convertLocalInterval = (date: Date) => {
     end: DateTime.fromISO(endDay.replace("Z", ""), {zone: "America/Los_Angeles"}).toUTC().toJSDate()
   };
 }
+
+export const convertLocalWeekStart = () => {
+  return DateTime.local().setZone("America/Los_Angeles").startOf("week").toUTC().toJSDate();
+}
+
+export const convertLocalWeekEnd = () => {
+  return DateTime.local().setZone("America/Los_Angeles").endOf("week").toUTC().toJSDate();
+}
+
+export const convertLocalMonthStart = () => {
+  return DateTime.local().setZone("America/Los_Angeles").startOf("month").toUTC().toJSDate();
+}
+
+export const convertLocalMonthEnd = () => {
+  return DateTime.local().setZone("America/Los_Angeles").endOf("month").toUTC().toJSDate();
+}

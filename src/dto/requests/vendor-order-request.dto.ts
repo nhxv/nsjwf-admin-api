@@ -18,13 +18,13 @@ export class VendorOrderRequestDto {
 }
 
 export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
-  vendorName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+  vendorName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productVendorOrders: Joi.array().items({
-    productName: Joi.string().required().max(255).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+    productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0).required(),
     unitPrice: Joi.number().min(0).required(),
     id: Joi.number().integer().positive().allow(0),
-    orderCode: Joi.string().max(20).regex(/[^A-Za-z0-9 &\-'()]/, { invert: true }),
+    orderCode: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),

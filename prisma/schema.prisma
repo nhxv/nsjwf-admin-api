@@ -320,6 +320,9 @@ model OrderTaskHistory {
   type          String        @db.VarChar(32)
   orderTaskType OrderTaskType @relation(fields: [type], references: [name], onDelete: Cascade)
   created_at    DateTime
+  updated_at    DateTime
+
+  @@unique([order_code, type], name: "OrderTask_key")
 }
 
 model OrderTaskType {

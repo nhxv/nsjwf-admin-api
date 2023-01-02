@@ -1,6 +1,6 @@
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
-import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, finishTask } from "./../services/customer-order.service";
+import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, reportTask, finishTask } from "./../services/customer-order.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
@@ -13,7 +13,7 @@ const router = Router();
 // find customer orders by status
 router.get(
   `/customer-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response: any = await findCustomerOrderByStatus(req.params.status);
@@ -28,7 +28,6 @@ router.get(
             return new ProductCustomerOrderResponseDto(
               productOrder.product_name,
               productOrder.quantity,
-              productOrder.unit_price,
             )
           }),
           order.expected_at,
@@ -136,6 +135,19 @@ router.get(
           order.updated_at,
         );
       }));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  `/customer-orders/tasks/report/:nickname`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await reportTask(req.params.nickname);
+      res.send(response);
     } catch (error) {
       next(error);
     }
