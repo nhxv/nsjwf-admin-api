@@ -2,8 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { Role } from "../commons/role.enum";
-import { findActiveVendors, findVendorsByName, createVendor, updateVendor } from "../services/vendor.service";
-import { VendorResponseDto } from "../dto/responses/vendor-response.dto";
+import { findActiveVendors, findVendorById, findVendorsByName, createVendor, updateVendor } from "../services/vendor.service";
 
 const router = Router();
 
@@ -20,6 +19,20 @@ router.get(
     }
   }
 );
+
+// find vendor by id
+router.get(
+  `/vendors/all/:id`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findVendorById(+req.params.id);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+)
 
 // find vendors by name from vendor table
 router.get(
@@ -42,15 +55,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await createVendor(req.body);
-      res.send(new VendorResponseDto(
-        response.name,
-        response.discontinued,
-        response.id,
-        response.address,
-        response.phone,
-        response.email,
-        response.presentative,
-      ));
+      res.send(response);
     } catch (error) {
       next(error);
     }
@@ -64,15 +69,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updateVendor(req.body, +req.params.id);
-      res.send(new VendorResponseDto(
-        response.name,
-        response.discontinued,
-        response.id,
-        response.address,
-        response.phone,
-        response.email,
-        response.presentative,
-      ));
+      res.send(response);
     } catch (error) {
       next(error);
     }

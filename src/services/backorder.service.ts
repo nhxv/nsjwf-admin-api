@@ -28,7 +28,11 @@ export const findBackorderByStatus = async (status: string) => {
         }
       },
       include: {
-        productBackorders: true,
+        productBackorders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         expected_at: "asc",
@@ -50,7 +54,11 @@ export const findBackorderById = async (id:number) => {
         id: id,
       },
       include: {
-        productBackorders: true,
+        productBackorders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       }
     });
     return backorder;
