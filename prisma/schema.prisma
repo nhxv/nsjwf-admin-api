@@ -37,33 +37,37 @@ model Product {
   productCustomerReturns     ProductCustomerReturn[]
   productVendorSaleReturns   ProductVendorSaleReturn[]
   productCustomerSaleReturns ProductCustomerSaleReturn[]
+  vendorProductTendencies    VendorProductTendency[]
+  customerProductTendencies  CustomerProductTendency[]
 }
 
 model Vendor {
-  id                Int                @id @default(autoincrement())
-  name              String             @unique @db.VarChar(255)
-  address           String?
-  phone             String?            @db.VarChar(20)
-  email             String?            @db.VarChar(320)
-  presentative      String?            @db.VarChar(255)
-  discontinued      Boolean            @default(false)
-  vendorOrders      VendorOrder[]
-  vendorReturns     VendorReturn[]
-  vendorSaleReturns VendorSaleReturn[]
+  id                      Int                     @id @default(autoincrement())
+  name                    String                  @unique @db.VarChar(255)
+  address                 String?
+  phone                   String?                 @db.VarChar(20)
+  email                   String?                 @db.VarChar(320)
+  presentative            String?                 @db.VarChar(255)
+  discontinued            Boolean                 @default(false)
+  vendorOrders            VendorOrder[]
+  vendorReturns           VendorReturn[]
+  vendorSaleReturns       VendorSaleReturn[]
+  vendorProductTendencies VendorProductTendency[]
 }
 
 model Customer {
-  id                  Int                  @id @default(autoincrement())
-  name                String               @unique @db.VarChar(255)
-  address             String?
-  phone               String?              @db.VarChar(20)
-  email               String?              @db.VarChar(320)
-  presentative        String?              @db.VarChar(255)
-  discontinued        Boolean              @default(false)
-  backorders          Backorder[]
-  customerOrders      CustomerOrder[]
-  customerReturns     CustomerReturn[]
-  customerSaleReturns CustomerSaleReturn[]
+  id                        Int                       @id @default(autoincrement())
+  name                      String                    @unique @db.VarChar(255)
+  address                   String?
+  phone                     String?                   @db.VarChar(20)
+  email                     String?                   @db.VarChar(320)
+  presentative              String?                   @db.VarChar(255)
+  discontinued              Boolean                   @default(false)
+  backorders                Backorder[]
+  customerOrders            CustomerOrder[]
+  customerReturns           CustomerReturn[]
+  customerSaleReturns       CustomerSaleReturn[]
+  customerProductTendencies CustomerProductTendency[]
 }
 
 model Vehicle {
@@ -329,4 +333,27 @@ model OrderTaskType {
   id                 Int                @id @default(autoincrement())
   name               String             @unique @db.VarChar(32)
   orderTaskHistories OrderTaskHistory[]
+}
+
+// Tendency
+model VendorProductTendency {
+  id          Int     @id @default(autoincrement())
+  vendor_name String  @db.VarChar(255)
+  vendor      Vendor  @relation(fields: [vendor_name], references: [name], onDelete: Cascade)
+  name        String  @db.VarChar(255)
+  product     Product @relation(fields: [name], references: [name], onDelete: Cascade)
+  quantity    Int
+
+  @@unique([vendor_name, name], name: "VendorProductTendency_key")
+}
+
+model CustomerProductTendency {
+  id            Int      @id @default(autoincrement())
+  customer_name String   @db.VarChar(255)
+  customer      Customer @relation(fields: [customer_name], references: [name], onDelete: Cascade)
+  name          String   @db.VarChar(255)
+  product       Product  @relation(fields: [name], references: [name], onDelete: Cascade)
+  quantity      Int
+
+  @@unique([customer_name, name], name: "CustomerProductTendency_key")
 }

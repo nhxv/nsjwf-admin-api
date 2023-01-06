@@ -8,7 +8,11 @@ export const findVendorSaleReturnByCode = async (code: string) => {
         sale_code: code,
       },
       include: {
-        productVendorSaleReturns: true,
+        productVendorSaleReturns: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       }
     });
     if (!vendorSaleReturn) {
@@ -18,7 +22,11 @@ export const findVendorSaleReturnByCode = async (code: string) => {
           code: code,
         },
         include: {
-          productVendorOrders: true,
+          productVendorOrders: {
+            orderBy: {
+              product_name: "asc",
+            }
+          },
         }
       });
       vendorSaleReturn = {

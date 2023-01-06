@@ -1,3 +1,4 @@
+import { VendorProductTendencyRequestDto } from "./vendor-product-tendency-request.dto";
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
@@ -9,6 +10,7 @@ export class VendorRequestDto {
     public phone?: string,
     public email?: string,
     public presentative?: string,
+    public vendorProductTendencies?: VendorProductTendencyRequestDto[]
   ) {}
 }
 
@@ -19,5 +21,9 @@ export const vendorSchema = Joi.object<VendorRequestDto>({
   phone: Joi.string().allow("").max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
   email: Joi.string().allow("").email().max(320).regex(GENERAL_TEXT_REGEX, { invert: true }),
   presentative: Joi.string().allow("").max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
-
+  vendorProductTendencies: Joi.array().items({
+    vendorName: Joi.string().trim().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
+    productName: Joi.string().trim().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
+    quantity: Joi.number().integer().min(0),
+  })
 });

@@ -14,7 +14,11 @@ export const findVendorReturns = async () => {
         }
       },
       include: {
-        productVendorReturns: true,
+        productVendorReturns: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         created_at: "asc",
