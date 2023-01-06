@@ -8,7 +8,11 @@ export const findCustomerSaleReturnByCode = async (code: string) => {
         sale_code: code,
       },
       include: {
-        productCustomerSaleReturns: true,
+        productCustomerSaleReturns: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       }
     });
     if (!customerSaleReturn) {

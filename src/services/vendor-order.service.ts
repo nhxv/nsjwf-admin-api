@@ -20,7 +20,11 @@ export const findVendorOrderByStatus = async (status: string) => {
         }
       },
       include: {
-        productVendorOrders: true,
+        productVendorOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         expected_at: "asc",
@@ -42,7 +46,11 @@ export const findVendorOrderByCode = async (code: string) => {
         code: code,
       },
       include: {
-        productVendorOrders: true,
+        productVendorOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       }
     })
     return vendorOrder;
@@ -67,7 +75,11 @@ export const findVendorSale = async (vendorName: string, date: string) => {
         },
       },
       include: {
-        productVendorOrders: true,
+        productVendorOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         updated_at: "asc",
@@ -335,7 +347,6 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
     });
 
   } catch (error) {
-    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }

@@ -18,6 +18,26 @@ export const findActiveVendors = async () => {
   }
 }
 
+export const findVendorById = async (id: number) => {
+  try {
+    const vendor = await prisma.vendor.findUniqueOrThrow({
+      where: {
+        id: id,
+      },
+      include: {
+        vendorProductTendencies: {
+          orderBy: {
+            name: "asc",
+          },
+        }
+      },
+    });
+    return vendor;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendor with the given data.");    
+  }
+}
+
 export const findVendorsByName = async (keyword: string) => {
   try {
     const vendors = await prisma.vendor.findMany({
@@ -40,6 +60,10 @@ export const findVendorsByName = async (keyword: string) => {
 export const createVendor = async (vendorDto: VendorRequestDto) => {
   try {
     const vendorData: VendorRequestDto = await vendorSchema.validateAsync(vendorDto);
+    const productTendencies = vendorData.vendorProductTendencies.map((product) => ({ 
+      name: product.productName,
+      quantity: product.quantity,
+    }));
     const newVendor = await prisma.vendor.create({
       data: {
         name: vendorData.name,
@@ -47,7 +71,10 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
         phone: vendorData.phone,
         email: vendorData.email,
         presentative: vendorData.presentative,
-        discontinued: vendorData.discontinued
+        discontinued: vendorData.discontinued,
+        vendorProductTendencies: {
+          create: productTendencies,
+        }
       }
     });
     return newVendor;
@@ -59,20 +86,59 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
 export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
   try {
     const vendorData: VendorRequestDto = await vendorSchema.validateAsync(vendorDto);
-    const updatedVendor = await prisma.vendor.update({
-      where: {
-        id: id
-      },
-      data: {
-        name: vendorData.name,
-        address: vendorData.address,
-        phone: vendorData.phone,
-        email: vendorData.email,
-        presentative: vendorData.presentative,
-        discontinued: vendorData.discontinued
+    const productTendencies = vendorData.vendorProductTendencies.map((product) => ({ 
+      name: product.productName,
+      quantity: product.quantity,
+    }));
+    return await prisma.$transaction(async (tx) => {
+      const updatedVendor = await prisma.vendor.update({
+        where: {
+          id: id
+        },
+        include: {
+          vendorProductTendencies: true,
+        },
+        data: {
+          name: vendorData.name,
+          address: vendorData.address,
+          phone: vendorData.phone,
+          email: vendorData.email,
+          presentative: vendorData.presentative,
+          discontinued: vendorData.discontinued
+        }
+      });
+      for (const product of productTendencies) {
+        const updatedProduct = await tx.vendorProductTendency.upsert({
+          where: {
+            VendorProductTendency_key: {
+              vendor_name: vendorData.name,
+              name: product.name,
+            }
+          },
+          update: {
+            quantity: product.quantity,
+          },
+          create: {
+            vendor_name: vendorData.name,
+            name: product.name,
+            quantity: product.quantity,
+          },
+        });
       }
-    });
-    return updatedVendor;
+      for (const product of updatedVendor.vendorProductTendencies) {
+        const found = productTendencies.find(p => p.name === product.name);
+        if (!found) {
+          const deletedProduct = await tx.vendorProductTendency.delete({
+            where: {
+              VendorProductTendency_key: {
+                vendor_name: vendorData.name,
+                name: product.name,
+              }
+            }
+          });
+        }
+      }
+    })
   } catch (error) {
     throw new createError.BadRequest("Cannot update vendor with the given data.");
   }

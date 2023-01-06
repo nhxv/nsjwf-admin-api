@@ -15,7 +15,11 @@ export const findCustomerReturns = async () => {
         }
       },
       include: {
-        productCustomerReturns: true,
+        productCustomerReturns: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         created_at: "asc",

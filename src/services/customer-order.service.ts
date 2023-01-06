@@ -20,7 +20,11 @@ export const findCustomerOrderByStatus = async (status: string) => {
         }
       },
       include: {
-        productCustomerOrders: true,
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc"
+          }
+        }
       },
       orderBy: {
         expected_at: "asc",
@@ -42,7 +46,11 @@ export const findCustomerOrderByCode = async (code: string) => {
         code: code,
       },
       include: {
-        productCustomerOrders: true,
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        }
       }
     })
     return customerOrder;
@@ -67,7 +75,11 @@ export const findCustomerSale = async (customerName: string, date: string) => {
         },
       },
       include: {
-        productCustomerOrders: true,
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        }
       },
       orderBy: {
         updated_at: "asc",
@@ -106,7 +118,11 @@ export const reportCustomerSale = async () => {
         }
       },
       include: {
-        productCustomerOrders: true,
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         updated_at: "asc",
@@ -121,7 +137,11 @@ export const reportCustomerSale = async () => {
         }
       },
       include: {
-        productCustomerReturns: true,
+        productCustomerReturns: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       },
       orderBy: {
         created_at: "asc",
@@ -189,7 +209,11 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
         status: status,
       },
       include: {
-        productCustomerOrders: true,
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          }
+        },
       }
     });
     return tasks;
