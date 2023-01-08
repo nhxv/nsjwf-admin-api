@@ -112,14 +112,8 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
     if (!(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)) {
       throw `Please don't attack us.`;
     }
-    const notZero = vendorOrderData.productVendorOrders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notZero.length < 1) {
-      throw `Hollow order.`;
-    }
     const { code, time } = generateCode();
-    const productOrders = notZero.map(
+    const productOrders = vendorOrderData.productVendorOrders.map(
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
@@ -217,12 +211,6 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
     if (vendorOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
-    const notZero = vendorOrderData.productVendorOrders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notZero.length < 1) {
-      throw `Hollow order.`;
-    }
 
     const time = generateCurrentTime();
     const productOrders = vendorOrderData.productVendorOrders.map(
@@ -262,16 +250,6 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
         throw `This order cannot be changed.`;
       }
 
-      const existingProductOrders = new Map();
-      for (const product of existingOrder.productVendorOrders) {
-        existingProductOrders.set(product.product_name, {
-          product_name: product.product_name,
-          quantity: product.quantity,
-          unit_price: product.unit_price,
-          updated_at: product.updated_at,
-        });
-      }
-
       let addedProductStockChangeHistory;
       if (isCompleted) {
         // create stock change history only if order is completed
@@ -282,67 +260,68 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
           }
         });
       }
-      for (const productOrder of productOrders) {
-        // remove product order. when quantity || price = 0 & product is not in existing order, skip.
-        if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
-          const existingProductOrder = existingProductOrders.get(productOrder.product_name);
-          if (existingProductOrder) {
-            const deletedProductOrder = await tx.productVendorOrder.delete({
-              where: {
-                ProductVendorOrder_key: {
-                  product_name: productOrder.product_name,
-                  order_code: productOrder.order_code,
-                }              
-              }
-            });
-          }
-        } else {
-          // upsert product vendor order
-          const updatedProductOrder = await tx.productVendorOrder.upsert({
+
+      // delete product order not found in request
+      for (const productOrder of existingOrder.productVendorOrders) {
+        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        if (!found) {
+          const deletedProductOrder = await tx.productVendorOrder.delete({
             where: {
               ProductVendorOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
-              }
-            },
-            update: {
-              quantity: productOrder.quantity,
-              unit_price: productOrder.unit_price,
-              updated_at: productOrder.updated_at,
-            },
-            create: {
+              }              
+            }
+          });
+        }
+      }
+
+      for (const productOrder of productOrders) {
+        // upsert product vendor order
+        const updatedProductOrder = await tx.productVendorOrder.upsert({
+          where: {
+            ProductVendorOrder_key: {
               product_name: productOrder.product_name,
               order_code: productOrder.order_code,
-              quantity: productOrder.quantity,
-              unit_price: productOrder.unit_price,
-              created_at: time,
-              updated_at: time,
+            }
+          },
+          update: {
+            quantity: productOrder.quantity,
+            unit_price: productOrder.unit_price,
+            updated_at: productOrder.updated_at,
+          },
+          create: {
+            product_name: productOrder.product_name,
+            order_code: productOrder.order_code,
+            quantity: productOrder.quantity,
+            unit_price: productOrder.unit_price,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+        
+        if (isCompleted) {
+          // update product stock
+          const updatedProductStock = await tx.productStock.update({
+            where: {
+              product_name: productOrder.product_name,
             },
-          });
-          
-          if (isCompleted) {
-            // update product stock
-            const updatedProductStock = await tx.productStock.update({
-              where: {
-                product_name: productOrder.product_name,
+            data: {
+              quantity: {
+                increment: productOrder.quantity,
               },
-              data: {
-                quantity: {
-                  increment: productOrder.quantity,
-                },
-                updated_at: time,
-              }
-            });
-            // create stock change
-            const addedProductStockChange = await tx.productStockChange.create({
-              data: {
-                stock_id: updatedProductStock.id,
-                change_id: addedProductStockChangeHistory.id,
-                quantity_change: productOrder.quantity,
-              }
-            });
-          }
-        }
+              updated_at: time,
+            }
+          });
+          // create stock change
+          const addedProductStockChange = await tx.productStockChange.create({
+            data: {
+              stock_id: updatedProductStock.id,
+              change_id: addedProductStockChangeHistory.id,
+              quantity_change: productOrder.quantity,
+            }
+          });
+        }        
       }
     });
 

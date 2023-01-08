@@ -20,10 +20,10 @@ export const backorderSchema = Joi.object<BackorderRequestDto>({
   customerName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productBackorders: Joi.array().items({
     productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
-    quantity: Joi.number().integer().min(0).required(),
-    unitPrice: Joi.number().min(0).required(),
-    id: Joi.number().integer().positive().allow(0),
-    backorderId: Joi.number().integer().positive().allow(0),
+    quantity: Joi.number().integer().positive().required(),
+    unitPrice: Joi.number().positive().required(),
+    id: Joi.number().integer().positive(),
+    backorderId: Joi.number().integer().positive(),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
     isRemove: Joi.boolean(),
@@ -32,7 +32,7 @@ export const backorderSchema = Joi.object<BackorderRequestDto>({
   isArchived: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   assignTo: Joi.string().max(255).required(),
-  id: Joi.number().integer().positive().allow(0),
+  id: Joi.number().integer().positive(),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
 });

@@ -232,19 +232,13 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
     if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
-    const notZero = customerOrderData.productCustomerOrders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notZero.length < 1) {
-      throw `Hollow order.`;
-    }
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
       }
     });
     const { code, time } = generateCode();
-    const productOrders = notZero.map(
+    const productOrders = customerOrderData.productCustomerOrders.map(
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
@@ -334,12 +328,6 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
     if (customerOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
-    const notZero = customerOrderData.productCustomerOrders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notZero.length < 1) {
-      throw `Hollow order.`;
-    }
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
@@ -383,15 +371,6 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
       } catch (e) {
         throw `This order cannot be changed.`;
       }
-      const existingProductOrders = new Map();
-      for (const product of existingOrder.productCustomerOrders) {
-        existingProductOrders.set(product.product_name, {
-          product_name: product.product_name,
-          quantity: product.quantity,
-          unit_price: product.unit_price,
-          updated_at: product.updated_at,
-        });
-      }
 
       // create stock change history
       const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
@@ -401,6 +380,48 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
         }
       });
 
+      const existingProductOrders = new Map();
+      // delete product order not in request
+      for (const productOrder of existingOrder.productCustomerOrders) {
+        existingProductOrders.set(productOrder.product_name, {
+          product_name: productOrder.product_name,
+          quantity: productOrder.quantity,
+          unit_price: productOrder.unit_price,
+          updated_at: productOrder.updated_at,
+        });
+        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        if (!found) {
+          const deletedProductOrder = await tx.productCustomerOrder.delete({
+            where: {
+              ProductCustomerOrder_key: {
+                product_name: productOrder.product_name,
+                order_code: productOrder.order_code,
+              }  
+            }
+          });
+          // update product stock
+          const updatedProductStock = await tx.productStock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: {
+                increment: productOrder.quantity,
+              },
+              updated_at: time,
+            }
+          });
+          // create stock change
+          const addedProductStockChange = await tx.productStockChange.create({
+            data: {
+              stock_id: updatedProductStock.id,
+              change_id: addedProductStockChangeHistory.id,
+              quantity_change: productOrder.quantity,
+            }
+          });
+        }
+      }
+
       for (const productOrder of productOrders) {
         let orderQuantityChange = 0;
         let stockQuantityChange = 0;
@@ -409,138 +430,101 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
         const currentProductOrder = existingProductOrders.get(productOrder.product_name);
 
         if (!currentProductOrder) {
-          // 1. insert product order. if product not in current order and quantity || price = 0, skip.
-          if (productOrder.quantity > 0 && productOrder.unit_price.greaterThan(new Prisma.Decimal(0))) {
-            orderQuantityChange = productOrder.quantity;
-            stockQuantityChange = 0 - productOrder.quantity;
-  
-            // check product stock
-            const currentProductStock = await tx.productStock.findUniqueOrThrow({
-              where: {
-                product_name: productOrder.product_name,
-              },
-            });
-            if (currentProductStock.quantity + stockQuantityChange < 0) {
-              throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
+          orderQuantityChange = productOrder.quantity;
+          stockQuantityChange = 0 - productOrder.quantity;
+
+          // check product stock
+          const currentProductStock = await tx.productStock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            },
+          });
+          if (currentProductStock.quantity + stockQuantityChange < 0) {
+            throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
+          }
+          const newProductOrder = await tx.productCustomerOrder.create({
+            data: {
+              product_name: productOrder.product_name,
+              order_code: productOrder.order_code,
+              quantity: productOrder.quantity,
+              unit_price: productOrder.unit_price,
+              created_at: time,
+              updated_at: time,
             }
-            const newProductOrder = await tx.productCustomerOrder.create({
-              data: {
+          });
+          // update product stock
+          const updatedProductStock = await tx.productStock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: {
+                increment: stockQuantityChange,
+              },
+              updated_at: time,
+            }
+          });
+          // create stock change
+          const addedProductStockChange = await tx.productStockChange.create({
+            data: {
+              stock_id: updatedProductStock.id,
+              change_id: addedProductStockChangeHistory.id,
+              quantity_change: stockQuantityChange,
+            }
+          });
+        } else {
+          // 2. update existing product order
+          orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
+          stockQuantityChange = currentProductOrder.quantity - productOrder.quantity;
+
+          // check product stock
+          const currentProductStock = await tx.productStock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            },
+          });
+          if (currentProductStock.quantity + stockQuantityChange < 0) {
+            throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
+          }            
+
+          // update product order
+          const updatedProductOrder = await tx.productCustomerOrder.update({
+            where: {
+              ProductCustomerOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
-                quantity: productOrder.quantity,
-                unit_price: productOrder.unit_price,
-                created_at: time,
-                updated_at: time,
-              }
-            });
-            // update product stock
-            const updatedProductStock = await tx.productStock.update({
-              where: {
-                product_name: productOrder.product_name,
+              }                  
+            },
+            data: {
+              quantity: {
+                increment: orderQuantityChange,
               },
-              data: {
-                quantity: {
-                  increment: stockQuantityChange,
-                },
-                updated_at: time,
-              }
-            });
-            // create stock change
-            const addedProductStockChange = await tx.productStockChange.create({
-              data: {
-                stock_id: updatedProductStock.id,
-                change_id: addedProductStockChangeHistory.id,
-                quantity_change: stockQuantityChange,
-              }
-            });
-          }
-        } else {
-          // if product existing in current order
-          if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
-            stockQuantityChange = currentProductOrder.quantity;
-            // 2. remove existing product order - auto throw if not exist
-            const deletedProductOrder = await tx.productCustomerOrder.delete({
-              where: {
-                ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
-                  order_code: productOrder.order_code,
-                }  
-              }
-            });
-            // update product stock
-            const updatedProductStock = await tx.productStock.update({
-              where: {
-                product_name: productOrder.product_name,
+              unit_price: productOrder.unit_price,
+              updated_at: productOrder.updated_at,
+            }
+          });
+          
+          // update product stock
+          const updatedProductStock = await tx.productStock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: {
+                increment: stockQuantityChange,
               },
-              data: {
-                quantity: {
-                  increment: stockQuantityChange,
-                },
-                updated_at: time,
-              }
-            });
-            // create stock change
-            const addedProductStockChange = await tx.productStockChange.create({
-              data: {
-                stock_id: updatedProductStock.id,
-                change_id: addedProductStockChangeHistory.id,
-                quantity_change: stockQuantityChange,
-              }
-            });            
-          } else {
-            // 3. update existing product order
-            orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
-            stockQuantityChange = currentProductOrder.quantity - productOrder.quantity;
-
-            // check product stock
-            const currentProductStock = await tx.productStock.findUniqueOrThrow({
-              where: {
-                product_name: productOrder.product_name,
-              },
-            });
-            if (currentProductStock.quantity + stockQuantityChange < 0) {
-              throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
-            }            
-
-            // update product order
-            const updatedProductOrder = await tx.productCustomerOrder.update({
-              where: {
-                ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
-                  order_code: productOrder.order_code,
-                }                  
-              },
-              data: {
-                quantity: {
-                  increment: orderQuantityChange,
-                },
-                unit_price: productOrder.unit_price,
-                updated_at: productOrder.updated_at,
-              }
-            });
-            
-            // update product stock
-            const updatedProductStock = await tx.productStock.update({
-              where: {
-                product_name: productOrder.product_name,
-              },
-              data: {
-                quantity: {
-                  increment: stockQuantityChange,
-                },
-                updated_at: time,
-              }
-            });
-            
-            // create stock change
-            const addedProductStockChange = await tx.productStockChange.create({
-              data: {
-                stock_id: updatedProductStock.id,
-                change_id: addedProductStockChangeHistory.id,
-                quantity_change: stockQuantityChange,
-              }
-            });                        
-          }
+              updated_at: time,
+            }
+          });
+          
+          // create stock change
+          const addedProductStockChange = await tx.productStockChange.create({
+            data: {
+              stock_id: updatedProductStock.id,
+              change_id: addedProductStockChangeHistory.id,
+              quantity_change: stockQuantityChange,
+            }
+          }); 
         }
       }
     });

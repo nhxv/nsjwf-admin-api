@@ -77,14 +77,8 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
     if (backorderData.isArchived) {
       throw `Please don't hack us.`;
     }
-    const notRemovedList = backorderData.productBackorders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notRemovedList.length < 1) {
-      throw `Hollow order.`;
-    }
     const time = generateCurrentTime();
-    const productOrders = notRemovedList.map(
+    const productOrders = backorderData.productBackorders.map(
       productOrder => ({
         product_name: productOrder.productName,
         unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
@@ -126,12 +120,6 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
     if (backorderData.id !== id) {
       throw `Please don't hack us.`;
     }
-    const notRemovedList = backorderData.productBackorders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notRemovedList.length < 1)  {
-      throw `Hollow order.`;
-    }
 
     const time = generateCurrentTime();
     const productOrders = backorderData.productBackorders.map(
@@ -171,13 +159,25 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
       }
 
       const existingProductOrders = new Map();
-      for (const product of existingOrder.productBackorders) {
-        existingProductOrders.set(product.product_name, {
-          product_name: product.product_name,
-          quantity: product.quantity,
-          unit_price: product.unit_price,
-          updated_at: product.updated_at,
+      for (const productOrder of existingOrder.productBackorders) {
+        existingProductOrders.set(productOrder.product_name, {
+          product_name: productOrder.product_name,
+          quantity: productOrder.quantity,
+          unit_price: productOrder.unit_price,
+          updated_at: productOrder.updated_at,
         });
+        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        if (!found) {
+          // remove existing product order
+          const deletedProductOrder = await tx.productBackorder.delete({
+            where: {
+              ProductBackorder_key: {
+                product_name: productOrder.product_name,
+                backorder_id: productOrder.backorder_id,
+              }
+            },
+          });
+        }
       }
 
       for (const productOrder of productOrders) {
@@ -187,35 +187,20 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
         const currentProductOrder = existingProductOrders.get(productOrder.product_name);
 
         if (!currentProductOrder) {
-          // 1. insert product order. if product not in current order and quantity = 0, skip.
-          if (productOrder.quantity > 0 && productOrder.unit_price.greaterThan(new Prisma.Decimal(0))) {
-            orderQuantityChange = productOrder.quantity;
-
-            // create product backorder
-            const createdProductOrder = await tx.productBackorder.create({
-              data: {
-                product_name: productOrder.product_name,
-                backorder_id: productOrder.backorder_id,
-                quantity: orderQuantityChange,
-                unit_price: productOrder.unit_price,
-                created_at: time,
-                updated_at: time,
-              },
-            });            
-          }
-        } else if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
-          // 2. remove existing product order
-          const deletedProductOrder = await tx.productBackorder.delete({
-            where: {
-              ProductBackorder_key: {
-                product_name: productOrder.product_name,
-                backorder_id: productOrder.backorder_id,
-              }
+          orderQuantityChange = productOrder.quantity;
+          // create product backorder
+          const createdProductOrder = await tx.productBackorder.create({
+            data: {
+              product_name: productOrder.product_name,
+              backorder_id: productOrder.backorder_id,
+              quantity: orderQuantityChange,
+              unit_price: productOrder.unit_price,
+              created_at: time,
+              updated_at: time,
             },
           });
-          orderQuantityChange = productOrder.quantity - deletedProductOrder.quantity;       
         } else {
-          // 3. update existing order
+          // update existing order
           orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
 
           // update product backorder
@@ -285,14 +270,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
     if (!Object.keys(OrderStatus).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
-    const notZero = customerOrderData.productCustomerOrders.filter(
-      po => po.quantity > 0 && new Prisma.Decimal(po.unitPrice).greaterThan(new Prisma.Decimal(0))
-    );
-    if (notZero.length < 1) {
-      throw `Hollow order.`;
-    }
-    
-    const productOrders = notZero.map(
+    const productOrders = customerOrderData.productCustomerOrders.map(
       productOrder => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
@@ -302,8 +280,6 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
         updated_at: time,
       })
     );
-
-
 
     return await prisma.$transaction(async (tx) => {
       // update backorder if backorder is not archived
@@ -332,13 +308,25 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
       }
 
       const existingProductOrders = new Map();
-      for (const product of existingOrder.productBackorders) {
-        existingProductOrders.set(product.product_name, {
-          product_name: product.product_name,
-          quantity: product.quantity,
-          unit_price: product.unit_price,
-          updated_at: product.updated_at,
+      for (const productOrder of existingOrder.productBackorders) {
+        existingProductOrders.set(productOrder.product_name, {
+          product_name: productOrder.product_name,
+          quantity: productOrder.quantity,
+          unit_price: productOrder.unit_price,
+          updated_at: productOrder.updated_at,
         });
+        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        if (!found) {
+          // remove existing product order
+          const deletedProductOrder = await tx.productBackorder.delete({
+            where: {
+              ProductBackorder_key: {
+                product_name: productOrder.product_name,
+                backorder_id: productOrder.backorder_id,
+              }
+            },
+          });
+        }        
       }
 
       for (const productOrder of productBackorders) {
@@ -348,33 +336,19 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
         const currentProductOrder = existingProductOrders.get(productOrder.product_name);
 
         if (!currentProductOrder) {
-          // 1. insert product order. if product not in current order and quantity = 0, skip.
-          if (productOrder.quantity > 0 && productOrder.unit_price.greaterThan(new Prisma.Decimal(0))) {
-            orderQuantityChange = productOrder.quantity;
+          orderQuantityChange = productOrder.quantity;
 
-            // create product backorder
-            const createdProductOrder = await tx.productBackorder.create({
-              data: {
-                product_name: productOrder.product_name,
-                backorder_id: productOrder.backorder_id,
-                quantity: orderQuantityChange,
-                unit_price: productOrder.unit_price,
-                created_at: time,
-                updated_at: time,
-              },
-            });            
-          }
-        } else if (productOrder.quantity === 0 || productOrder.unit_price.equals(new Prisma.Decimal(0))) {
-          // 2. remove existing product order
-          const deletedProductOrder = await tx.productBackorder.delete({
-            where: {
-              ProductBackorder_key: {
-                product_name: productOrder.product_name,
-                backorder_id: productOrder.backorder_id,
-              }
+          // create product backorder
+          const createdProductOrder = await tx.productBackorder.create({
+            data: {
+              product_name: productOrder.product_name,
+              backorder_id: productOrder.backorder_id,
+              quantity: orderQuantityChange,
+              unit_price: productOrder.unit_price,
+              created_at: time,
+              updated_at: time,
             },
           });
-          orderQuantityChange = productOrder.quantity - deletedProductOrder.quantity;       
         } else {
           // 3. update existing order
           orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
