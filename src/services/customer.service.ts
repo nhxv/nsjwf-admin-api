@@ -107,6 +107,23 @@ export const updateCustomer = async (customerDto: CustomerRequestDto, id: number
           discontinued: customerData.discontinued
         }
       });
+
+      // delete product not in request
+      for (const product of updatedCustomer.customerProductTendencies) {
+        const found = productTendencies.find(p => p.name === product.name);
+        if (!found) {
+          const deletedProduct = await tx.customerProductTendency.delete({
+            where: {
+              CustomerProductTendency_key: {
+                customer_name: customerData.name,
+                name: product.name,
+              }
+            }
+          });
+        }
+      }
+
+      // update/insert product in request
       for (const product of productTendencies) {
         const updatedProduct = await tx.customerProductTendency.upsert({
           where: {
@@ -124,19 +141,6 @@ export const updateCustomer = async (customerDto: CustomerRequestDto, id: number
             quantity: product.quantity,
           },
         });
-      }
-      for (const product of updatedCustomer.customerProductTendencies) {
-        const found = productTendencies.find(p => p.name === product.name);
-        if (!found) {
-          const deletedProduct = await tx.customerProductTendency.delete({
-            where: {
-              CustomerProductTendency_key: {
-                customer_name: customerData.name,
-                name: product.name,
-              }
-            }
-          });
-        }
       }
     })
   } catch (error) {
