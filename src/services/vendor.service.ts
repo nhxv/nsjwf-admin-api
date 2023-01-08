@@ -93,7 +93,7 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
     return await prisma.$transaction(async (tx) => {
       const updatedVendor = await prisma.vendor.update({
         where: {
-          id: id
+          id: id,
         },
         include: {
           vendorProductTendencies: true,
@@ -107,6 +107,23 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
           discontinued: vendorData.discontinued
         }
       });
+
+      // delete product not in request
+      for (const product of updatedVendor.vendorProductTendencies) {
+        const found = productTendencies.find(p => p.name === product.name);
+        if (!found) {
+          const deletedProduct = await tx.vendorProductTendency.delete({
+            where: {
+              VendorProductTendency_key: {
+                vendor_name: vendorData.name,
+                name: product.name,
+              }
+            }
+          });
+        }
+      }
+
+      // update/insert product in request
       for (const product of productTendencies) {
         const updatedProduct = await tx.vendorProductTendency.upsert({
           where: {
@@ -124,19 +141,6 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
             quantity: product.quantity,
           },
         });
-      }
-      for (const product of updatedVendor.vendorProductTendencies) {
-        const found = productTendencies.find(p => p.name === product.name);
-        if (!found) {
-          const deletedProduct = await tx.vendorProductTendency.delete({
-            where: {
-              VendorProductTendency_key: {
-                vendor_name: vendorData.name,
-                name: product.name,
-              }
-            }
-          });
-        }
       }
     })
   } catch (error) {

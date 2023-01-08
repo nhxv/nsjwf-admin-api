@@ -10,7 +10,8 @@ export class VendorRequestDto {
     public phone?: string,
     public email?: string,
     public presentative?: string,
-    public vendorProductTendencies?: VendorProductTendencyRequestDto[]
+    public vendorProductTendencies?: VendorProductTendencyRequestDto[],
+    public id?: number,
   ) {}
 }
 
@@ -25,5 +26,6 @@ export const vendorSchema = Joi.object<VendorRequestDto>({
     vendorName: Joi.string().trim().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     productName: Joi.string().trim().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0),
-  })
+  }),
+  id: Joi.number().positive().integer(),
 });
