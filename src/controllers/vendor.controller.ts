@@ -1,3 +1,4 @@
+import { findVendorTendencyByName } from "./../services/vendor.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
@@ -41,6 +42,19 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findVendorsByName(req.query.keyword as string);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  `/vendors/tendency/:name`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findVendorTendencyByName(req.params.name);
       res.send(response);
     } catch (error) {
       next(error);

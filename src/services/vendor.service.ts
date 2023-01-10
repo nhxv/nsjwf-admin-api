@@ -57,6 +57,22 @@ export const findVendorsByName = async (keyword: string) => {
   }
 }
 
+export const findVendorTendencyByName = async (name: string) => {
+  try {
+    const tendency = await prisma.vendor.findUniqueOrThrow({
+      where: {
+        name: name,
+      },
+      include: {
+        vendorProductTendencies: true,
+      }
+    });
+    return tendency;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendor tendency with the given data.");
+  }
+}
+
 export const createVendor = async (vendorDto: VendorRequestDto) => {
   try {
     const vendorData: VendorRequestDto = await vendorSchema.validateAsync(vendorDto);
