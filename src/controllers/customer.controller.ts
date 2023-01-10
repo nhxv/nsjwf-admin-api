@@ -1,3 +1,4 @@
+import { findCustomerTendencyByName } from "./../services/customer.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
@@ -41,6 +42,19 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findCustomersByName(req.query.keyword as string);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  `/customers/tendency/:name`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findCustomerTendencyByName(req.params.name);
       res.send(response);
     } catch (error) {
       next(error);

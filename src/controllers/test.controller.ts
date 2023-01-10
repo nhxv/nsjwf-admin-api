@@ -1,4 +1,4 @@
-import { nukeStock } from "./../services/test.service";
+import { nukeOperation } from "./../services/test.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { getRoleByName, getRoles, nukeConfigure } from "../services/test.service";
@@ -66,12 +66,12 @@ router.delete(
 );
 
 router.delete(
-  `/test/nuke/stock`,
+  `/test/nuke/operation`,
   [verifyAccessToken, hasAnyRole([Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const deleted = await nukeStock();
-      res.json({content: "Stock is nuked."});
+      const deleted = await nukeOperation();
+      res.json({content: "Operation is nuked."});
     } catch (error) {
       next(error);
     }

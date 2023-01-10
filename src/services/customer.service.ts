@@ -57,6 +57,22 @@ export const findCustomersByName = async (keyword: string) => {
   }
 }
 
+export const findCustomerTendencyByName = async (name: string) => {
+  try {
+    const tendency = await prisma.customer.findUniqueOrThrow({
+      where: {
+        name: name,
+      },
+      include: {
+        customerProductTendencies: true,
+      }
+    });
+    return tendency;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find customer tendency with the given data.");
+  }
+}
+
 export const createCustomer = async (customerDto: CustomerRequestDto) => {
   try {
     const customerData: CustomerRequestDto = await customerSchema.validateAsync(customerDto);
