@@ -1,3 +1,4 @@
+import { findAllEmployeeTasks } from "./../services/account.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { verifyAccessToken } from "../services/auth/token.service";
 import { hasAnyRole } from "../services/auth/authorization.service";
@@ -13,6 +14,17 @@ async (req: Request, res: Response, next: NextFunction) => {
   try {
     const response = await findAllEmployees();
     res.send(response.map(employee => new EmployeeResponse(employee.nickname)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get(`/accounts/employee-tasks/:status`, 
+[verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await findAllEmployeeTasks(req.params.status);
+    res.send(response);
   } catch (error) {
     next(error);
   }

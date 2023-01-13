@@ -1,3 +1,4 @@
+import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd, convertLocalInterval, convertLocalMonthStart, convertLocalMonthEnd, convertLocalWeekStart, convertLocalWeekEnd } from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
@@ -208,6 +209,10 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
         is_sold: false,
         status: status,
       },
+      orderBy: [
+        {priority: "asc"},
+        {created_at: "asc"},
+      ],
       include: {
         productCustomerOrders: {
           orderBy: {
@@ -261,6 +266,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           expected_at: convertLocalExpected(customerOrderData.expectedAt),
           is_test: customerOrderData.isTest,
           assign_to: employee.nickname,
+          priority: 0,
           is_sold: (customerOrderData.status === OrderStatus.COMPLETED),
           productCustomerOrders: {
             create: productOrders
@@ -649,5 +655,32 @@ export const reportTask = async (nickname: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot find task report.");    
+  }
+}
+
+export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOrderPriorityRequestDto[]) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      for (const employee of customerOrderPriorityRequestDto) {
+        if (employee.customerOrders?.length > 0) {
+          for (let i = 0; i < employee.customerOrders.length; i++) {
+            const updated = await tx.customerOrder.update({
+              where: {
+                code: employee.customerOrders[i].code,
+              },
+              data: {
+                assign_to: employee.nickname,
+                priority: i + 1,
+              },
+            });
+          }
+        }
+      }
+    });
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot update order priority.");        
   }
 }
