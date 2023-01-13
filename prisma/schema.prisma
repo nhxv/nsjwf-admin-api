@@ -162,12 +162,15 @@ model CustomerOrder {
   is_sold               Boolean                @default(false)
   assign_to             String                 @db.VarChar(32)
   account               Account                @relation(fields: [assign_to], references: [nickname])
+  priority              Int
+  is_doing              Boolean                @default(false)
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
   customerSaleReturn    CustomerSaleReturn?
   orderTaskHistories    OrderTaskHistory[]
 
   @@unique([code, is_sold], name: "CustomerOrderSold_key")
+  @@unique([assign_to, priority, created_at], name: "CustomerOrderPriority_key")
 }
 
 model ProductCustomerOrder {

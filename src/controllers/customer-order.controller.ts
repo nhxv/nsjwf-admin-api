@@ -1,6 +1,8 @@
+import { CustomerOrderRequestDto } from "./../dto/requests/customer-order-request.dto";
+import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
-import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, reportTask, finishTask } from "./../services/customer-order.service";
+import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, reportTask, finishTask, updatePriority } from "./../services/customer-order.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
@@ -189,6 +191,20 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await finishTask(req.params.code);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// when update employee task priority
+router.put(
+  `/customer-orders/tasks/priority/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await updatePriority(req.body);
       res.send(response);
     } catch (error) {
       next(error);
