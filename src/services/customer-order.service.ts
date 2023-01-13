@@ -548,9 +548,6 @@ export const finishTask = async (code: string) => {
       where: {
         code: code,
       },
-      include: {
-        productCustomerOrders: true,
-      }
     });
     if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
@@ -684,3 +681,60 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
     throw new createError.BadRequest("Cannot update order priority.");        
   }
 }
+
+export const startDoingTask = async (code: string) => {
+  try {
+    const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
+      where: {
+        code: code,
+      },
+    });
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+      throw `Please don't hack us.`;
+    }
+    const time = generateCurrentTime();
+    const updated = await prisma.customerOrder.update({
+      where: {
+        code: code,
+      },
+      data: {
+        is_doing: true,
+        updated_at: time,
+      }
+    });
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot register finished task.");
+  }
+}
+
+export const stopDoingTask = async (code: string) => {
+  try {
+    const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
+      where: {
+        code: code,
+      },
+    });
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+      throw `Please don't hack us.`;
+    }
+    const time = generateCurrentTime();
+    const updated = await prisma.customerOrder.update({
+      where: {
+        code: code,
+      },
+      data: {
+        is_doing: false,
+        updated_at: time,
+      }
+    });
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot register finished task.");
+  }
+}
+
