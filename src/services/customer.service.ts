@@ -9,7 +9,7 @@ export const findActiveCustomers = async () => {
         discontinued: false,
       },
       orderBy: {
-        name: "asc"
+        name: "asc",
       }
     });
     return customers;
@@ -59,7 +59,7 @@ export const findCustomersByName = async (keyword: string) => {
 
 export const findCustomerTendencyByName = async (name: string) => {
   try {
-    const tendency = await prisma.customer.findUniqueOrThrow({
+    const tendency = await prisma.customer.findUnique({
       where: {
         name: name,
       },
