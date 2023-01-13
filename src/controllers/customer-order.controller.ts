@@ -1,14 +1,11 @@
-import { CustomerOrderRequestDto } from "./../dto/requests/customer-order-request.dto";
-import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
-import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
-import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
-import { findCustomerOrderByStatus, findCustomerOrderByCode, findCustomerSale, reportCustomerSale, reportTask, finishTask, updatePriority } from "./../services/customer-order.service";
-import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/auth/authorization.service";
 import { Role } from "../commons/role.enum";
+import { hasAnyRole } from "../services/auth/authorization.service";
 import { createCustomerOrder, updateCustomerOrder } from "../services/customer-order.service";
-import { findEmployeeTask } from "./../services/customer-order.service";
+import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
+import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
+import { verifyAccessToken } from "./../services/auth/token.service";
+import { findCustomerOrderByCode, findCustomerOrderByStatus, findCustomerSale, findEmployeeTask, finishTask, reportCustomerSale, reportTask, updatePriority, startDoingTask, stopDoingTask } from "./../services/customer-order.service";
 
 const router = Router();
 
@@ -34,6 +31,7 @@ router.get(
           }),
           order.expected_at,
           order.assign_to,
+          order.is_doing,
           order.created_at,
           order.updated_at,
         );
@@ -84,6 +82,7 @@ router.get(
           }),
           order.expected_at,
           order.assign_to,
+          order.is_doing,
           order.created_at,
           order.updated_at,
           !!order.fullReturn,
@@ -133,6 +132,7 @@ router.get(
           }),
           order.expected_at,
           order.assign_to,
+          order.is_doing,
           order.created_at,
           order.updated_at,
         );
@@ -184,9 +184,37 @@ router.put(
   }
 );
 
+// when employee start doing task assigned to them
+router.put(
+  `/customer-orders/tasks/start-doing/:code`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await startDoingTask(req.params.code);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// when employee stop doing task assigned to them
+router.put(
+  `/customer-orders/tasks/stop-doing/:code`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await stopDoingTask(req.params.code);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // when employee finish task assigned to them
 router.put(
-  `/customer-orders/tasks/:code`,
+  `/customer-orders/tasks/finish/:code`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -200,7 +228,7 @@ router.put(
 
 // when update employee task priority
 router.put(
-  `/customer-orders/tasks/priority/all`,
+  `/customer-orders/tasks/priority`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
