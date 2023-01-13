@@ -382,6 +382,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           updated_at: time,
           expected_at: convertLocalExpected(customerOrderData.expectedAt),
           assign_to: customerOrderData.assignTo,
+          priority: 0,
           is_test: customerOrderData.isTest,
           is_sold: (customerOrderData.status === OrderStatus.DELIVERED),
           productCustomerOrders: {
