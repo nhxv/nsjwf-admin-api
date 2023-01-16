@@ -1,1 +1,1 @@
-export const GENERAL_TEXT_REGEX = /[!$%^\*\_+<>?:"{}\[\];/\t]/;
+export const GENERAL_TEXT_REGEX = /[!#$%^\*\_+<>?:"{}\[\];/\t]/;
