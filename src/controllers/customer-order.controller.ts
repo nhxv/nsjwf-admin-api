@@ -186,11 +186,11 @@ router.put(
 
 // when employee start doing task assigned to them
 router.put(
-  `/customer-orders/tasks/start-doing/:code`,
+  `/customer-orders/tasks/start-doing`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await startDoingTask(req.params.code);
+      const response = await startDoingTask(req.query.code as string, req.query.nickname as string);
       res.send(response);
     } catch (error) {
       next(error);

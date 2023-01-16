@@ -661,15 +661,31 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
       for (const employee of customerOrderPriorityRequestDto) {
         if (employee.customerOrders?.length > 0) {
           for (let i = 0; i < employee.customerOrders.length; i++) {
-            const updated = await tx.customerOrder.update({
+            const currentTask = await tx.customerOrder.findUniqueOrThrow({
               where: {
-                code: employee.customerOrders[i].code,
-              },
-              data: {
-                assign_to: employee.nickname,
-                priority: i + 1,
-              },
+                code: employee.customerOrders[i]. code,
+              }
             });
+            if (currentTask.is_doing) {
+              const updated = await tx.customerOrder.update({
+                where: {
+                  code: employee.customerOrders[i].code,
+                },
+                data: {
+                  priority: i + 1,
+                },
+              });
+            } else {
+              const updated = await tx.customerOrder.update({
+                where: {
+                  code: employee.customerOrders[i].code,
+                },
+                data: {
+                  assign_to: employee.nickname,
+                  priority: i + 1,
+                },
+              });
+            }
           }
         }
       }
@@ -682,7 +698,7 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
   }
 }
 
-export const startDoingTask = async (code: string) => {
+export const startDoingTask = async (code: string, nickname: string) => {
   try {
     const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
       where: {
@@ -691,6 +707,9 @@ export const startDoingTask = async (code: string) => {
     });
     if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
+    }
+    if (currentOrder.assign_to !== nickname) {
+      throw `This is no longer your task.`;
     }
     const time = generateCurrentTime();
     const updated = await prisma.customerOrder.update({
