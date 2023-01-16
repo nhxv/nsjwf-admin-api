@@ -576,6 +576,7 @@ export const finishTask = async (code: string) => {
         },
         data: {
           status: (currentOrder.status === OrderStatus.PICKING ? OrderStatus.CHECKING : OrderStatus.DELIVERED),
+          is_doing: false,
           updated_at: time,
         }
       });
