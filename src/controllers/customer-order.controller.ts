@@ -5,9 +5,22 @@ import { createCustomerOrder, updateCustomerOrder } from "../services/customer-o
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { verifyAccessToken } from "./../services/auth/token.service";
-import { findCustomerOrderByCode, findCustomerOrderByStatus, findCustomerSale, findEmployeeTask, finishTask, reportCustomerSale, reportTask, updatePriority, startDoingTask, stopDoingTask } from "./../services/customer-order.service";
+import { findDailyCustomerOrder, findCustomerOrderByCode, findCustomerOrderByStatus, findCustomerSale, findEmployeeTask, finishTask, reportCustomerSale, reportTask, updatePriority, startDoingTask, stopDoingTask } from "./../services/customer-order.service";
 
 const router = Router();
+
+router.get(
+  `/customer-orders/daily`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response: any = await findDailyCustomerOrder();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }  
+);
 
 // find customer orders by status
 router.get(

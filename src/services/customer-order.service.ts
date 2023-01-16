@@ -8,6 +8,21 @@ import { Prisma } from "@prisma/client";
 import { generateCode } from "../commons/code.util";
 import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
 
+export const findDailyCustomerOrder = async () => {
+  try {
+    const customerOrders = await prisma.customerOrder.findMany({
+      where: {
+        expected_at: {
+          gte: convertLocalStart(),
+        }
+      }
+    });
+    return customerOrders;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find customer order.");    
+  }
+}
+
 export const findCustomerOrderByStatus = async (status: string) => {
   try {
     if (!(Object.values(OrderStatus) as string[]).includes(status) || status === OrderStatus.COMPLETED) {
