@@ -56,7 +56,7 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
           reason: reason,
         }
       });
-
+      let changeCount = 0;
       for (const stock of productStockData) {
         // 2. compare current stock with new stock
         const currentProductStock = await tx.productStock.findUniqueOrThrow({
@@ -68,6 +68,8 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
         if (stockQuantityChange === 0) {
           continue;
         }
+        // count change
+        changeCount++;
 
         // validate if quantity change make sense
         if (
@@ -99,6 +101,9 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
             quantity_change: stockQuantityChange,
           }
         });
+      }
+      if (changeCount === 0) {
+        throw `Nothing ever changes.`;
       }
       return updatedResult;
     });
