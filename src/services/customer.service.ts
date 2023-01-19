@@ -160,6 +160,10 @@ export const updateCustomer = async (customerDto: CustomerRequestDto, id: number
       }
     })
   } catch (error) {
+    if (error.details?.message) {
+      throw new createError.BadRequest(error.details.message);
+    }
+    console.log(error);
     throw new createError.BadRequest("Cannot update customer with the given data.");
   }
 }
