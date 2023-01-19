@@ -1,6 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { CustomerRequestDto, customerSchema } from "../dto/requests/customer-request.dto";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findActiveCustomers = async () => {
   try {
@@ -95,6 +96,9 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
     });
     return newCustomer;
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot add customer with the given data.");
   }
 }
@@ -160,17 +164,8 @@ export const updateCustomer = async (customerDto: CustomerRequestDto, id: number
       }
     })
   } catch (error) {
-    console.log(error);
     if (error.details?.length > 0) {
-      let message = "";
-      for (let i = 0; i < error.details.length; i++) {
-        if (i === error.details.length - 1) {
-          message += error.details[i].message;
-        } else {
-          message += error.details[i].message + ", ";
-        }
-      }
-      throw new createError.BadRequest(message);
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot update customer with the given data.");
   }
