@@ -1,8 +1,8 @@
-import { ProductStockChangeReason } from './../commons/product-stock-change-reason.enum';
-import { generateCurrentTime } from "./../commons/time.util";
 import createError from "http-errors";
-import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
 import prisma from "../../prisma/prisma-client";
+import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
+import { generateCurrentTime } from "./../commons/time.util";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findActiveProducts = async () => {
   try {
@@ -64,6 +64,9 @@ export const createProduct = async (productDto: ProductRequestDto) => {
       });
     })
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot add product with the given data.");
   }
 }

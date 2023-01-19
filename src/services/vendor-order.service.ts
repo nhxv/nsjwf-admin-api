@@ -6,6 +6,7 @@ import createError  from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { OrderStatus } from "../commons/order-status.enum";
 import { Prisma } from "@prisma/client";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findVendorOrderByStatus = async (status: string) => {
   try {
@@ -197,6 +198,9 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot add vendor order with the given data.");
   }
 }
@@ -328,6 +332,9 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot update vendor order with the given data.");
   }

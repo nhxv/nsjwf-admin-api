@@ -1,6 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { VendorRequestDto, vendorSchema } from "../dto/requests/vendor-request.dto";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findActiveVendors = async () => {
   try {
@@ -95,6 +96,9 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
     });
     return newVendor;
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot add vendor with the given data.");
   }
 }
@@ -160,6 +164,9 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
       }
     })
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot update vendor with the given data.");
   }
 }

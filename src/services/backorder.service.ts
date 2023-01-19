@@ -9,6 +9,7 @@ import { BackorderRequestDto, backorderSchema } from "../dto/requests/backorder-
 import { customerOrderSchema } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
 import { BackorderStatus } from "../commons/backorder-status.enum";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findBackorderByStatus = async (status: string) => {
   try {
@@ -43,6 +44,7 @@ export const findBackorderByStatus = async (status: string) => {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
+    
     throw new createError.BadRequest("Cannot find backorder.");
   }
 };
@@ -105,6 +107,9 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot add backorder with the given data.");
   }
@@ -225,6 +230,9 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot update backorder with the given data.");
   }
@@ -436,6 +444,9 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot convert backorder with the given data.");    
   }

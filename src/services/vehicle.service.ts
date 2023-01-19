@@ -1,6 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { VehicleRequestDto, vehicleSchema } from "../dto/requests/vehicle-request.dto";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findVehiclesByName = async (keyword: string) => {
   try {
@@ -35,6 +36,9 @@ export const createVehicle = async (vehicleDto: VehicleRequestDto) => {
     });
     return newVehicle;
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot add vehicle with the given data.");
   }
 }
@@ -56,6 +60,9 @@ export const updateVehicle = async (vehicleDto: VehicleRequestDto, id: number) =
     });
     return updatedVehicle;
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot update vehicle with the given data.");
   }
 }

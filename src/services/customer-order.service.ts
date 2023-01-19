@@ -7,6 +7,7 @@ import createError  from "http-errors";
 import { Prisma } from "@prisma/client";
 import { generateCode } from "../commons/code.util";
 import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findDailyCustomerOrder = async () => {
   try {
@@ -335,6 +336,9 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot create customer order with the given data.");
   }
 }
@@ -552,6 +556,9 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot update customer order with the given data.");
   }

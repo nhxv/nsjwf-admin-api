@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import createError  from "http-errors";
 import { generateCurrentTime } from "../commons/time.util";
 import { OrderStatus } from "../commons/order-status.enum";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findVendorReturns = async () => {
   try {
@@ -164,6 +165,9 @@ export const createVendorReturn = async (vendorReturnRequestDto: VendorReturnReq
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
+    }
+    if (error.details?.length > 0) {
+      handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot create vendor return with the given data.");
   }
