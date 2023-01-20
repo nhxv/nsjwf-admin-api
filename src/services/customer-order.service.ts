@@ -224,6 +224,9 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
         assign_to: nickname,
         is_sold: false,
         status: status,
+        expected_at: {
+          gte: convertLocalStart(),
+        }
       },
       orderBy: [
         {priority: "asc"},
@@ -686,10 +689,13 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
           for (let i = 0; i < employee.customerOrders.length; i++) {
             const currentTask = await tx.customerOrder.findUniqueOrThrow({
               where: {
-                code: employee.customerOrders[i]. code,
+                code: employee.customerOrders[i].code,
               }
             });
             if (currentTask.is_doing) {
+              if (currentTask.assign_to !== employee.nickname) {
+                throw `Cannot re-assign on-doing task to someone else.`;
+              }
               const updated = await tx.customerOrder.update({
                 where: {
                   code: employee.customerOrders[i].code,
