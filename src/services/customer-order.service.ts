@@ -169,6 +169,7 @@ export const reportCustomerSale = async () => {
       reports.push({
         is_test: sold.is_test,
         order_code: sold.code,
+        manual_code: sold.manual_code ? sold.manual_code : "",
         customer_name: sold.customer_name,
         sale: sold.productCustomerOrders.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0),
         refund: 0,
