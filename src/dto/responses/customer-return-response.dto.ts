@@ -1,11 +1,10 @@
 import { ProductCustomerReturnResponseDto } from "./product-customer-return-response.dto";
 
-export class CustomerReturnResponseDto {
-  constructor(
-    public customerName: string,
-    public orderCode: string,
-    public productCustomerReturns: ProductCustomerReturnResponseDto[],
-    public createdAt?: Date,
-    public id?: number,
-  ) {}
+export interface CustomerReturnResponseDto {
+  customerName: string,
+  orderCode: string,
+  productCustomerReturns: ProductCustomerReturnResponseDto[],
+  createdAt?: Date,
+  manualCode?: string,
+  id?: number,  
 }

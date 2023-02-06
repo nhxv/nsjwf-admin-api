@@ -2,17 +2,15 @@ import { VendorProductTendencyRequestDto } from "./vendor-product-tendency-reque
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class VendorRequestDto {
-  constructor(
-    public name: string,
-    public discontinued: boolean,
-    public address?: string,
-    public phone?: string,
-    public email?: string,
-    public presentative?: string,
-    public vendorProductTendencies?: VendorProductTendencyRequestDto[],
-    public id?: number,
-  ) {}
+export interface VendorRequestDto {
+  name: string,
+  discontinued: boolean,
+  address?: string,
+  phone?: string,
+  email?: string,
+  presentative?: string,
+  vendorProductTendencies?: VendorProductTendencyRequestDto[],
+  id?: number,  
 }
 
 export const vendorSchema = Joi.object<VendorRequestDto>({

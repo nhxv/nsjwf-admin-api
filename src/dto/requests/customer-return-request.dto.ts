@@ -3,17 +3,15 @@ import { ProductCustomerReturnRequestDto } from "./product-customer-return-reque
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class CustomerReturnRequestDto {
-  constructor(
-    public customerName: string,
-    public productCustomerReturns: ProductCustomerReturnRequestDto[],
-    public orderCode: string,
-    public recommendedPrice: Prisma.Decimal,
-    public finalPrice: Prisma.Decimal,
-    public status?: string,
-    public createdAt?: Date,
-    public id?: number,
-  ) {}
+export interface CustomerReturnRequestDto {
+  customerName: string,
+  productCustomerReturns: ProductCustomerReturnRequestDto[],
+  orderCode: string,
+  recommendedPrice: Prisma.Decimal,
+  finalPrice: Prisma.Decimal,
+  status?: string,
+  createdAt?: Date,
+  id?: number,
 }
 
 export const customerReturnSchema = Joi.object<CustomerReturnRequestDto>({

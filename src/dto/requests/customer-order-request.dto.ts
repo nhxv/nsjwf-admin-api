@@ -1,21 +1,20 @@
 import Joi from "joi";
 import { ProductCustomerOrderRequestDto } from "./product-customer-order-request.dto";
 import { OrderStatus } from "../../commons/order-status.enum";
-import { GENERAL_TEXT_REGEX } from "../../commons/constant";
+import { GENERAL_TEXT_REGEX, NUMBER_REGEX } from "../../commons/constant";
 
-export class CustomerOrderRequestDto {
-  constructor(
-    public customerName: string,
-    public productCustomerOrders: ProductCustomerOrderRequestDto[],
-    public isTest: boolean,
-    public expectedAt: Date,
-    public assignTo: string,
-    public code?: string,
-    public status?: string,
-    public createdAt?: Date,
-    public updatedAt?: Date,
-    public id?: number,
-  ) {}
+export interface CustomerOrderRequestDto {
+  customerName: string,
+  productCustomerOrders: ProductCustomerOrderRequestDto[],
+  isTest: boolean,
+  expectedAt: Date,
+  assignTo: string,
+  code?: string,
+  status?: string,
+  createdAt?: Date,
+  updatedAt?: Date,
+  manualCode?: string,
+  id?: number,
 }
 
 export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
@@ -38,4 +37,5 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
   status: Joi.string().max(32).valid(...Object.values(OrderStatus)).regex(GENERAL_TEXT_REGEX, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
+  manualCode: Joi.string().allow("").max(6).regex(NUMBER_REGEX),
 });

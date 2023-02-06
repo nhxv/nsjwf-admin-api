@@ -164,6 +164,7 @@ model CustomerOrder {
   account               Account                @relation(fields: [assign_to], references: [nickname])
   priority              Int
   is_doing              Boolean                @default(false)
+  manual_code           String?                @unique @db.VarChar(6)
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
   customerSaleReturn    CustomerSaleReturn?
@@ -302,6 +303,7 @@ model CustomerSaleReturn {
   customer_name              String                      @db.VarChar(255)
   customer                   Customer                    @relation(fields: [customer_name], references: [name], onDelete: Cascade)
   sold_at                    DateTime
+  sale_manual_code           String?                     @unique @db.VarChar(6)
   productCustomerSaleReturns ProductCustomerSaleReturn[]
 }
 

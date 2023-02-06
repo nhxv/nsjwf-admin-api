@@ -241,10 +241,10 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
 export const convertBackorder = async (id: number, backorderDto: BackorderRequestDto) => {
   try {
     // Validate backorder data
-    const backorderData: BackorderRequestDto = await backorderSchema.validateAsync(backorderDto);
     if (backorderDto.id !== id) {
       throw `Please don't hack us.`;
     }
+    const backorderData: BackorderRequestDto = await backorderSchema.validateAsync(backorderDto);
     if (!backorderData.isArchived) {
       throw `Please don't hack us.`;
     }
@@ -262,16 +262,15 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
     const { code, time } = generateCode();
 
     // convert backorder to a newly created customer order
-    const customerOrderDto = new CustomerOrderRequestDto(
-      backorderData.customerName,
-      backorderData.productBackorders,
-      backorderData.isTest,
-      backorderData.expectedAt,
-      backorderData.assignTo,
-      code,
-      OrderStatus.PICKING,
-      time,
-    );
+    const customerOrderDto: CustomerOrderRequestDto = {
+      customerName: backorderData.customerName,
+      productCustomerOrders: backorderData.productBackorders,
+      isTest: backorderData.isTest,
+      expectedAt: backorderData.expectedAt,
+      assignTo: backorderData.assignTo,
+      code: code,
+      status: OrderStatus.PICKING,
+    };
 
     // Validate customer order
     const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
@@ -392,7 +391,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           assign_to: customerOrderData.assignTo,
           priority: 0,
           is_test: customerOrderData.isTest,
-          is_sold: (customerOrderData.status === OrderStatus.DELIVERED),
+          is_sold: false,
           productCustomerOrders: {
             create: productOrders
           }

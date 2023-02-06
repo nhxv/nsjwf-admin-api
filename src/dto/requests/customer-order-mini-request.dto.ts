@@ -1,7 +1,5 @@
-export class CustomerOrderMiniRequestDto {
-  constructor(
-    public customerName: string,
-    public code: string,
-    public id?: number,
-  ) {}
+export interface CustomerOrderMiniRequestDto {
+  customerName: string,
+  code: string,
+  id?: number,
 }

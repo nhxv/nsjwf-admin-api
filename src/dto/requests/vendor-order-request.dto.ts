@@ -3,18 +3,16 @@ import { ProductVendorOrderRequestDto } from "./product-vendor-order-request.dto
 import { OrderStatus } from "../../commons/order-status.enum";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class VendorOrderRequestDto {
-  constructor(
-    public vendorName: string,
-    public productVendorOrders: ProductVendorOrderRequestDto[],
-    public isTest: boolean,
-    public expectedAt: Date,
-    public id?: number,
-    public code?: string,
-    public status?: string,
-    public createdAt?: Date,
-    public updatedAt?: Date,
-  ) {}
+export interface VendorOrderRequestDto {
+  vendorName: string,
+  productVendorOrders: ProductVendorOrderRequestDto[],
+  isTest: boolean,
+  expectedAt: Date,
+  id?: number,
+  code?: string,
+  status?: string,
+  createdAt?: Date,
+  updatedAt?: Date,
 }
 
 export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({

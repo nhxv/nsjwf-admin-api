@@ -16,20 +16,22 @@ router.get(
     try {
       const response = await findBackorderByStatus(req.params.status);
       res.send(response.map(order => {
-        return new BackorderResponseDto(
-          order.customer_name,
-          order.is_test,
-          order.productBackorders.map(productOrder => {
-            return new ProductBackorderResponseDto(
-              productOrder.product_name,
-              productOrder.quantity,
-            )
+        const backorderRes: BackorderResponseDto = {
+          customerName: order.customer_name,
+          isTest: order.is_test,
+          productBackorders: order.productBackorders.map(po => {
+            const poRes : ProductBackorderResponseDto = {
+              productName: po.product_name,
+              quantity: po.quantity,
+            }
+            return poRes;
           }),
-          order.is_archived,
-          order.expected_at,
-          order.id,
-          order.created_at,
-        )
+          isArchived: order.is_archived,
+          createdAt: order.created_at,
+          expectedAt: order.expected_at,
+          id: order.id,
+        };
+        return backorderRes;
       }));
     } catch (error) {
       next(error);

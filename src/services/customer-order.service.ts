@@ -245,7 +245,7 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot find task by the given data");
+    throw new createError.BadRequest("Cannot find task by the given data.");
   }
 }
 
@@ -287,6 +287,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           assign_to: employee.nickname,
           priority: 0,
           is_sold: (customerOrderData.status === OrderStatus.COMPLETED),
+          manual_code: customerOrderData.manualCode,
           productCustomerOrders: {
             create: productOrders
           }
@@ -393,6 +394,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            manual_code: customerOrderData.manualCode,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
           }
         });
@@ -557,6 +559,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
       }
     });
   } catch (error) {
+    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }

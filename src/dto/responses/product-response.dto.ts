@@ -1,7 +1,5 @@
-export class ProductResponseDto {
-  constructor(
-    public name: string,
-    public discontinued: boolean,
-    public id?: number,
-  ) {}
+export interface ProductResponseDto {
+  name: string,
+  discontinued: boolean,
+  id?: number,
 }

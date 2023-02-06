@@ -1,14 +1,12 @@
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class VehicleRequestDto {
-  constructor(
-    public licensePlate: string,
-    public available: boolean,
-    public discontinued: boolean,
-    public nickname?: string,
-    public volume?: number,
-  ) {}
+export interface VehicleRequestDto {
+  licensePlate: string,
+  available: boolean,
+  discontinued: boolean,
+  nickname?: string,
+  volume?: number,
 }
 
 export const vehicleSchema = Joi.object<VehicleRequestDto>({

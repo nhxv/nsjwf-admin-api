@@ -1,8 +1,6 @@
-export class VendorProductTendencyRequestDto {
-  constructor (
-    public vendorName: string,
-    public productName: string,
-    public quantity: number,
-    public id?: number,
-  ) {}
+export interface VendorProductTendencyRequestDto {
+  vendorName: string,
+  productName: string,
+  quantity: number,
+  id?: number,  
 }
