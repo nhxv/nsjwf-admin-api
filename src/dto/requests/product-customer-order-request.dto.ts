@@ -1,14 +1,12 @@
 import { Prisma } from "@prisma/client";
 
-export class ProductCustomerOrderRequestDto {
-  constructor(
-    public productName: string,
-    public quantity: number,
-    public unitPrice: Prisma.Decimal,
-    public id?: number,
-    public orderCode?: string,
-    public createdAt?: Date,
-    public updatedAt?: Date,
-    public isRemove?: boolean,   
-  ) {}
+export interface ProductCustomerOrderRequestDto {
+  productName: string,
+  quantity: number,
+  unitPrice: Prisma.Decimal,
+  id?: number,
+  orderCode?: string,
+  createdAt?: Date,
+  updatedAt?: Date,
+  isRemove?: boolean, 
 }

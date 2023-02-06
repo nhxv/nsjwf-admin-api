@@ -1,8 +1,6 @@
 import { CustomerOrderMiniRequestDto } from "./customer-order-mini-request.dto";
 
-export class CustomerOrderPriorityRequestDto {
-  constructor(
-    public nickname: string,
-    public customerOrders: CustomerOrderMiniRequestDto[],
-  ) {}
+export interface CustomerOrderPriorityRequestDto {
+  nickname: string,
+  customerOrders: CustomerOrderMiniRequestDto[],
 }

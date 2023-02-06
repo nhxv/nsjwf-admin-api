@@ -1,10 +1,9 @@
-import { ProductStockRequestDto } from "./../dto/requests/product-stock-request.dto";
-import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/auth/authorization.service";
 import { Role } from "../commons/role.enum";
-import { findAllProductStock, updateProductStock } from "../services/product-stock.service";
 import { ProductStockResponseDto } from "../dto/responses/product-stock-response.dto";
+import { hasAnyRole } from "../services/auth/authorization.service";
+import { findAllProductStock, updateProductStock } from "../services/product-stock.service";
+import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 
@@ -14,12 +13,13 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findAllProductStock();
-      res.send(response.map((productStock) => {
-        return new ProductStockResponseDto(
-          productStock.product_name,
-          productStock.quantity,
-          productStock.id,
-        )
+      res.send(response.map(productStock => {
+        const productStockRes: ProductStockResponseDto = {
+          name: productStock.product_name,
+          quantity: productStock.quantity,
+          id: productStock.id,
+        };
+        return productStockRes;
       }));
     } catch (error) {
       next(error);
@@ -35,12 +35,13 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updateProductStock(req.body.stock, req.body.reason);
-      res.send(response.map((productStock) => {
-        return new ProductStockResponseDto(
-          productStock.product_name,
-          productStock.quantity,
-        )
-      }));
+      res.send(response.map(productStock => {
+        const productStockRes: ProductStockResponseDto = {
+          name: productStock.product_name,
+          quantity: productStock.quantity,
+        };
+        return productStockRes;
+      }))
     } catch (error) {
       next(error);
     }

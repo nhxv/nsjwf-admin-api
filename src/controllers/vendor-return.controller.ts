@@ -14,21 +14,22 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response: any = await findVendorReturns();
-      res.send(response.map(
-        vendorReturn => {
-        return new VendorReturnResponseDto(
-          vendorReturn.vendor_name,
-          vendorReturn.order_code,
-          vendorReturn.productVendorReturns.map(productReturn => {
-            return new ProductVendorReturnResponseDto(
-              productReturn.product_name,
-              productReturn.quantity,
-              productReturn.unit_price,
-            )
+      const response = await findVendorReturns();
+      res.send(response.map(vendorReturn => {
+        const vendorReturnRes: VendorReturnResponseDto = {
+          vendorName: vendorReturn.vendor_name,
+          orderCode: vendorReturn.order_code,
+          productVendorReturns: vendorReturn.productVendorReturns.map(pr => {
+            const prRes: ProductVendorReturnResponseDto = {
+              productName: pr.product_name,
+              quantity: pr.quantity,
+              unitPrice: pr.unit_price,
+            };
+            return prRes;
           }),
-          vendorReturn.created_at,
-        );
+          createdAt: vendorReturn.created_at,
+        };
+        return vendorReturnRes;
       }));
     } catch (error) {
       next(error);

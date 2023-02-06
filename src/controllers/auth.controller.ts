@@ -8,8 +8,13 @@ router.post(
   "/auth/login",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const loginRes = await login(req.body);
-      res.send(new LoginResponseDto(loginRes.account.nickname, loginRes.account.role_id, loginRes.token));
+      const response = await login(req.body);
+      const loginRes: LoginResponseDto = {
+        nickname: response.account.nickname,
+        roleId: response.account.role_id,
+        token: response.token,
+      };
+      res.send(loginRes);
     } catch (error) {
       next(error);
     }

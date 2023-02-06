@@ -34,6 +34,7 @@ export const findCustomerSaleReturnByCode = async (code: string) => {
           quantity: p.quantity,
           unit_price: p.unit_price,
         })),
+        sale_manual_code: orderSold.manual_code,
       }
     }
     return customerSaleReturn;

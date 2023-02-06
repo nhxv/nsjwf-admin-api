@@ -1,10 +1,8 @@
 import Joi from "joi";
 
-export class LoginRequestDto {
-  constructor(
-    public username: string,
-    public password: string,
-  ) {}
+export interface LoginRequestDto {
+  username: string,
+  password: string,
 }
 
 export const loginSchema = Joi.object<LoginRequestDto>({

@@ -28,26 +28,28 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response: any = await findCustomerOrderByStatus(req.params.status);
-      res.send(response.map(
-        order => {
-        return new CustomerOrderResponseDto(
-          order.customer_name,
-          order.is_test,
-          order.code,
-          order.status,
-          order.productCustomerOrders.map(productOrder => {
-            return new ProductCustomerOrderResponseDto(
-              productOrder.product_name,
-              productOrder.quantity,
-            )
+      const response = await findCustomerOrderByStatus(req.params.status);
+      res.send(response.map(order => {
+        const orderRes: CustomerOrderResponseDto = {
+          customerName: order.customer_name,
+          isTest: order.is_test,
+          code: order.code,
+          status: order.status,
+          productCustomerOrders: order.productCustomerOrders.map(po => {
+            const poRes: ProductCustomerOrderResponseDto = {
+              productName: po.product_name,
+              quantity: po.quantity,
+            }
+            return poRes;
           }),
-          order.expected_at,
-          order.assign_to,
-          order.is_doing,
-          order.created_at,
-          order.updated_at,
-        );
+          expectedAt: order.expected_at,
+          assignTo: order.assign_to,
+          isDoing: order.is_doing,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          manualCode: order.manual_code,
+        }
+        return orderRes;
       }));
     } catch (error) {
       next(error);
@@ -79,27 +81,29 @@ router.get(
         req.query.keyword as string, 
         req.query.date as string
       );
-      res.send(response.map(
-        order => {
-        return new CustomerOrderResponseDto(
-          order.customer_name,
-          order.is_test,
-          order.code,
-          order.status,
-          order.productCustomerOrders.map(productOrder => {
-            return new ProductCustomerOrderResponseDto(
-              productOrder.product_name,
-              productOrder.quantity,
-              productOrder.unit_price,
-            )
+      res.send(response.map(order => {
+        const orderRes: CustomerOrderResponseDto = {
+          customerName: order.customer_name,
+          isTest: order.is_test,
+          code: order.code,
+          status: order.status,
+          productCustomerOrders: order.productCustomerOrders.map(po => {
+            const poRes: ProductCustomerOrderResponseDto = {
+              productName: po.product_name,
+              quantity: po.quantity,
+              unitPrice: po.unit_price,
+            }
+            return poRes;
           }),
-          order.expected_at,
-          order.assign_to,
-          order.is_doing,
-          order.created_at,
-          order.updated_at,
-          !!order.fullReturn,
-        );
+          expectedAt: order.expected_at,
+          assignTo: order.assign_to,
+          isDoing: order.is_doing,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          fullReturn: !!order.fullReturn,
+          manualCode: order.manual_code,
+        }
+        return orderRes;
       }));
     } catch (error) {
       next(error);
@@ -130,26 +134,28 @@ router.get(
         req.query.nickname as string,
         req.query.status as string, 
       );
-      res.send(response.map(
-        order => {
-        return new CustomerOrderResponseDto(
-          order.customer_name,
-          order.is_test,
-          order.code,
-          order.status,
-          order.productCustomerOrders.map(productOrder => {
-            return new ProductCustomerOrderResponseDto(
-              productOrder.product_name,
-              productOrder.quantity,
-              productOrder.unit_price,
-            )
+      res.send(response.map(order => {
+        const orderRes: CustomerOrderResponseDto = {
+          customerName: order.customer_name,
+          isTest: order.is_test,
+          code: order.code,
+          status: order.status,
+          productCustomerOrders: order.productCustomerOrders.map(po => {
+            const poRes: ProductCustomerOrderResponseDto = {
+              productName: po.product_name,
+              quantity: po.quantity,
+              unitPrice: po.unit_price,
+            }
+            return poRes;
           }),
-          order.expected_at,
-          order.assign_to,
-          order.is_doing,
-          order.created_at,
-          order.updated_at,
-        );
+          expectedAt: order.expected_at,
+          assignTo: order.assign_to,
+          isDoing: order.is_doing,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          manualCode: order.manual_code,
+        };
+        return orderRes;
       }));
     } catch (error) {
       next(error);
@@ -170,7 +176,7 @@ router.get(
   }
 );
 
-// create order to customer
+// create customer order
 router.post(
   `/customer-orders`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -184,7 +190,7 @@ router.post(
   }
 );
 
-// update order to customer by order code
+// update customer order by order code
 router.put(
   `/customer-orders/:code`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],

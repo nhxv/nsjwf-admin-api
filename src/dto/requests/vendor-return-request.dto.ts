@@ -3,17 +3,15 @@ import Joi from "joi";
 import { Prisma } from "@prisma/client";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class VendorReturnRequestDto {
-  constructor(
-    public vendorName: string,
-    public productVendorReturns: ProductVendorReturnRequestDto[],
-    public orderCode: string,
-    public recommendedPrice: Prisma.Decimal,
-    public finalPrice: Prisma.Decimal,
-    public status?: string,
-    public createdAt?: Date,
-    public id?: number,
-  ) {}
+export interface VendorReturnRequestDto {
+  vendorName: string,
+  productVendorReturns: ProductVendorReturnRequestDto[],
+  orderCode: string,
+  recommendedPrice: Prisma.Decimal,
+  finalPrice: Prisma.Decimal,
+  status?: string,
+  createdAt?: Date,
+  id?: number,
 }
 
 export const vendorReturnSchema = Joi.object<VendorReturnRequestDto>({

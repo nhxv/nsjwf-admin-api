@@ -2,18 +2,16 @@ import { ProductBackorderRequestDto } from "./product-backorder.dto";
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-export class BackorderRequestDto {
-  constructor(
-    public customerName: string,
-    public productBackorders: ProductBackorderRequestDto[],
-    public isTest: boolean,
-    public isArchived: boolean,
-    public expectedAt: Date,
-    public assignTo: string,
-    public id?: number,
-    public createdAt?: Date,
-    public updatedAt?: Date,
-  ) {}
+export interface BackorderRequestDto {
+  customerName: string,
+  productBackorders: ProductBackorderRequestDto[],
+  isTest: boolean,
+  isArchived: boolean,
+  expectedAt: Date,
+  assignTo: string,
+  id?: number,
+  createdAt?: Date,
+  updatedAt?: Date,
 }
 
 export const backorderSchema = Joi.object<BackorderRequestDto>({
