@@ -85,6 +85,9 @@ export const updateProduct = async (productDto: ProductRequestDto, id: number) =
     });
     return updatedProduct;
   } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
     throw new createError.BadRequest("Cannot update product with the given data.");
   }
 }

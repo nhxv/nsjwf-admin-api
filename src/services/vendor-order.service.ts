@@ -173,7 +173,17 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
               change_id: addedProductStockChangeHistory.id,
               quantity_change: productOrder.quantity,
             }
-          });          
+          }); 
+          
+          // update product sell price suggestion
+          const updatedProductSellPrice = await tx.product.update({
+            where: {
+              name: productOrder.product_name,
+            },
+            data: {
+              sell_price: productOrder.unit_price,
+            }
+          });
         }
       });
     } else {
@@ -323,6 +333,15 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: productOrder.quantity,
+            }
+          });
+          // update product sell price suggestion
+          const updatedProductSellPrice = await tx.product.update({
+            where: {
+              name: productOrder.product_name,
+            },
+            data: {
+              sell_price: productOrder.unit_price,
             }
           });
         }        
