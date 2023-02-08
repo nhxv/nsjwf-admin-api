@@ -195,7 +195,6 @@ export const reportCustomerSale = async () => {
         }
       }
       if (!found) {
-        const sum = customerReturn.productCustomerReturns.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0);
         reports.push({
           is_test: false,
           order_code: "NONE",
@@ -205,7 +204,7 @@ export const reportCustomerSale = async () => {
           refund_order: customerReturn.order_code,
           date: customerReturn.created_at,
           productCustomerOrders: [],
-        })
+        });
       }
     }
     return reports;

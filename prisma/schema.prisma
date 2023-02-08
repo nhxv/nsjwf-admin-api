@@ -29,6 +29,7 @@ model Product {
   id                         Int                         @id @default(autoincrement())
   name                       String                      @unique @db.VarChar(255)
   discontinued               Boolean                     @default(false)
+  sell_price                 Decimal?
   productBackorders          ProductBackorder[]
   productCustomerOrders      ProductCustomerOrder[]
   productStock               ProductStock?
