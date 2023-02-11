@@ -1,13 +1,32 @@
+import { EmployeeRequestDto, employeeSchema } from "./../dto/requests/employee-request.dto";
 import { OrderStatus } from "./../commons/order-status.enum";
 import { convertLocalStart } from "./../commons/time.util";
 import createError  from "http-errors";
 import { Role } from "../commons/role.enum";
+import { handleValidationError } from "../commons/http.exception";
 
 export const findAllEmployees = async () => {
   try {
     const employees = await prisma.account.findMany({
       where: {
         role_id: Role.OPERATOR,
+      },
+      orderBy: {
+        nickname: "asc",
+      }
+    });
+    return employees;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find employees.");
+  }
+}
+
+export const findActiveEmployees = async () => {
+  try {
+    const employees = await prisma.account.findMany({
+      where: {
+        role_id: Role.OPERATOR,
+        active: true,
       },
       orderBy: {
         nickname: "asc",
@@ -53,5 +72,26 @@ export const findAllEmployeeTasks = async (status: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot find employees.");
+  }
+}
+
+export const updateEmployee = async (id: number, employeeDto: EmployeeRequestDto) => {
+  try {
+    const employeeData: EmployeeRequestDto = await employeeSchema.validateAsync(employeeDto);
+    const updatedEmployee = await prisma.account.update({
+      where: {
+        id: id,
+      },
+      data: {
+        nickname: employeeData.nickname,
+        active: employeeData.active,
+      }
+    });
+    return updatedEmployee;
+  } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
+    throw new createError.BadRequest("Cannot update employee.");
   }
 }
