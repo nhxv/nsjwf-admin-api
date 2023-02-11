@@ -20,6 +20,7 @@ model Account {
   nickname           String?            @unique @db.VarChar(255)
   role_id            Int
   role               Role               @relation(fields: [role_id], references: [id])
+  active             Boolean?
   orderTaskHistories OrderTaskHistory[]
   customerOrders     CustomerOrder[]
   backorders         Backorder[]

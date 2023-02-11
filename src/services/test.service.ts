@@ -45,6 +45,11 @@ export const nukeOperation = async () => {
     const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
     const deletedVendorReturn = await prisma.vendorReturn.deleteMany({});
     const deletedVendorSaleReturn = await prisma.vendorSaleReturn.deleteMany({});
+    const updatedProducts = await prisma.product.updateMany({
+      data: {
+        sell_price: null,
+      },
+    });
     return await prisma.$transaction(async (tx) => {
       const allStocks = await tx.productStock.findMany();
       for (const stock of allStocks) {
