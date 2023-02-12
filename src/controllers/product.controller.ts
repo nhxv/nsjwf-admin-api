@@ -1,15 +1,28 @@
-import { findActiveProducts } from './../services/product.service';
+import { NextFunction, Request, Response, Router } from "express";
+import { Role } from "../commons/role.enum";
+import { createProduct, findActiveProducts, findAllProducts, findProductsByName, updateProduct } from "../services/product.service";
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
-import { NextFunction, Request, Response, Router } from "express";
-import { findProductsByName, createProduct, updateProduct } from "../services/product.service";
-import { Role } from "../commons/role.enum";
 
 const router = Router();
 
 // find active products from product table
 router.get(
   `/products/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findAllProducts();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// find active products from product table
+router.get(
+  `/products`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -4,6 +4,19 @@ import { ProductRequestDto, productSchema } from "../dto/requests/product-reques
 import { generateCurrentTime } from "./../commons/time.util";
 import { handleValidationError } from "../commons/http.exception";
 
+export const findAllProducts = async () => {
+  try {
+    const products = await prisma.product.findMany({
+      orderBy: {
+        name: "asc"
+      }
+    });
+    return products;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find products.");
+  }
+}
+
 export const findActiveProducts = async () => {
   try {
     const products = await prisma.product.findMany({
