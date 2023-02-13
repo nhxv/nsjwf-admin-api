@@ -1,11 +1,14 @@
 # SJWH Admin API
+
 Built with Typescript, ExpressJS, Prisma, PostgreSQL
 
 ## Requirements
+
     NodeJS 18+
     PostgreSQL 15+
 
 ## Local setup
+
 Install dependencies:
 
     npm i
@@ -21,15 +24,16 @@ Create .env file:
 
 (Optional) Enable SQL logging in prisma-client.ts:
 
-    const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});    
+    const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});
 
 Run dev server:
-    
+
     npm run dev
 
-Dev server will automatically restart when detecting changes to source code.    
+Dev server will automatically restart when detecting changes to source code.
 
 ## Migration
+
 After modify prisma/schema.prisma, run:
 
     npm run prisma:format
@@ -47,6 +51,7 @@ After applying sql scripts, run:
     npm run prisma:generate
 
 ## Deployment
+
 Create Managed Database on Digital Ocean, setup App in App platform as trust sources, then copy connection string:
 
     postgresql://{username}:{password}@db-postgresql-{your_region}.b.db.ondigitalocean.com:{your_port}/defaultdb?sslmode=require
@@ -74,4 +79,5 @@ Make call to test API to check if it's working:
     GET {your_url}.ondigitalocean.app/api/test/roles
 
 ## Related
-https://github.com/nhxv/sjwh-admin        
+
+https://github.com/nhxv/sjwh-admin

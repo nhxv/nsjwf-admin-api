@@ -1,5 +1,5 @@
 export interface LoginResponseDto {
-  nickname: string,
-  roleId: number,
-  token: string,
+  nickname: string;
+  roleId: number;
+  token: string;
 }

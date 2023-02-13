@@ -9,5 +9,5 @@ export const generateOrderCode = () => {
   return {
     code: `${year}${month}${day}${hour}${minute}${second}`,
     time: date,
-  }
-}
+  };
+};

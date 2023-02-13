@@ -1,8 +1,16 @@
-import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalInterval } from "./../commons/time.util";
+import {
+  generateCurrentTime,
+  convertLocalExpected,
+  convertLocalStart,
+  convertLocalInterval,
+} from "./../commons/time.util";
 import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
 import { generateCode } from "../commons/code.util";
-import { VendorOrderRequestDto, vendorOrderSchema } from "./../dto/requests/vendor-order-request.dto";
-import createError  from "http-errors";
+import {
+  VendorOrderRequestDto,
+  vendorOrderSchema,
+} from "./../dto/requests/vendor-order-request.dto";
+import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { OrderStatus } from "../commons/order-status.enum";
 import { Prisma } from "@prisma/client";
@@ -18,13 +26,13 @@ export const findVendorOrderByStatus = async (status: string) => {
         status: status,
         expected_at: {
           gte: convertLocalStart(),
-        }
+        },
       },
       include: {
         productVendorOrders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
       },
       orderBy: {
@@ -36,9 +44,11 @@ export const findVendorOrderByStatus = async (status: string) => {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot find vendor order with the given status.");
+    throw new createError.BadRequest(
+      "Cannot find vendor order with the given status."
+    );
   }
-}
+};
 
 export const findVendorOrderByCode = async (code: string) => {
   try {
@@ -50,15 +60,17 @@ export const findVendorOrderByCode = async (code: string) => {
         productVendorOrders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
-      }
-    })
+      },
+    });
     return vendorOrder;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find vendor order with the given code.");
+    throw new createError.BadRequest(
+      "Cannot find vendor order with the given code."
+    );
   }
-}
+};
 
 export const findVendorSale = async (vendorName: string, date: string) => {
   try {
@@ -79,7 +91,7 @@ export const findVendorSale = async (vendorName: string, date: string) => {
         productVendorOrders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
       },
       orderBy: {
@@ -89,13 +101,16 @@ export const findVendorSale = async (vendorName: string, date: string) => {
     for (let i = 0; i < vendorSolds.length; i++) {
       const saleReturn = await prisma.vendorSaleReturn.findUnique({
         where: {
-          sale_code: vendorSolds[i].code
+          sale_code: vendorSolds[i].code,
         },
         include: {
           productVendorSaleReturns: true,
-        }
+        },
       });
-      if (!saleReturn || saleReturn.productVendorSaleReturns.find(p => p.quantity !== 0)) {
+      if (
+        !saleReturn ||
+        saleReturn.productVendorSaleReturns.find((p) => p.quantity !== 0)
+      ) {
         vendorSolds[i]["fullReturn"] = false;
       } else {
         vendorSolds[i]["fullReturn"] = true;
@@ -103,22 +118,31 @@ export const findVendorSale = async (vendorName: string, date: string) => {
     }
     return vendorSolds;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find vendor sale with the given data.");    
+    throw new createError.BadRequest(
+      "Cannot find vendor sale with the given data."
+    );
   }
-}
+};
 
-export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) => {
+export const createVendorOrder = async (
+  vendorOrderDto: VendorOrderRequestDto
+) => {
   try {
-    const vendorOrderData: VendorOrderRequestDto = await vendorOrderSchema.validateAsync(vendorOrderDto);
-    if (!(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)) {
+    const vendorOrderData: VendorOrderRequestDto =
+      await vendorOrderSchema.validateAsync(vendorOrderDto);
+    if (
+      !(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)
+    ) {
       throw `Please don't attack us.`;
     }
     const { code, time } = generateCode();
     const productOrders = vendorOrderData.productVendorOrders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -140,21 +164,22 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
             is_test: vendorOrderData.isTest,
             is_sold: true,
             productVendorOrders: {
-              create: productOrders
-            }
-          }
+              create: productOrders,
+            },
+          },
         });
         // create product stock change history
-        const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
-          }
-        });
-        
+        const addedProductStockChangeHistory =
+          await tx.productStockChangeHistory.create({
+            data: {
+              created_at: time,
+              reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
+            },
+          });
+
         for (const productOrder of productOrders) {
-           // update product stock
-           const updatedProductStock = await tx.productStock.update({
+          // update product stock
+          const updatedProductStock = await tx.productStock.update({
             where: {
               product_name: productOrder.product_name,
             },
@@ -163,7 +188,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
                 increment: productOrder.quantity,
               },
               updated_at: time,
-            }
+            },
           });
 
           // create stock change
@@ -172,9 +197,9 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: productOrder.quantity,
-            }
-          }); 
-          
+            },
+          });
+
           // update product sell price suggestion
           const updatedProductSellPrice = await tx.product.update({
             where: {
@@ -182,7 +207,7 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
             },
             data: {
               sell_price: productOrder.unit_price,
-            }
+            },
           });
         }
       });
@@ -198,9 +223,9 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
           is_test: vendorOrderData.isTest,
           is_sold: false,
           productVendorOrders: {
-            create: productOrders
-          }
-        }
+            create: productOrders,
+          },
+        },
       });
       return newVendorOrder;
     }
@@ -211,15 +236,23 @@ export const createVendorOrder = async (vendorOrderDto: VendorOrderRequestDto) =
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot add vendor order with the given data.");
+    throw new createError.BadRequest(
+      "Cannot add vendor order with the given data."
+    );
   }
-}
+};
 
-export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrderRequestDto) => {
+export const updateVendorOrder = async (
+  code: string,
+  vendorOrderDto: VendorOrderRequestDto
+) => {
   try {
     // Validate
-    const vendorOrderData: VendorOrderRequestDto = await vendorOrderSchema.validateAsync(vendorOrderDto);
-    if (!(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)) {
+    const vendorOrderData: VendorOrderRequestDto =
+      await vendorOrderSchema.validateAsync(vendorOrderDto);
+    if (
+      !(Object.values(OrderStatus) as string[]).includes(vendorOrderData.status)
+    ) {
       throw `Please don't attack us.`;
     }
     if (vendorOrderData.code !== code) {
@@ -228,16 +261,18 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
 
     const time = generateCurrentTime();
     const productOrders = vendorOrderData.productVendorOrders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         order_code: vendorOrderData.code,
         updated_at: time,
       })
     );
     return await prisma.$transaction(async (tx) => {
-      const isCompleted = (vendorOrderData.status === OrderStatus.COMPLETED);
+      const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
       // update vendor order table if that order IS NOT completed
       let existingOrder;
       try {
@@ -246,7 +281,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             VendorOrderSold_key: {
               code: vendorOrderData.code,
               is_sold: false,
-            }
+            },
           },
           include: {
             productVendorOrders: true,
@@ -257,8 +292,8 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             updated_at: time,
             expected_at: convertLocalExpected(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
-            is_sold: isCompleted
-          }
+            is_sold: isCompleted,
+          },
         });
       } catch (e) {
         throw `This order cannot be changed.`;
@@ -267,25 +302,28 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
       let addedProductStockChangeHistory;
       if (isCompleted) {
         // create stock change history only if order is completed
-        addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
-          }
-        });
+        addedProductStockChangeHistory =
+          await tx.productStockChangeHistory.create({
+            data: {
+              created_at: time,
+              reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
+            },
+          });
       }
 
       // delete product order not found in request
       for (const productOrder of existingOrder.productVendorOrders) {
-        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        const found = productOrders.find(
+          (po) => po.product_name === productOrder.product_name
+        );
         if (!found) {
           const deletedProductOrder = await tx.productVendorOrder.delete({
             where: {
               ProductVendorOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
-              }              
-            }
+              },
+            },
           });
         }
       }
@@ -297,7 +335,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             ProductVendorOrder_key: {
               product_name: productOrder.product_name,
               order_code: productOrder.order_code,
-            }
+            },
           },
           update: {
             quantity: productOrder.quantity,
@@ -313,7 +351,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             updated_at: time,
           },
         });
-        
+
         if (isCompleted) {
           // update product stock
           const updatedProductStock = await tx.productStock.update({
@@ -325,7 +363,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
                 increment: productOrder.quantity,
               },
               updated_at: time,
-            }
+            },
           });
           // create stock change
           const addedProductStockChange = await tx.productStockChange.create({
@@ -333,7 +371,7 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: productOrder.quantity,
-            }
+            },
           });
           // update product sell price suggestion
           const updatedProductSellPrice = await tx.product.update({
@@ -342,12 +380,11 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
             },
             data: {
               sell_price: productOrder.unit_price,
-            }
+            },
           });
-        }        
+        }
       }
     });
-
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -355,6 +392,8 @@ export const updateVendorOrder = async (code:string, vendorOrderDto: VendorOrder
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update vendor order with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update vendor order with the given data."
+    );
   }
-}
+};

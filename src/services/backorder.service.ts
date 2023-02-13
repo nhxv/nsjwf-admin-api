@@ -2,10 +2,17 @@ import { ProductStockChangeReason } from "../commons/product-stock-change-reason
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { Prisma } from "@prisma/client";
 import prisma from "../../prisma/prisma-client";
-import createError  from "http-errors";
-import { generateCurrentTime, convertLocalExpected, convertLocalStart } from "../commons/time.util";
+import createError from "http-errors";
+import {
+  generateCurrentTime,
+  convertLocalExpected,
+  convertLocalStart,
+} from "../commons/time.util";
 import { generateCode } from "../commons/code.util";
-import { BackorderRequestDto, backorderSchema } from "../dto/requests/backorder-request.dto";
+import {
+  BackorderRequestDto,
+  backorderSchema,
+} from "../dto/requests/backorder-request.dto";
 import { customerOrderSchema } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
 import { BackorderStatus } from "../commons/backorder-status.enum";
@@ -26,30 +33,30 @@ export const findBackorderByStatus = async (status: string) => {
         is_archived: isArchived,
         expected_at: {
           gte: convertLocalStart(),
-        }
+        },
       },
       include: {
         productBackorders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
       },
       orderBy: {
         expected_at: "asc",
-      }
+      },
     });
     return backorders;
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    
+
     throw new createError.BadRequest("Cannot find backorder.");
   }
 };
 
-export const findBackorderById = async (id:number) => {
+export const findBackorderById = async (id: number) => {
   try {
     const backorder = await prisma.backorder.findUniqueOrThrow({
       where: {
@@ -59,31 +66,36 @@ export const findBackorderById = async (id:number) => {
         productBackorders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
-      }
+      },
     });
     return backorder;
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot find backorder with the given data.");
+    throw new createError.BadRequest(
+      "Cannot find backorder with the given data."
+    );
   }
-}
+};
 
 export const createBackorder = async (backorderDto: BackorderRequestDto) => {
   try {
     // Validate
-    const backorderData: BackorderRequestDto = await backorderSchema.validateAsync(backorderDto);
+    const backorderData: BackorderRequestDto =
+      await backorderSchema.validateAsync(backorderDto);
     if (backorderData.isArchived) {
       throw `Please don't hack us.`;
     }
     const time = generateCurrentTime();
     const productOrders = backorderData.productBackorders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -100,9 +112,9 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
         is_archived: backorderData.isArchived,
         assign_to: backorderData.assignTo,
         productBackorders: {
-          create: productOrders
-        }
-      }
+          create: productOrders,
+        },
+      },
     });
   } catch (error) {
     if (typeof error === "string") {
@@ -111,14 +123,20 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot add backorder with the given data.");
+    throw new createError.BadRequest(
+      "Cannot add backorder with the given data."
+    );
   }
 };
 
-export const updateBackorder = async (id: number, backorderDto: BackorderRequestDto) => {
+export const updateBackorder = async (
+  id: number,
+  backorderDto: BackorderRequestDto
+) => {
   try {
     // Validate
-    const backorderData: BackorderRequestDto = await backorderSchema.validateAsync(backorderDto);
+    const backorderData: BackorderRequestDto =
+      await backorderSchema.validateAsync(backorderDto);
     if (backorderData.isArchived) {
       throw `Please don't hack us.`;
     }
@@ -128,11 +146,13 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
 
     const time = generateCurrentTime();
     const productOrders = backorderData.productBackorders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         backorder_id: backorderData.id,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         updated_at: time,
       })
     );
@@ -146,7 +166,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
             BackorderArchive_key: {
               id: backorderData.id,
               is_archived: false,
-            }
+            },
           },
           include: {
             productBackorders: true,
@@ -157,7 +177,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
             expected_at: convertLocalExpected(backorderData.expectedAt),
             is_test: backorderData.isTest,
             assign_to: backorderData.assignTo,
-          }
+          },
         });
       } catch (e) {
         throw `This backorder cannot be changed.`;
@@ -171,7 +191,9 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
-        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        const found = productOrders.find(
+          (po) => po.product_name === productOrder.product_name
+        );
         if (!found) {
           // remove existing product order
           const deletedProductOrder = await tx.productBackorder.delete({
@@ -179,7 +201,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
               ProductBackorder_key: {
                 product_name: productOrder.product_name,
                 backorder_id: productOrder.backorder_id,
-              }
+              },
             },
           });
         }
@@ -189,7 +211,9 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
         let orderQuantityChange = 0;
 
         // find current order quantity
-        const currentProductOrder = existingProductOrders.get(productOrder.product_name);
+        const currentProductOrder = existingProductOrders.get(
+          productOrder.product_name
+        );
 
         if (!currentProductOrder) {
           orderQuantityChange = productOrder.quantity;
@@ -206,7 +230,8 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
           });
         } else {
           // update existing order
-          orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
+          orderQuantityChange =
+            productOrder.quantity - currentProductOrder.quantity;
 
           // update product backorder
           const updatedProductOrder = await tx.productBackorder.update({
@@ -214,7 +239,7 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
               ProductBackorder_key: {
                 product_name: productOrder.product_name,
                 backorder_id: productOrder.backorder_id,
-              }
+              },
             },
             data: {
               quantity: {
@@ -223,10 +248,10 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
               unit_price: productOrder.unit_price,
               updated_at: productOrder.updated_at,
             },
-          });       
-        }          
+          });
+        }
       }
-    });    
+    });
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -234,23 +259,29 @@ export const updateBackorder = async (id: number, backorderDto: BackorderRequest
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update backorder with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update backorder with the given data."
+    );
   }
 };
 
-export const convertBackorder = async (id: number, backorderDto: BackorderRequestDto) => {
+export const convertBackorder = async (
+  id: number,
+  backorderDto: BackorderRequestDto
+) => {
   try {
     // Validate backorder data
     if (backorderDto.id !== id) {
       throw `Please don't hack us.`;
     }
-    const backorderData: BackorderRequestDto = await backorderSchema.validateAsync(backorderDto);
+    const backorderData: BackorderRequestDto =
+      await backorderSchema.validateAsync(backorderDto);
     if (!backorderData.isArchived) {
       throw `Please don't hack us.`;
     }
 
     const productBackorders = backorderData.productBackorders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         backorder_id: backorderData.id,
         quantity: productOrder.quantity,
@@ -273,15 +304,18 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
     };
 
     // Validate customer order
-    const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
+    const customerOrderData: CustomerOrderRequestDto =
+      await customerOrderSchema.validateAsync(customerOrderDto);
     if (!Object.keys(OrderStatus).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
     const productOrders = customerOrderData.productCustomerOrders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -297,7 +331,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
             BackorderArchive_key: {
               id: backorderData.id,
               is_archived: false,
-            }
+            },
           },
           include: {
             productBackorders: true,
@@ -308,7 +342,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
             expected_at: convertLocalExpected(backorderData.expectedAt),
             is_test: backorderData.isTest,
             is_archived: true,
-          }
+          },
         });
       } catch (e) {
         throw `This backorder cannot be changed.`;
@@ -322,7 +356,9 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
-        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        const found = productOrders.find(
+          (po) => po.product_name === productOrder.product_name
+        );
         if (!found) {
           // remove existing product order
           const deletedProductOrder = await tx.productBackorder.delete({
@@ -330,17 +366,19 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
               ProductBackorder_key: {
                 product_name: productOrder.product_name,
                 backorder_id: productOrder.backorder_id,
-              }
+              },
             },
           });
-        }        
+        }
       }
 
       for (const productOrder of productBackorders) {
         let orderQuantityChange = 0;
 
         // find current order quantity
-        const currentProductOrder = existingProductOrders.get(productOrder.product_name);
+        const currentProductOrder = existingProductOrders.get(
+          productOrder.product_name
+        );
 
         if (!currentProductOrder) {
           orderQuantityChange = productOrder.quantity;
@@ -358,7 +396,8 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           });
         } else {
           // 3. update existing order
-          orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
+          orderQuantityChange =
+            productOrder.quantity - currentProductOrder.quantity;
 
           // update product backorder
           const updatedProductOrder = await tx.productBackorder.update({
@@ -366,7 +405,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
               ProductBackorder_key: {
                 product_name: productOrder.product_name,
                 backorder_id: productOrder.backorder_id,
-              }
+              },
             },
             data: {
               quantity: {
@@ -375,8 +414,8 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
               unit_price: productOrder.unit_price,
               updated_at: productOrder.updated_at,
             },
-          });       
-        }          
+          });
+        }
       }
 
       // 1. create customer order
@@ -393,18 +432,19 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
           is_test: customerOrderData.isTest,
           is_sold: false,
           productCustomerOrders: {
-            create: productOrders
-          }
-        }
+            create: productOrders,
+          },
+        },
       });
 
       // 2. create stock change history
-      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: ProductStockChangeReason.CUSTOMER_ORDER_CREATE,
-        }
-      });
+      const addedProductStockChangeHistory =
+        await tx.productStockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: ProductStockChangeReason.CUSTOMER_ORDER_CREATE,
+          },
+        });
 
       for (const productOrder of productOrders) {
         const currentProductStock = await tx.productStock.findUniqueOrThrow({
@@ -414,7 +454,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
         });
         const stockQuantityChange = 0 - productOrder.quantity;
 
-        if (currentProductStock.quantity + stockQuantityChange < 0) 
+        if (currentProductStock.quantity + stockQuantityChange < 0)
           throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
 
         // update product stock
@@ -427,7 +467,7 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
               increment: stockQuantityChange,
             },
             updated_at: time,
-          }
+          },
         });
 
         // create product stock change
@@ -436,10 +476,10 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
             stock_id: updatedProductStock.id,
             change_id: addedProductStockChangeHistory.id,
             quantity_change: stockQuantityChange,
-          }
-        });    
+          },
+        });
       }
-    })
+    });
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -447,6 +487,8 @@ export const convertBackorder = async (id: number, backorderDto: BackorderReques
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot convert backorder with the given data.");    
+    throw new createError.BadRequest(
+      "Cannot convert backorder with the given data."
+    );
   }
-}
+};

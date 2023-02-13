@@ -1,7 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { findAllVendors, findVendorTendencyByName, createVendor, findActiveVendors, findVendorById, findVendorsByName, updateVendor } from "../services/vendor.service";
+import {
+  findAllVendors,
+  findVendorTendencyByName,
+  createVendor,
+  findActiveVendors,
+  findVendorById,
+  findVendorsByName,
+  updateVendor,
+} from "../services/vendor.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
@@ -86,7 +94,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 // update vendor by id
@@ -100,7 +108,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 export default router;

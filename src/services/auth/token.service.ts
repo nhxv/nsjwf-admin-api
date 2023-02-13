@@ -4,7 +4,7 @@ import JWT from "jsonwebtoken";
 
 export const signAccessToken = (accountId: number, roleId: number) => {
   return new Promise<string>((resolve, reject) => {
-    const payload = { account: {id: accountId, roleId: roleId} };
+    const payload = { account: { id: accountId, roleId: roleId } };
     const secret = process.env.ACCESS_TOKEN_SECRET || "nhxv";
     const options = {
       expiresIn: process.env.ACCESS_TOKEN_EXPIRE,
@@ -18,23 +18,32 @@ export const signAccessToken = (accountId: number, roleId: number) => {
       resolve(token);
     });
   });
-}
+};
 
-export const verifyAccessToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyAccessToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.headers["authorization"]) {
     return next(new createError.Unauthorized("Missing headers"));
-  } 
+  }
   const authHeader = req.headers["authorization"];
   const bearerToken = authHeader.split(" ");
   const token = bearerToken[1];
 
-  JWT.verify(token, process.env.ACCESS_TOKEN_SECRET || "nhxv", async (err, payload) => {
-    if (err) {
-      const message = err.name === "JsonWebTokenError" ? "Unauthorized" : err.message;
-      return next(new createError.Unauthorized(message));
+  JWT.verify(
+    token,
+    process.env.ACCESS_TOKEN_SECRET || "nhxv",
+    async (err, payload) => {
+      if (err) {
+        const message =
+          err.name === "JsonWebTokenError" ? "Unauthorized" : err.message;
+        return next(new createError.Unauthorized(message));
+      }
+      // pass payload to authorization middleware
+      req.payload = payload;
+      next();
     }
-    // pass payload to authorization middleware
-    req.payload = payload;
-    next();
-  });
+  );
 };
