@@ -9,5 +9,5 @@ export const generateCode = () => {
   return {
     code: `${year}${month}${day}${hour}${minute}${second}`,
     time: date,
-  }
-}
+  };
+};

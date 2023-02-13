@@ -3,7 +3,11 @@ import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { Role } from "../commons/role.enum";
-import { findVehiclesByName, createVehicle, updateVehicle } from "../services/vehicle.service";
+import {
+  findVehiclesByName,
+  createVehicle,
+  updateVehicle,
+} from "../services/vehicle.service";
 
 const router = Router();
 
@@ -14,17 +18,19 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findVehiclesByName(req.query.keyword as string);
-      res.send(response.map(vehicle => {
-        const vehicleRes: VehicleResponseDto = {
-          licensePlate: vehicle.license_plate,
-          available: vehicle.available,
-          discontinued: vehicle.discontinued,
-          id: vehicle.id,
-          nickname: vehicle.nickname,
-          volume: vehicle.volume,
-        };
-        return vehicleRes;
-      }));
+      res.send(
+        response.map((vehicle) => {
+          const vehicleRes: VehicleResponseDto = {
+            licensePlate: vehicle.license_plate,
+            available: vehicle.available,
+            discontinued: vehicle.discontinued,
+            id: vehicle.id,
+            nickname: vehicle.nickname,
+            volume: vehicle.volume,
+          };
+          return vehicleRes;
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -42,7 +48,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 // update vehicle by id
@@ -56,7 +62,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 export default router;

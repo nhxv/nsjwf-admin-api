@@ -1,11 +1,18 @@
 import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
 import { VendorOrderResponseDto } from "./../dto/responses/vendor-order-response.dto";
-import { findVendorOrderByStatus, findVendorOrderByCode, findVendorSale } from "./../services/vendor-order.service";
+import {
+  findVendorOrderByStatus,
+  findVendorOrderByCode,
+  findVendorSale,
+} from "./../services/vendor-order.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { Role } from "../commons/role.enum";
-import { createVendorOrder, updateVendorOrder } from "../services/vendor-order.service";
+import {
+  createVendorOrder,
+  updateVendorOrder,
+} from "../services/vendor-order.service";
 
 const router = Router();
 
@@ -16,28 +23,30 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findVendorOrderByStatus(req.params.status);
-      res.send(response.map(order => {
-        const vendorOrderRes: VendorOrderResponseDto = {
-          vendorName: order.vendor_name,
-          isTest: order.is_test,
-          code: order.code,
-          status: order.status,
-          productVendorOrders: order.productVendorOrders.map(po => {
-            const poRes: ProductVendorOrderResponseDto = {
-              productName: po.product_name,
-              quantity: po.quantity,
-              unitPrice: po.unit_price,
-            };
-            return poRes;
-          }),
-          expectedAt: order.expected_at,
-          createdAt: order.created_at,
-        };
-        return vendorOrderRes;
-      }));
+      res.send(
+        response.map((order) => {
+          const vendorOrderRes: VendorOrderResponseDto = {
+            vendorName: order.vendor_name,
+            isTest: order.is_test,
+            code: order.code,
+            status: order.status,
+            productVendorOrders: order.productVendorOrders.map((po) => {
+              const poRes: ProductVendorOrderResponseDto = {
+                productName: po.product_name,
+                quantity: po.quantity,
+                unitPrice: po.unit_price,
+              };
+              return poRes;
+            }),
+            expectedAt: order.expected_at,
+            createdAt: order.created_at,
+          };
+          return vendorOrderRes;
+        })
+      );
     } catch (error) {
       next(error);
-    }    
+    }
   }
 );
 
@@ -61,28 +70,33 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response: any = await findVendorSale(req.query.keyword as string, req.query.date as string);
-      res.send(response.map(order => {
-        const vendorOrderRes: VendorOrderResponseDto = {
-          vendorName: order.vendor_name,
-          isTest: order.is_test,
-          code: order.code,
-          status: order.status,
-          productVendorOrders: order.productVendorOrders.map(po => {
-            const poRes: ProductVendorOrderResponseDto = {
-              productName: po.product_name,
-              quantity: po.quantity,
-              unitPrice: po.unit_price,
-            };
-            return poRes;
-          }),
-          expectedAt: order.expected_at,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
-          fullReturn: !!order.fullReturn,
-        };
-        return vendorOrderRes;
-      }));
+      const response: any = await findVendorSale(
+        req.query.keyword as string,
+        req.query.date as string
+      );
+      res.send(
+        response.map((order) => {
+          const vendorOrderRes: VendorOrderResponseDto = {
+            vendorName: order.vendor_name,
+            isTest: order.is_test,
+            code: order.code,
+            status: order.status,
+            productVendorOrders: order.productVendorOrders.map((po) => {
+              const poRes: ProductVendorOrderResponseDto = {
+                productName: po.product_name,
+                quantity: po.quantity,
+                unitPrice: po.unit_price,
+              };
+              return poRes;
+            }),
+            expectedAt: order.expected_at,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            fullReturn: !!order.fullReturn,
+          };
+          return vendorOrderRes;
+        })
+      );
     } catch (error) {
       next(error);
     }

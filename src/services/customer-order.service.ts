@@ -1,9 +1,19 @@
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
-import { generateCurrentTime, convertLocalExpected, convertLocalStart, convertLocalEnd, convertLocalInterval, convertLocalMonthStart, convertLocalMonthEnd, convertLocalWeekStart, convertLocalWeekEnd } from "./../commons/time.util";
+import {
+  generateCurrentTime,
+  convertLocalExpected,
+  convertLocalStart,
+  convertLocalEnd,
+  convertLocalInterval,
+  convertLocalMonthStart,
+  convertLocalMonthEnd,
+  convertLocalWeekStart,
+  convertLocalWeekEnd,
+} from "./../commons/time.util";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { OrderStatus } from "../commons/order-status.enum";
-import createError  from "http-errors";
+import createError from "http-errors";
 import { Prisma } from "@prisma/client";
 import { generateCode } from "../commons/code.util";
 import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
@@ -15,18 +25,21 @@ export const findDailyCustomerOrder = async () => {
       where: {
         expected_at: {
           gte: convertLocalStart(),
-        }
-      }
+        },
+      },
     });
     return customerOrders;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find customer order.");    
+    throw new createError.BadRequest("Cannot find customer order.");
   }
-}
+};
 
 export const findCustomerOrderByStatus = async (status: string) => {
   try {
-    if (!(Object.values(OrderStatus) as string[]).includes(status) || status === OrderStatus.COMPLETED) {
+    if (
+      !(Object.values(OrderStatus) as string[]).includes(status) ||
+      status === OrderStatus.COMPLETED
+    ) {
       throw `Please don't hack us.`;
     }
     const customerOrders = await prisma.customerOrder.findMany({
@@ -34,14 +47,14 @@ export const findCustomerOrderByStatus = async (status: string) => {
         status: status,
         expected_at: {
           gte: convertLocalStart(),
-        }
+        },
       },
       include: {
         productCustomerOrders: {
           orderBy: {
-            product_name: "asc"
-          }
-        }
+            product_name: "asc",
+          },
+        },
       },
       orderBy: {
         expected_at: "asc",
@@ -52,9 +65,11 @@ export const findCustomerOrderByStatus = async (status: string) => {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot find customer order with the given status.");
+    throw new createError.BadRequest(
+      "Cannot find customer order with the given status."
+    );
   }
-}
+};
 
 export const findCustomerOrderByCode = async (code: string) => {
   try {
@@ -66,15 +81,17 @@ export const findCustomerOrderByCode = async (code: string) => {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
-          }
-        }
-      }
-    })
+          },
+        },
+      },
+    });
     return customerOrder;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find customer order with the given code.");
+    throw new createError.BadRequest(
+      "Cannot find customer order with the given code."
+    );
   }
-}
+};
 
 export const findCustomerSale = async (customerName: string, date: string) => {
   try {
@@ -95,8 +112,8 @@ export const findCustomerSale = async (customerName: string, date: string) => {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
-          }
-        }
+          },
+        },
       },
       orderBy: {
         updated_at: "asc",
@@ -105,13 +122,16 @@ export const findCustomerSale = async (customerName: string, date: string) => {
     for (let i = 0; i < customerSolds.length; i++) {
       const saleReturn = await prisma.customerSaleReturn.findUnique({
         where: {
-          sale_code: customerSolds[i].code
+          sale_code: customerSolds[i].code,
         },
         include: {
           productCustomerSaleReturns: true,
-        }
+        },
       });
-      if (!saleReturn || saleReturn.productCustomerSaleReturns.find(p => p.quantity !== 0)) {
+      if (
+        !saleReturn ||
+        saleReturn.productCustomerSaleReturns.find((p) => p.quantity !== 0)
+      ) {
         customerSolds[i]["fullReturn"] = false;
       } else {
         customerSolds[i]["fullReturn"] = true;
@@ -119,9 +139,11 @@ export const findCustomerSale = async (customerName: string, date: string) => {
     }
     return customerSolds;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find customer sale with the given data.");    
+    throw new createError.BadRequest(
+      "Cannot find customer sale with the given data."
+    );
   }
-}
+};
 
 export const reportCustomerSale = async () => {
   try {
@@ -132,13 +154,13 @@ export const reportCustomerSale = async () => {
         updated_at: {
           gte: convertLocalStart(),
           lte: convertLocalEnd(),
-        }
+        },
       },
       include: {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
       },
       orderBy: {
@@ -150,20 +172,20 @@ export const reportCustomerSale = async () => {
       where: {
         created_at: {
           gte: convertLocalStart(),
-          lte: convertLocalEnd(),          
-        }
+          lte: convertLocalEnd(),
+        },
       },
       include: {
         productCustomerReturns: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
       },
       orderBy: {
         created_at: "asc",
-      }
-    })
+      },
+    });
     const reports = [];
     for (const sold of customerSolds) {
       reports.push({
@@ -171,7 +193,10 @@ export const reportCustomerSale = async () => {
         order_code: sold.code,
         manual_code: sold.manual_code ? sold.manual_code : "",
         customer_name: sold.customer_name,
-        sale: sold.productCustomerOrders.reduce((prev, curr: any) => prev + curr.quantity*curr.unit_price, 0),
+        sale: sold.productCustomerOrders.reduce(
+          (prev, curr: any) => prev + curr.quantity * curr.unit_price,
+          0
+        ),
         refund: 0,
         refund_order: "",
         date: sold.updated_at,
@@ -186,10 +211,10 @@ export const reportCustomerSale = async () => {
           if (newRefund <= reports[i].sale) {
             found = true;
             reports[i] = {
-              ...reports[i], 
+              ...reports[i],
               refund: newRefund,
               refund_order: customerReturn.order_code,
-            }
+            };
             break;
           }
         }
@@ -211,7 +236,7 @@ export const reportCustomerSale = async () => {
   } catch (error) {
     throw new createError.BadRequest("Cannot report.");
   }
-}
+};
 
 export const findEmployeeTask = async (nickname: string, status: string) => {
   try {
@@ -226,19 +251,16 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
         status: status,
         expected_at: {
           gte: convertLocalStart(),
-        }
+        },
       },
-      orderBy: [
-        {priority: "asc"},
-        {created_at: "asc"},
-      ],
+      orderBy: [{ priority: "asc" }, { created_at: "asc" }],
       include: {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
-      }
+      },
     });
     return tasks;
   } catch (error) {
@@ -247,26 +269,35 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
     }
     throw new createError.BadRequest("Cannot find task by the given data.");
   }
-}
+};
 
-export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequestDto) => {
+export const createCustomerOrder = async (
+  customerOrderDto: CustomerOrderRequestDto
+) => {
   try {
     // Validate customer order
-    const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
-    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
+    const customerOrderData: CustomerOrderRequestDto =
+      await customerOrderSchema.validateAsync(customerOrderDto);
+    if (
+      !(Object.values(OrderStatus) as string[]).includes(
+        customerOrderData.status
+      )
+    ) {
       throw `Please don't attack us.`;
     }
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
-      }
+      },
     });
     const { code, time } = generateCode();
     const productOrders = customerOrderData.productCustomerOrders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
@@ -286,21 +317,22 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
           is_test: customerOrderData.isTest,
           assign_to: employee.nickname,
           priority: 0,
-          is_sold: (customerOrderData.status === OrderStatus.COMPLETED),
+          is_sold: customerOrderData.status === OrderStatus.COMPLETED,
           manual_code: customerOrderData.manualCode,
           productCustomerOrders: {
-            create: productOrders
-          }
-        }
+            create: productOrders,
+          },
+        },
       });
 
       // 2. create stock change history
-      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: ProductStockChangeReason.CUSTOMER_ORDER_CREATE,
-        }
-      });
+      const addedProductStockChangeHistory =
+        await tx.productStockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: ProductStockChangeReason.CUSTOMER_ORDER_CREATE,
+          },
+        });
 
       for (const productOrder of productOrders) {
         const currentProductStock = await tx.productStock.findUniqueOrThrow({
@@ -308,8 +340,8 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
             product_name: productOrder.product_name,
           },
         });
-        
-        if (currentProductStock.quantity < productOrder.quantity) 
+
+        if (currentProductStock.quantity < productOrder.quantity)
           throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
 
         const stockQuantityChange = 0 - productOrder.quantity;
@@ -324,7 +356,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
               increment: stockQuantityChange,
             },
             updated_at: time,
-          }
+          },
         });
         // create stock change
         const addedProductStockChange = await tx.productStockChange.create({
@@ -332,7 +364,7 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
             stock_id: updatedProductStock.id,
             change_id: addedProductStockChangeHistory.id,
             quantity_change: stockQuantityChange,
-          }
+          },
         });
       }
     });
@@ -343,15 +375,25 @@ export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequest
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot create customer order with the given data.");
+    throw new createError.BadRequest(
+      "Cannot create customer order with the given data."
+    );
   }
-}
+};
 
-export const updateCustomerOrder = async (code: string, customerOrderDto: CustomerOrderRequestDto) => {
+export const updateCustomerOrder = async (
+  code: string,
+  customerOrderDto: CustomerOrderRequestDto
+) => {
   try {
     // Validate customer order
-    const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
-    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
+    const customerOrderData: CustomerOrderRequestDto =
+      await customerOrderSchema.validateAsync(customerOrderDto);
+    if (
+      !(Object.values(OrderStatus) as string[]).includes(
+        customerOrderData.status
+      )
+    ) {
       throw `Please don't attack us.`;
     }
     if (customerOrderData.code !== code) {
@@ -360,14 +402,16 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
-      }
+      },
     });
     const time = generateCurrentTime();
     const productOrders = customerOrderData.productCustomerOrders.map(
-      productOrder => ({
+      (productOrder) => ({
         product_name: productOrder.productName,
         order_code: customerOrderData.code,
-        unit_price: new Prisma.Decimal(new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)),
+        unit_price: new Prisma.Decimal(
+          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+        ),
         quantity: productOrder.quantity,
         updated_at: time,
       })
@@ -382,7 +426,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             CustomerOrderSold_key: {
               code: customerOrderData.code,
               is_sold: false,
-            }
+            },
           },
           include: {
             productCustomerOrders: true,
@@ -396,19 +440,20 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
             manual_code: customerOrderData.manualCode,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
-          }
+          },
         });
       } catch (e) {
         throw `This order cannot be changed.`;
       }
 
       // create stock change history
-      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: ProductStockChangeReason.CUSTOMER_ORDER_EDIT,
-        }
-      });
+      const addedProductStockChangeHistory =
+        await tx.productStockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: ProductStockChangeReason.CUSTOMER_ORDER_EDIT,
+          },
+        });
 
       const existingProductOrders = new Map();
       // delete product order not in request
@@ -419,15 +464,17 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
-        const found = productOrders.find(po => po.product_name === productOrder.product_name);
+        const found = productOrders.find(
+          (po) => po.product_name === productOrder.product_name
+        );
         if (!found) {
           const deletedProductOrder = await tx.productCustomerOrder.delete({
             where: {
               ProductCustomerOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
-              }  
-            }
+              },
+            },
           });
           // update product stock
           const updatedProductStock = await tx.productStock.update({
@@ -439,7 +486,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
                 increment: productOrder.quantity,
               },
               updated_at: time,
-            }
+            },
           });
           // create stock change
           const addedProductStockChange = await tx.productStockChange.create({
@@ -447,7 +494,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: productOrder.quantity,
-            }
+            },
           });
         }
       }
@@ -455,9 +502,11 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
       for (const productOrder of productOrders) {
         let orderQuantityChange = 0;
         let stockQuantityChange = 0;
-        
+
         // find current product order
-        const currentProductOrder = existingProductOrders.get(productOrder.product_name);
+        const currentProductOrder = existingProductOrders.get(
+          productOrder.product_name
+        );
 
         if (!currentProductOrder) {
           orderQuantityChange = productOrder.quantity;
@@ -480,7 +529,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
               unit_price: productOrder.unit_price,
               created_at: time,
               updated_at: time,
-            }
+            },
           });
           // update product stock
           const updatedProductStock = await tx.productStock.update({
@@ -492,7 +541,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
                 increment: stockQuantityChange,
               },
               updated_at: time,
-            }
+            },
           });
           // create stock change
           const addedProductStockChange = await tx.productStockChange.create({
@@ -500,12 +549,14 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: stockQuantityChange,
-            }
+            },
           });
         } else {
           // 2. update existing product order
-          orderQuantityChange = productOrder.quantity - currentProductOrder.quantity;
-          stockQuantityChange = currentProductOrder.quantity - productOrder.quantity;
+          orderQuantityChange =
+            productOrder.quantity - currentProductOrder.quantity;
+          stockQuantityChange =
+            currentProductOrder.quantity - productOrder.quantity;
 
           // check product stock
           const currentProductStock = await tx.productStock.findUniqueOrThrow({
@@ -515,7 +566,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
           });
           if (currentProductStock.quantity + stockQuantityChange < 0) {
             throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
-          }            
+          }
 
           // update product order
           const updatedProductOrder = await tx.productCustomerOrder.update({
@@ -523,7 +574,7 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
               ProductCustomerOrder_key: {
                 product_name: productOrder.product_name,
                 order_code: productOrder.order_code,
-              }                  
+              },
             },
             data: {
               quantity: {
@@ -531,9 +582,9 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
               },
               unit_price: productOrder.unit_price,
               updated_at: productOrder.updated_at,
-            }
+            },
           });
-          
+
           // update product stock
           const updatedProductStock = await tx.productStock.update({
             where: {
@@ -544,17 +595,17 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
                 increment: stockQuantityChange,
               },
               updated_at: time,
-            }
+            },
           });
-          
+
           // create stock change
           const addedProductStockChange = await tx.productStockChange.create({
             data: {
               stock_id: updatedProductStock.id,
               change_id: addedProductStockChangeHistory.id,
               quantity_change: stockQuantityChange,
-            }
-          }); 
+            },
+          });
         }
       }
     });
@@ -566,9 +617,11 @@ export const updateCustomerOrder = async (code: string, customerOrderDto: Custom
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update customer order with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update customer order with the given data."
+    );
   }
-}
+};
 
 export const finishTask = async (code: string) => {
   try {
@@ -577,7 +630,10 @@ export const finishTask = async (code: string) => {
         code: code,
       },
     });
-    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+    if (
+      currentOrder.status !== OrderStatus.PICKING &&
+      currentOrder.status !== OrderStatus.SHIPPING
+    ) {
       throw `Please don't hack us.`;
     }
     const time = generateCurrentTime();
@@ -588,10 +644,13 @@ export const finishTask = async (code: string) => {
           code: code,
         },
         data: {
-          status: (currentOrder.status === OrderStatus.PICKING ? OrderStatus.CHECKING : OrderStatus.DELIVERED),
+          status:
+            currentOrder.status === OrderStatus.PICKING
+              ? OrderStatus.CHECKING
+              : OrderStatus.DELIVERED,
           is_doing: false,
           updated_at: time,
-        }
+        },
       });
 
       // register task history
@@ -600,7 +659,7 @@ export const finishTask = async (code: string) => {
           OrderTask_key: {
             order_code: updatedOrder.code,
             type: currentOrder.status,
-          }
+          },
         },
         update: {
           updated_at: time,
@@ -611,7 +670,7 @@ export const finishTask = async (code: string) => {
           type: currentOrder.status,
           created_at: time,
           updated_at: time,
-        }
+        },
       });
     });
   } catch (error) {
@@ -620,7 +679,7 @@ export const finishTask = async (code: string) => {
     }
     throw new createError.BadRequest("Cannot register finished task.");
   }
-}
+};
 
 export const reportTask = async (nickname: string) => {
   try {
@@ -629,39 +688,63 @@ export const reportTask = async (nickname: string) => {
         updated_at: {
           gte: convertLocalStart(),
           lte: convertLocalEnd(),
-        }
-      }
+        },
+      },
     });
     const weekly = await prisma.orderTaskHistory.findMany({
       where: {
         updated_at: {
           gte: convertLocalWeekStart(),
           lte: convertLocalWeekEnd(),
-        }
-      }
+        },
+      },
     });
     const monthly = await prisma.orderTaskHistory.findMany({
       where: {
         updated_at: {
           gte: convertLocalMonthStart(),
           lte: convertLocalMonthEnd(),
-        }
-      }
+        },
+      },
     });
-    const pickingDaily = daily.filter(task => task.type === OrderStatus.PICKING);
-    const pickingWeekly = weekly.filter(task => task.type === OrderStatus.PICKING);
-    const pickingMonthly = monthly.filter(task => task.type === OrderStatus.PICKING);
+    const pickingDaily = daily.filter(
+      (task) => task.type === OrderStatus.PICKING
+    );
+    const pickingWeekly = weekly.filter(
+      (task) => task.type === OrderStatus.PICKING
+    );
+    const pickingMonthly = monthly.filter(
+      (task) => task.type === OrderStatus.PICKING
+    );
 
-    const shippingDaily = daily.filter(task => task.type === OrderStatus.SHIPPING);
-    const shippingWeekly = weekly.filter(task => task.type === OrderStatus.SHIPPING);
-    const shippingMonthly = monthly.filter(task => task.type === OrderStatus.SHIPPING);
+    const shippingDaily = daily.filter(
+      (task) => task.type === OrderStatus.SHIPPING
+    );
+    const shippingWeekly = weekly.filter(
+      (task) => task.type === OrderStatus.SHIPPING
+    );
+    const shippingMonthly = monthly.filter(
+      (task) => task.type === OrderStatus.SHIPPING
+    );
 
-    const employeePickingDaily = pickingDaily.filter(task => task.employee_name !== nickname);
-    const employeeShippingDaily = shippingDaily.filter(task => task.employee_name !== nickname);
-    const employeePickingWeekly = pickingWeekly.filter(task => task.employee_name !== nickname);
-    const employeeShippingWeekly = shippingWeekly.filter(task => task.employee_name !== nickname);
-    const employeePickingMonthly = pickingMonthly.filter(task => task.employee_name !== nickname);
-    const employeeShippingMonthly = shippingMonthly.filter(task => task.employee_name !== nickname);
+    const employeePickingDaily = pickingDaily.filter(
+      (task) => task.employee_name !== nickname
+    );
+    const employeeShippingDaily = shippingDaily.filter(
+      (task) => task.employee_name !== nickname
+    );
+    const employeePickingWeekly = pickingWeekly.filter(
+      (task) => task.employee_name !== nickname
+    );
+    const employeeShippingWeekly = shippingWeekly.filter(
+      (task) => task.employee_name !== nickname
+    );
+    const employeePickingMonthly = pickingMonthly.filter(
+      (task) => task.employee_name !== nickname
+    );
+    const employeeShippingMonthly = shippingMonthly.filter(
+      (task) => task.employee_name !== nickname
+    );
     return {
       employeePickingDaily: employeePickingDaily.length,
       employeeShippingDaily: employeeShippingDaily.length,
@@ -675,16 +758,18 @@ export const reportTask = async (nickname: string) => {
       shippingDaily: shippingDaily.length,
       shippingWeekly: shippingWeekly.length,
       shippingMonthly: shippingMonthly.length,
-    }
+    };
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot find task report.");    
+    throw new createError.BadRequest("Cannot find task report.");
   }
-}
+};
 
-export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOrderPriorityRequestDto[]) => {
+export const updatePriority = async (
+  customerOrderPriorityRequestDto: CustomerOrderPriorityRequestDto[]
+) => {
   try {
     return await prisma.$transaction(async (tx) => {
       for (const employee of customerOrderPriorityRequestDto) {
@@ -693,7 +778,7 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
             const currentTask = await tx.customerOrder.findUniqueOrThrow({
               where: {
                 code: employee.customerOrders[i].code,
-              }
+              },
             });
             if (currentTask.is_doing) {
               if (currentTask.assign_to !== employee.nickname) {
@@ -726,9 +811,9 @@ export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOr
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot update order priority.");        
+    throw new createError.BadRequest("Cannot update order priority.");
   }
-}
+};
 
 export const startDoingTask = async (code: string, nickname: string) => {
   try {
@@ -737,7 +822,10 @@ export const startDoingTask = async (code: string, nickname: string) => {
         code: code,
       },
     });
-    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+    if (
+      currentOrder.status !== OrderStatus.PICKING &&
+      currentOrder.status !== OrderStatus.SHIPPING
+    ) {
       throw `Please don't hack us.`;
     }
     if (currentOrder.assign_to !== nickname) {
@@ -751,7 +839,7 @@ export const startDoingTask = async (code: string, nickname: string) => {
       data: {
         is_doing: true,
         updated_at: time,
-      }
+      },
     });
   } catch (error) {
     if (typeof error === "string") {
@@ -759,7 +847,7 @@ export const startDoingTask = async (code: string, nickname: string) => {
     }
     throw new createError.BadRequest("Cannot register finished task.");
   }
-}
+};
 
 export const stopDoingTask = async (code: string) => {
   try {
@@ -768,7 +856,10 @@ export const stopDoingTask = async (code: string) => {
         code: code,
       },
     });
-    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
+    if (
+      currentOrder.status !== OrderStatus.PICKING &&
+      currentOrder.status !== OrderStatus.SHIPPING
+    ) {
       throw `Please don't hack us.`;
     }
     const time = generateCurrentTime();
@@ -779,7 +870,7 @@ export const stopDoingTask = async (code: string) => {
       data: {
         is_doing: false,
         updated_at: time,
-      }
+      },
     });
   } catch (error) {
     if (typeof error === "string") {
@@ -787,5 +878,4 @@ export const stopDoingTask = async (code: string) => {
     }
     throw new createError.BadRequest("Cannot register finished task.");
   }
-}
-
+};

@@ -1,11 +1,26 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { createCustomerOrder, updateCustomerOrder } from "../services/customer-order.service";
+import {
+  createCustomerOrder,
+  updateCustomerOrder,
+} from "../services/customer-order.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { verifyAccessToken } from "./../services/auth/token.service";
-import { findDailyCustomerOrder, findCustomerOrderByCode, findCustomerOrderByStatus, findCustomerSale, findEmployeeTask, finishTask, reportCustomerSale, reportTask, updatePriority, startDoingTask, stopDoingTask } from "./../services/customer-order.service";
+import {
+  findDailyCustomerOrder,
+  findCustomerOrderByCode,
+  findCustomerOrderByStatus,
+  findCustomerSale,
+  findEmployeeTask,
+  finishTask,
+  reportCustomerSale,
+  reportTask,
+  updatePriority,
+  startDoingTask,
+  stopDoingTask,
+} from "./../services/customer-order.service";
 
 const router = Router();
 
@@ -19,7 +34,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  }  
+  }
 );
 
 // find customer orders by status
@@ -29,28 +44,30 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await findCustomerOrderByStatus(req.params.status);
-      res.send(response.map(order => {
-        const orderRes: CustomerOrderResponseDto = {
-          customerName: order.customer_name,
-          isTest: order.is_test,
-          code: order.code,
-          status: order.status,
-          productCustomerOrders: order.productCustomerOrders.map(po => {
-            const poRes: ProductCustomerOrderResponseDto = {
-              productName: po.product_name,
-              quantity: po.quantity,
-            }
-            return poRes;
-          }),
-          expectedAt: order.expected_at,
-          assignTo: order.assign_to,
-          isDoing: order.is_doing,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
-          manualCode: order.manual_code,
-        }
-        return orderRes;
-      }));
+      res.send(
+        response.map((order) => {
+          const orderRes: CustomerOrderResponseDto = {
+            customerName: order.customer_name,
+            isTest: order.is_test,
+            code: order.code,
+            status: order.status,
+            productCustomerOrders: order.productCustomerOrders.map((po) => {
+              const poRes: ProductCustomerOrderResponseDto = {
+                productName: po.product_name,
+                quantity: po.quantity,
+              };
+              return poRes;
+            }),
+            expectedAt: order.expected_at,
+            assignTo: order.assign_to,
+            isDoing: order.is_doing,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            manualCode: order.manual_code,
+          };
+          return orderRes;
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -78,33 +95,35 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response: any = await findCustomerSale(
-        req.query.keyword as string, 
+        req.query.keyword as string,
         req.query.date as string
       );
-      res.send(response.map(order => {
-        const orderRes: CustomerOrderResponseDto = {
-          customerName: order.customer_name,
-          isTest: order.is_test,
-          code: order.code,
-          status: order.status,
-          productCustomerOrders: order.productCustomerOrders.map(po => {
-            const poRes: ProductCustomerOrderResponseDto = {
-              productName: po.product_name,
-              quantity: po.quantity,
-              unitPrice: po.unit_price,
-            }
-            return poRes;
-          }),
-          expectedAt: order.expected_at,
-          assignTo: order.assign_to,
-          isDoing: order.is_doing,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
-          fullReturn: !!order.fullReturn,
-          manualCode: order.manual_code,
-        }
-        return orderRes;
-      }));
+      res.send(
+        response.map((order) => {
+          const orderRes: CustomerOrderResponseDto = {
+            customerName: order.customer_name,
+            isTest: order.is_test,
+            code: order.code,
+            status: order.status,
+            productCustomerOrders: order.productCustomerOrders.map((po) => {
+              const poRes: ProductCustomerOrderResponseDto = {
+                productName: po.product_name,
+                quantity: po.quantity,
+                unitPrice: po.unit_price,
+              };
+              return poRes;
+            }),
+            expectedAt: order.expected_at,
+            assignTo: order.assign_to,
+            isDoing: order.is_doing,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            fullReturn: !!order.fullReturn,
+            manualCode: order.manual_code,
+          };
+          return orderRes;
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -132,31 +151,33 @@ router.get(
     try {
       const response = await findEmployeeTask(
         req.query.nickname as string,
-        req.query.status as string, 
+        req.query.status as string
       );
-      res.send(response.map(order => {
-        const orderRes: CustomerOrderResponseDto = {
-          customerName: order.customer_name,
-          isTest: order.is_test,
-          code: order.code,
-          status: order.status,
-          productCustomerOrders: order.productCustomerOrders.map(po => {
-            const poRes: ProductCustomerOrderResponseDto = {
-              productName: po.product_name,
-              quantity: po.quantity,
-              unitPrice: po.unit_price,
-            }
-            return poRes;
-          }),
-          expectedAt: order.expected_at,
-          assignTo: order.assign_to,
-          isDoing: order.is_doing,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
-          manualCode: order.manual_code,
-        };
-        return orderRes;
-      }));
+      res.send(
+        response.map((order) => {
+          const orderRes: CustomerOrderResponseDto = {
+            customerName: order.customer_name,
+            isTest: order.is_test,
+            code: order.code,
+            status: order.status,
+            productCustomerOrders: order.productCustomerOrders.map((po) => {
+              const poRes: ProductCustomerOrderResponseDto = {
+                productName: po.product_name,
+                quantity: po.quantity,
+                unitPrice: po.unit_price,
+              };
+              return poRes;
+            }),
+            expectedAt: order.expected_at,
+            assignTo: order.assign_to,
+            isDoing: order.is_doing,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            manualCode: order.manual_code,
+          };
+          return orderRes;
+        })
+      );
     } catch (error) {
       next(error);
     }
@@ -210,7 +231,10 @@ router.put(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await startDoingTask(req.query.code as string, req.query.nickname as string);
+      const response = await startDoingTask(
+        req.query.code as string,
+        req.query.nickname as string
+      );
       res.send(response);
     } catch (error) {
       next(error);

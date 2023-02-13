@@ -1,7 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { createCustomer, findActiveCustomers, findAllCustomers, findCustomerById, findCustomersByName, findCustomerTendencyByName, updateCustomer } from "../services/customer.service";
+import {
+  createCustomer,
+  findActiveCustomers,
+  findAllCustomers,
+  findCustomerById,
+  findCustomersByName,
+  findCustomerTendencyByName,
+  updateCustomer,
+} from "../services/customer.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
@@ -86,7 +94,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 // update customer by id
@@ -100,7 +108,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  } 
+  }
 );
 
 export default router;

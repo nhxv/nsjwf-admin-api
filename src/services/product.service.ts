@@ -1,6 +1,9 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
-import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
+import {
+  ProductRequestDto,
+  productSchema,
+} from "../dto/requests/product-request.dto";
 import { generateCurrentTime } from "./../commons/time.util";
 import { handleValidationError } from "../commons/http.exception";
 
@@ -8,14 +11,14 @@ export const findAllProducts = async () => {
   try {
     const products = await prisma.product.findMany({
       orderBy: {
-        name: "asc"
-      }
+        name: "asc",
+      },
     });
     return products;
   } catch (error) {
     throw new createError.BadRequest("Cannot find products.");
   }
-}
+};
 
 export const findActiveProducts = async () => {
   try {
@@ -24,14 +27,14 @@ export const findActiveProducts = async () => {
         discontinued: false,
       },
       orderBy: {
-        name: "asc"
-      }
+        name: "asc",
+      },
     });
     return products;
   } catch (error) {
     throw new createError.BadRequest("Cannot find products.");
   }
-}
+};
 
 export const findProductsByName = async (keyword: string) => {
   try {
@@ -40,30 +43,34 @@ export const findProductsByName = async (keyword: string) => {
         name: {
           contains: keyword,
           mode: "insensitive",
-        }
+        },
       },
       orderBy: {
         name: "asc",
-      }
+      },
     });
     return products;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find product with the given data.");
+    throw new createError.BadRequest(
+      "Cannot find product with the given data."
+    );
   }
-}
+};
 
 export const createProduct = async (productDto: ProductRequestDto) => {
   try {
-    const productData: ProductRequestDto = await productSchema.validateAsync(productDto);
+    const productData: ProductRequestDto = await productSchema.validateAsync(
+      productDto
+    );
     return await prisma.$transaction(async (tx) => {
       const time = generateCurrentTime();
-      
+
       // 1. create product
       const addedProduct = await tx.product.create({
         data: {
           name: productData.name,
-          discontinued: productData.discontinued
-        }
+          discontinued: productData.discontinued,
+        },
       });
 
       // 2. create product stock
@@ -73,34 +80,41 @@ export const createProduct = async (productDto: ProductRequestDto) => {
           quantity: 0,
           created_at: time,
           updated_at: time,
-        }
+        },
       });
-    })
+    });
   } catch (error) {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
     throw new createError.BadRequest("Cannot add product with the given data.");
   }
-}
+};
 
-export const updateProduct = async (productDto: ProductRequestDto, id: number) => {
+export const updateProduct = async (
+  productDto: ProductRequestDto,
+  id: number
+) => {
   try {
-    const productData: ProductRequestDto = await productSchema.validateAsync(productDto);
+    const productData: ProductRequestDto = await productSchema.validateAsync(
+      productDto
+    );
     const updatedProduct = await prisma.product.update({
       where: {
-        id: id
+        id: id,
       },
       data: {
         name: productData.name,
-        discontinued: productData.discontinued
-      }
+        discontinued: productData.discontinued,
+      },
     });
     return updatedProduct;
   } catch (error) {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update product with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update product with the given data."
+    );
   }
-}
+};

@@ -1,7 +1,10 @@
 import { generateCurrentTime } from "./../commons/time.util";
 import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
 import createError from "http-errors";
-import { ProductStockRequestDto, productStockSchema } from "./../dto/requests/product-stock-request.dto";
+import {
+  ProductStockRequestDto,
+  productStockSchema,
+} from "./../dto/requests/product-stock-request.dto";
 import { ProductStock } from "@prisma/client";
 
 export const findAllProductStock = async () => {
@@ -16,12 +19,17 @@ export const findAllProductStock = async () => {
     `;
     return productStock;
   } catch (error) {
-    throw new createError.BadRequest("Cannot get product stock with the given data.");
+    throw new createError.BadRequest(
+      "Cannot get product stock with the given data."
+    );
   }
-}
+};
 
 // change stock manually
-export const updateProductStock = async (productStockDto: ProductStockRequestDto[], reason: string) => {
+export const updateProductStock = async (
+  productStockDto: ProductStockRequestDto[],
+  reason: string
+) => {
   try {
     const productStockData = [];
     // validate each product stock
@@ -50,21 +58,23 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
     return await prisma.$transaction(async (tx) => {
       const updatedResult = [];
       // 1. create product stock change history
-      const addedProductStockChangeHistory = await tx.productStockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: reason,
-        }
-      });
+      const addedProductStockChangeHistory =
+        await tx.productStockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: reason,
+          },
+        });
       let changeCount = 0;
       for (const stock of productStockData) {
         // 2. compare current stock with new stock
         const currentProductStock = await tx.productStock.findUniqueOrThrow({
           where: {
-            id: stock.id
+            id: stock.id,
           },
         });
-        const stockQuantityChange = stock.quantity - currentProductStock.quantity;
+        const stockQuantityChange =
+          stock.quantity - currentProductStock.quantity;
         if (stockQuantityChange === 0) {
           continue;
         }
@@ -73,8 +83,10 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
 
         // validate if quantity change make sense
         if (
-          reason === ProductStockChangeReason.SELF_CREATE && stockQuantityChange < 0 ||
-          reason === ProductStockChangeReason.DAMAGED && stockQuantityChange > 0
+          (reason === ProductStockChangeReason.SELF_CREATE &&
+            stockQuantityChange < 0) ||
+          (reason === ProductStockChangeReason.DAMAGED &&
+            stockQuantityChange > 0)
         ) {
           throw `Change doesn't make sense with reason ${reason}.`;
         }
@@ -82,14 +94,14 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
         // 3. update stock in product stock table
         const updatedProductStock = await tx.productStock.update({
           where: {
-            id: stock.id
+            id: stock.id,
           },
           data: {
             quantity: {
               increment: stockQuantityChange,
             },
             updated_at: time,
-          }
+          },
         });
         updatedResult.push(updatedProductStock);
 
@@ -99,7 +111,7 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
             stock_id: updatedProductStock.id,
             change_id: addedProductStockChangeHistory.id,
             quantity_change: stockQuantityChange,
-          }
+          },
         });
       }
       if (changeCount === 0) {
@@ -111,6 +123,8 @@ export const updateProductStock = async (productStockDto: ProductStockRequestDto
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
-    throw new createError.BadRequest("Cannot update product stock with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update product stock with the given data."
+    );
   }
-}
+};
