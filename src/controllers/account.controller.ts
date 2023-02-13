@@ -28,7 +28,7 @@ router.get(
 );
 
 router.get(
-  `/accounts/employees`, 
+  `/accounts/employees/active`, 
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -1,15 +1,28 @@
-import { findVendorTendencyByName } from "./../services/vendor.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/auth/authorization.service";
-import { verifyAccessToken } from "./../services/auth/token.service";
 import { Role } from "../commons/role.enum";
-import { findActiveVendors, findVendorById, findVendorsByName, createVendor, updateVendor } from "../services/vendor.service";
+import { hasAnyRole } from "../services/auth/authorization.service";
+import { findAllVendors, findVendorTendencyByName, createVendor, findActiveVendors, findVendorById, findVendorsByName, updateVendor } from "../services/vendor.service";
+import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 
-// find active vendors
+// find all vendors
 router.get(
   `/vendors/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findAllVendors();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// find active vendors
+router.get(
+  `/vendors`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -33,7 +46,7 @@ router.get(
       next(error);
     }
   }
-)
+);
 
 // find vendors by name from vendor table
 router.get(
