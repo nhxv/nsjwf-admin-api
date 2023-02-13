@@ -1,7 +1,11 @@
 import { nukeOperation } from "./../services/test.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { getRoleByName, getRoles, nukeConfigure } from "../services/test.service";
+import {
+  getRoleByName,
+  getRoles,
+  nukeConfigure,
+} from "../services/test.service";
 import { verifyAccessToken } from "../services/auth/token.service";
 import { Role } from "../commons/role.enum";
 
@@ -10,9 +14,9 @@ const router = Router();
 router.get(
   `/test/hello`,
   async (req: Request, res: Response, next: NextFunction) => {
-    res.json({content: "hello from test api"});
+    res.json({ content: "hello from test api" });
   }
-)
+);
 
 router.get(
   `/test/roles`,
@@ -58,7 +62,7 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const deleted = await nukeConfigure();
-      res.json({content: "Configure is nuked."});
+      res.json({ content: "Configure is nuked." });
     } catch (error) {
       next(error);
     }
@@ -71,7 +75,7 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const deleted = await nukeOperation();
-      res.json({content: "Operation is nuked."});
+      res.json({ content: "Operation is nuked." });
     } catch (error) {
       next(error);
     }

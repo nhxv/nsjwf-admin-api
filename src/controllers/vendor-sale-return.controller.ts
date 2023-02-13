@@ -8,7 +8,7 @@ const router = Router();
 
 // find vendor sale return by sale code
 router.get(
-  `/vendor-sale-returns/:code`, 
+  `/vendor-sale-returns/:code`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

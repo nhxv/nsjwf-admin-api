@@ -12,4 +12,4 @@ export const handleValidationError = (error) => {
     }
   }
   throw new createError.BadRequest(message);
-}
+};

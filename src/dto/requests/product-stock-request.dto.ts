@@ -1,10 +1,10 @@
 import Joi from "joi";
 
 export interface ProductStockRequestDto {
-  id: number,
-  quantity: number,
-  createdAt?: Date,
-  updatedAt?: Date,
+  id: number;
+  quantity: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const productStockSchema = Joi.object<ProductStockRequestDto>({

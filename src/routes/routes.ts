@@ -16,20 +16,20 @@ import vendorSaleReturnController from "../controllers/vendor-sale-return.contro
 import accountController from "../controllers/account.controller";
 
 const api = Router()
-.use(testController)
-.use(authController)
-.use(productController)
-.use(customerController)
-.use(vendorController)
-.use(vehicleController)
-.use(productStockController)
-.use(vendorOrderController)
-.use(customerOrderController)
-.use(backorderController)
-.use(customerReturnController)
-.use(customerSaleReturnController)
-.use(vendorReturnController)
-.use(vendorSaleReturnController)
-.use(accountController);
+  .use(testController)
+  .use(authController)
+  .use(productController)
+  .use(customerController)
+  .use(vendorController)
+  .use(vehicleController)
+  .use(productStockController)
+  .use(vendorOrderController)
+  .use(customerOrderController)
+  .use(backorderController)
+  .use(customerReturnController)
+  .use(customerSaleReturnController)
+  .use(vendorReturnController)
+  .use(vendorSaleReturnController)
+  .use(accountController);
 
 export default Router().use("/api", api);

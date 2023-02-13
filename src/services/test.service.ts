@@ -4,16 +4,16 @@ import prisma from "../../prisma/prisma-client";
 export const getRoles = async () => {
   const roles = await prisma.role.findMany();
   return roles;
-}
+};
 
 export const getRoleByName = async (roleName: string) => {
   const role = await prisma.role.findUnique({
     where: {
-      name: roleName
-    }
+      name: roleName,
+    },
   });
   return role;
-}
+};
 
 export const nukeConfigure = async () => {
   try {
@@ -24,27 +24,41 @@ export const nukeConfigure = async () => {
   } catch (error) {
     throw new createError.BadRequest("Try again, master.");
   }
-}
+};
 
 export const nukeOperation = async () => {
   try {
     const deletedBackorder = await prisma.backorder.deleteMany({});
     const deletedCustomerOrder = await prisma.customerOrder.deleteMany({});
     const deletedCustomerReturn = await prisma.customerReturn.deleteMany({});
-    const deletedCustomerSaleReturn = await prisma.customerSaleReturn.deleteMany({});
-    const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany({});
+    const deletedCustomerSaleReturn =
+      await prisma.customerSaleReturn.deleteMany({});
+    const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany(
+      {}
+    );
     const deletedOrderTaskType = await prisma.orderTaskType.deleteMany({});
-    const deletedProductBackorder = await prisma.productBackorder.deleteMany({});
-    const deletedProductCustomerOrder = await prisma.productCustomerOrder.deleteMany({});
-    const deletedProductCustomerReturn = await prisma.productCustomerReturn.deleteMany({});
-    const deletedProductCustomerSaleReturn = await prisma.productCustomerSaleReturn.deleteMany({});
-    const deletedProductStockChangeHistory = await prisma.productStockChangeHistory.deleteMany({});
-    const deletedProductVendorOrder = await prisma.productVendorOrder.deleteMany({});
-    const deletedProductVendorReturn = await prisma.productVendorReturn.deleteMany({});
-    const deletedProductVendorSaleReturn = await prisma.productVendorSaleReturn.deleteMany({});
+    const deletedProductBackorder = await prisma.productBackorder.deleteMany(
+      {}
+    );
+    const deletedProductCustomerOrder =
+      await prisma.productCustomerOrder.deleteMany({});
+    const deletedProductCustomerReturn =
+      await prisma.productCustomerReturn.deleteMany({});
+    const deletedProductCustomerSaleReturn =
+      await prisma.productCustomerSaleReturn.deleteMany({});
+    const deletedProductStockChangeHistory =
+      await prisma.productStockChangeHistory.deleteMany({});
+    const deletedProductVendorOrder =
+      await prisma.productVendorOrder.deleteMany({});
+    const deletedProductVendorReturn =
+      await prisma.productVendorReturn.deleteMany({});
+    const deletedProductVendorSaleReturn =
+      await prisma.productVendorSaleReturn.deleteMany({});
     const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
     const deletedVendorReturn = await prisma.vendorReturn.deleteMany({});
-    const deletedVendorSaleReturn = await prisma.vendorSaleReturn.deleteMany({});
+    const deletedVendorSaleReturn = await prisma.vendorSaleReturn.deleteMany(
+      {}
+    );
     const updatedProducts = await prisma.product.updateMany({
       data: {
         sell_price: null,
@@ -60,11 +74,11 @@ export const nukeOperation = async () => {
           data: {
             quantity: 0,
             updated_at: stock.created_at,
-          }
-        })
+          },
+        });
       }
     });
   } catch (error) {
     throw new createError.BadRequest("Try again, master.");
   }
-}
+};

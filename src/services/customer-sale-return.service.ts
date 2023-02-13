@@ -1,4 +1,4 @@
-import createError  from "http-errors";
+import createError from "http-errors";
 
 export const findCustomerSaleReturnByCode = async (code: string) => {
   let customerSaleReturn;
@@ -11,9 +11,9 @@ export const findCustomerSaleReturnByCode = async (code: string) => {
         productCustomerSaleReturns: {
           orderBy: {
             product_name: "asc",
-          }
+          },
         },
-      }
+      },
     });
     if (!customerSaleReturn) {
       // get order sold instead
@@ -23,22 +23,26 @@ export const findCustomerSaleReturnByCode = async (code: string) => {
         },
         include: {
           productCustomerOrders: true,
-        }
+        },
       });
       customerSaleReturn = {
         sale_code: orderSold.code,
         customer_name: orderSold.customer_name,
         sold_at: orderSold.updated_at,
-        productCustomerSaleReturns: orderSold.productCustomerOrders.map(p => ({
-          product_name: p.product_name,
-          quantity: p.quantity,
-          unit_price: p.unit_price,
-        })),
+        productCustomerSaleReturns: orderSold.productCustomerOrders.map(
+          (p) => ({
+            product_name: p.product_name,
+            quantity: p.quantity,
+            unit_price: p.unit_price,
+          })
+        ),
         sale_manual_code: orderSold.manual_code,
-      }
+      };
     }
     return customerSaleReturn;
   } catch (error) {
-    throw new createError.BadRequest("Cannot get customer sale return with the given data.");
+    throw new createError.BadRequest(
+      "Cannot get customer sale return with the given data."
+    );
   }
-}
+};

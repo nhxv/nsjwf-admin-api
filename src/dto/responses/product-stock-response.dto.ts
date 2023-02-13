@@ -1,5 +1,5 @@
 export interface ProductStockResponseDto {
-  name: string,
-  quantity: number,
-  id?: number,
+  name: string;
+  quantity: number;
+  id?: number;
 }

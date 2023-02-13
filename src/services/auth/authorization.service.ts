@@ -7,5 +7,5 @@ export const hasAnyRole = (roles: number[]) => {
       return next(new createError.Forbidden());
     }
     next();
-  }
-}
+  };
+};
