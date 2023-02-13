@@ -3,6 +3,19 @@ import prisma from "../../prisma/prisma-client";
 import { VendorRequestDto, vendorSchema } from "../dto/requests/vendor-request.dto";
 import { handleValidationError } from "../commons/http.exception";
 
+export const findAllVendors = async () => {
+  try {
+    const vendors = await prisma.vendor.findMany({
+      orderBy: {
+        name: "asc"
+      }
+    });
+    return vendors;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendors.");
+  }
+}
+
 export const findActiveVendors = async () => {
   try {
     const vendors = await prisma.vendor.findMany({

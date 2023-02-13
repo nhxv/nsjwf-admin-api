@@ -1,15 +1,28 @@
-import { findCustomerTendencyByName } from "./../services/customer.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { createCustomer, findActiveCustomers, findCustomerById, findCustomersByName, updateCustomer } from "../services/customer.service";
+import { createCustomer, findActiveCustomers, findAllCustomers, findCustomerById, findCustomersByName, findCustomerTendencyByName, updateCustomer } from "../services/customer.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 
-// find active customers
+// find all customers
 router.get(
   `/customers/all`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await findAllCustomers();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// find active customers
+router.get(
+  `/customers/active`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -21,9 +34,9 @@ router.get(
   }
 );
 
-// find vendor by id
+// find active by id
 router.get(
-  `/customers/all/:id`,
+  `/customers/active/:id`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

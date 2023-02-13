@@ -6,7 +6,7 @@ import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 
-// find active products from product table
+// find all products from product table
 router.get(
   `/products/all`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -22,7 +22,7 @@ router.get(
 
 // find active products from product table
 router.get(
-  `/products`,
+  `/products/active`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
