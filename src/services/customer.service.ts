@@ -3,6 +3,19 @@ import prisma from "../../prisma/prisma-client";
 import { CustomerRequestDto, customerSchema } from "../dto/requests/customer-request.dto";
 import { handleValidationError } from "../commons/http.exception";
 
+export const findAllCustomers = async () => {
+  try {
+    const customers = await prisma.customer.findMany({
+      orderBy: {
+        name: "asc",
+      }
+    });
+    return customers;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find customers.");
+  }
+}
+
 export const findActiveCustomers = async () => {
   try {
     const customers = await prisma.customer.findMany({
