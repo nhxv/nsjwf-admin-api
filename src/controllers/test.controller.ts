@@ -7,7 +7,7 @@ import {
   nukeConfigure,
 } from "../services/test.service";
 import { verifyAccessToken } from "../services/auth/token.service";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 
 const router = Router();
 

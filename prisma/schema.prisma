@@ -31,9 +31,10 @@ model Product {
   name                       String                      @unique @db.VarChar(255)
   discontinued               Boolean                     @default(false)
   sell_price                 Decimal?
+  units                      Unit[]
+  stock                      Stock?
   productBackorders          ProductBackorder[]
   productCustomerOrders      ProductCustomerOrder[]
-  productStock               ProductStock?
   productVendorOrders        ProductVendorOrder[]
   productVendorReturns       ProductVendorReturn[]
   productCustomerReturns     ProductCustomerReturn[]
@@ -81,38 +82,59 @@ model Vehicle {
   discontinued  Boolean @default(false)
 }
 
-// Stock
-model ProductStock {
-  id                  Int                  @id @default(autoincrement())
-  product_name        String               @unique @db.VarChar(255)
-  product             Product              @relation(fields: [product_name], references: [name], onDelete: Cascade)
-  quantity            Int                  @default(0)
-  created_at          DateTime
-  updated_at          DateTime
-  productStockChanges ProductStockChange[]
+// Unit
+model Unit {
+  id                        Int                         @id @default(autoincrement())
+  name                      String                      @db.VarChar(10)
+  code                      String                      @unique @db.VarChar(21) // productId (10) + underscore (1) + unitName (10)
+  product_name              String                      @db.VarChar(255)
+  product                   Product                     @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  ratio                     String                      @db.VarChar(4)
+  discontinued              Boolean
+  ProductVendorOrder        ProductVendorOrder[]
+  ProductCustomerOrder      ProductCustomerOrder[]
+  ProductBackorder          ProductBackorder[]
+  ProductVendorReturn       ProductVendorReturn[]
+  ProductVendorSaleReturn   ProductVendorSaleReturn[]
+  ProductCustomerReturn     ProductCustomerReturn[]
+  ProductCustomerSaleReturn ProductCustomerSaleReturn[]
+  VendorProductTendency     VendorProductTendency[]
+  CustomerProductTendency   CustomerProductTendency[]
+
+  @@unique([name, product_name], name: "ProductUnitStock_key")
 }
 
-model ProductStockChangeHistory {
-  id                       Int                      @id @default(autoincrement())
-  created_at               DateTime
-  reason                   String                   @db.VarChar(32)
-  productStockChangeReason ProductStockChangeReason @relation(fields: [reason], references: [name])
-  productStockChanges      ProductStockChange[]
+model Stock {
+  id           Int           @id @default(autoincrement())
+  product_name String        @unique @db.VarChar(255)
+  product      Product       @relation(fields: [product_name], references: [name], onDelete: Cascade)
+  quantity     String        @db.VarChar(255)
+  created_at   DateTime
+  updated_at   DateTime
+  stockChanges StockChange[]
 }
 
-model ProductStockChange {
-  id                        Int                       @id @default(autoincrement())
-  stock_id                  Int
-  productStock              ProductStock              @relation(fields: [stock_id], references: [id], onDelete: Cascade)
-  change_id                 Int
-  productStockChangeHistory ProductStockChangeHistory @relation(fields: [change_id], references: [id], onDelete: Cascade)
-  quantity_change           Int
+model StockChangeHistory {
+  id                Int               @id @default(autoincrement())
+  created_at        DateTime
+  reason            String            @db.VarChar(32)
+  stockChangeReason StockChangeReason @relation(fields: [reason], references: [name])
+  stockChanges      StockChange[]
 }
 
-model ProductStockChangeReason {
-  id                          Int                         @id @default(autoincrement())
-  name                        String                      @unique @db.VarChar(32)
-  productStockChangeHistories ProductStockChangeHistory[]
+model StockChange {
+  id                 Int                @id @default(autoincrement())
+  stock_id           Int
+  stock              Stock              @relation(fields: [stock_id], references: [id], onDelete: Cascade)
+  change_id          Int
+  stockChangeHistory StockChangeHistory @relation(fields: [change_id], references: [id], onDelete: Cascade)
+  quantity_change    String
+}
+
+model StockChangeReason {
+  id                   Int                  @id @default(autoincrement())
+  name                 String               @unique @db.VarChar(32)
+  stockChangeHistories StockChangeHistory[]
 }
 
 // Vendor order
@@ -142,6 +164,8 @@ model ProductVendorOrder {
   order_code   String      @db.VarChar(20)
   vendorOrder  VendorOrder @relation(fields: [order_code], references: [code], onDelete: Cascade)
   quantity     Int
+  unit_code    String      @db.VarChar(21)
+  unit         Unit        @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price   Decimal
   created_at   DateTime
   updated_at   DateTime
@@ -183,6 +207,8 @@ model ProductCustomerOrder {
   order_code    String        @db.VarChar(20)
   customerOrder CustomerOrder @relation(fields: [order_code], references: [code], onDelete: Cascade)
   quantity      Int
+  unit_code     String        @db.VarChar(21)
+  unit          Unit          @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price    Decimal
   created_at    DateTime
   updated_at    DateTime
@@ -221,6 +247,8 @@ model ProductBackorder {
   backorder_id Int
   backorder    Backorder @relation(fields: [backorder_id], references: [id], onDelete: Cascade)
   quantity     Int
+  unit_code    String    @db.VarChar(21)
+  unit         Unit      @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price   Decimal
   created_at   DateTime
   updated_at   DateTime
@@ -248,10 +276,13 @@ model ProductVendorReturn {
   return_id    Int
   vendorReturn VendorReturn @relation(fields: [return_id], references: [id], onDelete: Cascade)
   quantity     Int
+  unit_code    String       @db.VarChar(21)
+  unit         Unit         @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price   Decimal
   created_at   DateTime
 }
 
+// each vendor order only has 1 vendor sale return - but multiple vendor returns
 model VendorSaleReturn {
   id                       Int                       @id @default(autoincrement())
   sale_code                String                    @unique @db.VarChar(20)
@@ -269,6 +300,8 @@ model ProductVendorSaleReturn {
   product_name            String           @db.VarChar(255)
   product                 Product          @relation(fields: [product_name], references: [name], onDelete: Cascade)
   quantity                Int
+  unit_code               String           @db.VarChar(21)
+  unit                    Unit             @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price              Decimal
 
   @@unique([vendor_sale_return_code, product_name], name: "ProductVendorSaleReturn_key")
@@ -294,6 +327,8 @@ model ProductCustomerReturn {
   return_id      Int
   customerReturn CustomerReturn @relation(fields: [return_id], references: [id], onDelete: Cascade)
   quantity       Int
+  unit_code      String         @db.VarChar(21)
+  unit           Unit           @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price     Decimal
   created_at     DateTime
 }
@@ -316,6 +351,8 @@ model ProductCustomerSaleReturn {
   product_name              String             @db.VarChar(255)
   product                   Product            @relation(fields: [product_name], references: [name], onDelete: Cascade)
   quantity                  Int
+  unit_code                 String             @db.VarChar(21)
+  unit                      Unit               @relation(fields: [unit_code], references: [code], onDelete: Cascade)
   unit_price                Decimal
 
   @@unique([customer_sale_return_code, product_name], name: "ProductCustomerSaleReturn_key")
@@ -350,6 +387,8 @@ model VendorProductTendency {
   name        String  @db.VarChar(255)
   product     Product @relation(fields: [name], references: [name], onDelete: Cascade)
   quantity    Int
+  unit_code   String  @db.VarChar(21)
+  unit        Unit    @relation(fields: [unit_code], references: [code], onDelete: Cascade)
 
   @@unique([vendor_name, name], name: "VendorProductTendency_key")
 }
@@ -361,6 +400,8 @@ model CustomerProductTendency {
   name          String   @db.VarChar(255)
   product       Product  @relation(fields: [name], references: [name], onDelete: Cascade)
   quantity      Int
+  unit_code     String   @db.VarChar(21)
+  unit          Unit     @relation(fields: [unit_code], references: [code], onDelete: Cascade)
 
   @@unique([customer_name, name], name: "CustomerProductTendency_key")
 }

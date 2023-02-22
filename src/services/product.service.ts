@@ -1,11 +1,11 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
+import { handleValidationError } from "../commons/http.exception";
 import {
   ProductRequestDto,
   productSchema,
 } from "../dto/requests/product-request.dto";
-import { generateCurrentTime } from "./../commons/time.util";
-import { handleValidationError } from "../commons/http.exception";
+import { generateCurrentTime } from "./../commons/utils/time.util";
 
 export const findAllProducts = async () => {
   try {
@@ -29,6 +29,19 @@ export const findActiveProducts = async () => {
       orderBy: {
         name: "asc",
       },
+      include: {
+        units: {
+          where: {
+            discontinued: false,
+          },
+          select: {
+            code: true,
+          },
+          orderBy: {
+            code: "asc",
+          },
+        },
+      },
     });
     return products;
   } catch (error) {
@@ -36,24 +49,28 @@ export const findActiveProducts = async () => {
   }
 };
 
-export const findProductsByName = async (keyword: string) => {
+export const findProductById = async (id: number) => {
   try {
-    const products = await prisma.product.findMany({
+    const product = await prisma.product.findUniqueOrThrow({
       where: {
-        name: {
-          contains: keyword,
-          mode: "insensitive",
+        id: id,
+      },
+      include: {
+        units: {
+          where: {
+            NOT: {
+              name: "BOX",
+            },
+          },
+          orderBy: {
+            name: "asc",
+          },
         },
       },
-      orderBy: {
-        name: "asc",
-      },
     });
-    return products;
+    return product;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find product with the given data."
-    );
+    throw new createError.BadRequest("Cannot find product with the given id.");
   }
 };
 
@@ -73,11 +90,24 @@ export const createProduct = async (productDto: ProductRequestDto) => {
         },
       });
 
-      // 2. create product stock
-      const addedProductStock = await tx.productStock.create({
+      // 2. create box unit
+      const defaultUnit = "BOX";
+      const defaultRatio = "1/1";
+      const addedUnit = await tx.unit.create({
+        data: {
+          name: defaultUnit,
+          code: `${addedProduct.id}_${defaultUnit}`,
+          product_name: addedProduct.name,
+          ratio: defaultRatio,
+          discontinued: false,
+        },
+      });
+
+      // 3. create stock for box unit
+      const addedStock = await tx.stock.create({
         data: {
           product_name: productData.name,
-          quantity: 0,
+          quantity: "0",
           created_at: time,
           updated_at: time,
         },

@@ -1,22 +1,25 @@
-import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
-import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { Prisma } from "@prisma/client";
-import prisma from "../../prisma/prisma-client";
+import Fraction from "fraction.js";
 import createError from "http-errors";
+import prisma from "../../prisma/prisma-client";
+import { BackorderStatus } from "../commons/enums/backorder-status.enum";
+import { OrderStatus } from "../commons/enums/order-status.enum";
+import { handleValidationError } from "../commons/http.exception";
+import { generateCode } from "../commons/utils/code.util";
 import {
-  generateCurrentTime,
   convertLocalExpected,
   convertLocalStart,
-} from "../commons/time.util";
-import { generateCode } from "../commons/code.util";
+  generateCurrentTime,
+} from "../commons/utils/time.util";
 import {
   BackorderRequestDto,
   backorderSchema,
 } from "../dto/requests/backorder-request.dto";
-import { customerOrderSchema } from "../dto/requests/customer-order-request.dto";
-import { OrderStatus } from "../commons/order-status.enum";
-import { BackorderStatus } from "../commons/backorder-status.enum";
-import { handleValidationError } from "../commons/http.exception";
+import {
+  CustomerOrderRequestDto,
+  customerOrderSchema,
+} from "../dto/requests/customer-order-request.dto";
+import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 
 export const findBackorderByStatus = async (status: string) => {
   try {
@@ -93,10 +96,11 @@ export const createBackorder = async (backorderDto: BackorderRequestDto) => {
     const productOrders = backorderData.productBackorders.map(
       (productOrder) => ({
         product_name: productOrder.productName,
+        quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
           new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
         ),
-        quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
       })
@@ -150,6 +154,7 @@ export const updateBackorder = async (
         product_name: productOrder.productName,
         backorder_id: backorderData.id,
         quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
           new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
         ),
@@ -188,6 +193,7 @@ export const updateBackorder = async (
         existingProductOrders.set(productOrder.product_name, {
           product_name: productOrder.product_name,
           quantity: productOrder.quantity,
+          unit_code: productOrder.unitCode,
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
@@ -208,32 +214,26 @@ export const updateBackorder = async (
       }
 
       for (const productOrder of productOrders) {
-        let orderQuantityChange = 0;
-
-        // find current order quantity
+        // find current product order
         const currentProductOrder = existingProductOrders.get(
           productOrder.product_name
         );
 
         if (!currentProductOrder) {
-          orderQuantityChange = productOrder.quantity;
           // create product backorder
           const createdProductOrder = await tx.productBackorder.create({
             data: {
               product_name: productOrder.product_name,
               backorder_id: productOrder.backorder_id,
-              quantity: orderQuantityChange,
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
               unit_price: productOrder.unit_price,
               created_at: time,
               updated_at: time,
             },
           });
         } else {
-          // update existing order
-          orderQuantityChange =
-            productOrder.quantity - currentProductOrder.quantity;
-
-          // update product backorder
+          // update existing product backorder
           const updatedProductOrder = await tx.productBackorder.update({
             where: {
               ProductBackorder_key: {
@@ -242,9 +242,8 @@ export const updateBackorder = async (
               },
             },
             data: {
-              quantity: {
-                increment: orderQuantityChange,
-              },
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
               unit_price: productOrder.unit_price,
               updated_at: productOrder.updated_at,
             },
@@ -280,17 +279,18 @@ export const convertBackorder = async (
       throw `Please don't hack us.`;
     }
 
+    const { code, time } = generateCode();
+
     const productBackorders = backorderData.productBackorders.map(
       (productOrder) => ({
         product_name: productOrder.productName,
         backorder_id: backorderData.id,
         quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(productOrder.unitPrice),
         updated_at: time,
       })
     );
-
-    const { code, time } = generateCode();
 
     // convert backorder to a newly created customer order
     const customerOrderDto: CustomerOrderRequestDto = {
@@ -303,7 +303,7 @@ export const convertBackorder = async (
       status: OrderStatus.PICKING,
     };
 
-    // Validate customer order
+    // validate customer order
     const customerOrderData: CustomerOrderRequestDto =
       await customerOrderSchema.validateAsync(customerOrderDto);
     if (!Object.keys(OrderStatus).includes(customerOrderData.status)) {
@@ -313,10 +313,11 @@ export const convertBackorder = async (
       (productOrder) => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
+        quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
           new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
         ),
-        quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
       })
@@ -353,6 +354,7 @@ export const convertBackorder = async (
         existingProductOrders.set(productOrder.product_name, {
           product_name: productOrder.product_name,
           quantity: productOrder.quantity,
+          unit_code: productOrder.unit_code,
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
@@ -373,33 +375,26 @@ export const convertBackorder = async (
       }
 
       for (const productOrder of productBackorders) {
-        let orderQuantityChange = 0;
-
         // find current order quantity
         const currentProductOrder = existingProductOrders.get(
           productOrder.product_name
         );
 
         if (!currentProductOrder) {
-          orderQuantityChange = productOrder.quantity;
-
           // create product backorder
           const createdProductOrder = await tx.productBackorder.create({
             data: {
               product_name: productOrder.product_name,
               backorder_id: productOrder.backorder_id,
-              quantity: orderQuantityChange,
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
               unit_price: productOrder.unit_price,
               created_at: time,
               updated_at: time,
             },
           });
         } else {
-          // 3. update existing order
-          orderQuantityChange =
-            productOrder.quantity - currentProductOrder.quantity;
-
-          // update product backorder
+          // update existing product backorder
           const updatedProductOrder = await tx.productBackorder.update({
             where: {
               ProductBackorder_key: {
@@ -408,9 +403,8 @@ export const convertBackorder = async (
               },
             },
             data: {
-              quantity: {
-                increment: orderQuantityChange,
-              },
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
               unit_price: productOrder.unit_price,
               updated_at: productOrder.updated_at,
             },
@@ -418,7 +412,7 @@ export const convertBackorder = async (
         }
       }
 
-      // 1. create customer order
+      // create customer order
       const newCustomerOrder = await tx.customerOrder.create({
         data: {
           code: code,
@@ -437,45 +431,55 @@ export const convertBackorder = async (
         },
       });
 
-      // 2. create stock change history
-      const addedProductStockChangeHistory =
-        await tx.productStockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: ProductStockChangeReason.CUSTOMER_ORDER_CREATE,
-          },
-        });
+      // create stock change history
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
+        },
+      });
 
       for (const productOrder of productOrders) {
-        const currentProductStock = await tx.productStock.findUniqueOrThrow({
+        const currentStock = await tx.stock.findUniqueOrThrow({
           where: {
             product_name: productOrder.product_name,
           },
         });
-        const stockQuantityChange = 0 - productOrder.quantity;
 
-        if (currentProductStock.quantity + stockQuantityChange < 0)
-          throw `${productOrder.product_name}: Only ${currentProductStock.quantity} in stock.`;
+        // get unit ratio
+        const unit = await tx.unit.findUniqueOrThrow({
+          where: {
+            code: productOrder.unit_code,
+          },
+        });
+        const newRatio = new Fraction(unit.ratio);
+        const productOrderQuantity = newRatio.mul(
+          new Fraction(productOrder.quantity)
+        );
+        const currentStockQuantity = new Fraction(currentStock.quantity);
+        const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
+        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
-        // update product stock
-        const updatedProductStock = await tx.productStock.update({
+        if (newStockQuantity.compare(0) < 0)
+          throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
+
+        // update stock
+        const updatedStock = await tx.stock.update({
           where: {
             product_name: productOrder.product_name,
           },
           data: {
-            quantity: {
-              increment: stockQuantityChange,
-            },
+            quantity: newStockQuantity.toFraction(),
             updated_at: time,
           },
         });
 
-        // create product stock change
-        const addedProductStockChange = await tx.productStockChange.create({
+        // create stock change
+        const addedStockChange = await tx.stockChange.create({
           data: {
-            stock_id: updatedProductStock.id,
-            change_id: addedProductStockChangeHistory.id,
-            quantity_change: stockQuantityChange,
+            stock_id: updatedStock.id,
+            change_id: addedStockChangeHistory.id,
+            quantity_change: stockQuantityChange.toFraction(),
           },
         });
       }
@@ -487,6 +491,7 @@ export const convertBackorder = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
+    console.log(error);
     throw new createError.BadRequest(
       "Cannot convert backorder with the given data."
     );

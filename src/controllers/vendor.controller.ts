@@ -1,13 +1,12 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
-  findAllVendors,
-  findVendorTendencyByName,
   createVendor,
   findActiveVendors,
+  findAllVendors,
   findVendorById,
-  findVendorsByName,
+  findVendorTendencyByName,
   updateVendor,
 } from "../services/vendor.service";
 import { verifyAccessToken } from "./../services/auth/token.service";
@@ -30,7 +29,7 @@ router.get(
 
 // find active vendors
 router.get(
-  `/vendors`,
+  `/vendors/active`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -44,7 +43,7 @@ router.get(
 
 // find vendor by id
 router.get(
-  `/vendors/all/:id`,
+  `/vendors/active/:id`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -56,26 +55,14 @@ router.get(
   }
 );
 
-// find vendors by name from vendor table
 router.get(
-  `/vendors/basic-search`,
+  `/vendors/active/tendency/:name`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findVendorsByName(req.query.keyword as string);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.get(
-  `/vendors/tendency/:name`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findVendorTendencyByName(req.params.name);
+      const response = await findVendorTendencyByName(
+        decodeURIComponent(req.params.name)
+      );
       res.send(response);
     } catch (error) {
       next(error);

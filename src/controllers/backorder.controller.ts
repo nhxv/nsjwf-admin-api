@@ -1,16 +1,16 @@
-import {
-  findBackorderByStatus,
-  findBackorderById,
-  createBackorder,
-  updateBackorder,
-  convertBackorder,
-} from "./../services/backorder.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/auth/authorization.service";
-import { Role } from "../commons/role.enum";
-import { verifyAccessToken } from "./../services/auth/token.service";
+import { Role } from "../commons/enums/role.enum";
 import { BackorderResponseDto } from "../dto/responses/backorder-response.dto";
 import { ProductBackorderResponseDto } from "../dto/responses/product-backorder-response.dto";
+import { hasAnyRole } from "../services/auth/authorization.service";
+import { verifyAccessToken } from "./../services/auth/token.service";
+import {
+  convertBackorder,
+  createBackorder,
+  findBackorderById,
+  findBackorderByStatus,
+  updateBackorder,
+} from "./../services/backorder.service";
 
 const router = Router();
 
@@ -30,6 +30,7 @@ router.get(
               const poRes: ProductBackorderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
               };
               return poRes;
             }),
@@ -47,7 +48,7 @@ router.get(
   }
 );
 
-// find customer order by code
+// find backorder by id
 router.get(
   `/backorders/:id`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
