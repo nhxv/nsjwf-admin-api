@@ -2,7 +2,10 @@ import Fraction from "fraction.js";
 import createError from "http-errors";
 import { StockChangeReason } from "../commons/enums/stock-change-reason.enum";
 import { generateCurrentTime } from "../commons/utils/time.util";
-import { StockRequestDto, stockSchema } from "../dto/requests/stock-request.dto";
+import {
+  StockRequestDto,
+  stockSchema,
+} from "../dto/requests/stock-request.dto";
 import { handleValidationError } from "../commons/http.exception";
 
 export const findAllStock = async () => {
@@ -22,11 +25,15 @@ export const findAllStock = async () => {
       if (!productStock.get(s.product_name)) {
         productStock.set(s.product_name, {
           id: s.id,
-          name: s.product_name, 
-          measures: [{
-            quantity: new Fraction(s.quantity).mul(new Fraction(s.ratio)).toFraction(),
-            unitCode: s.code,
-          }],
+          name: s.product_name,
+          measures: [
+            {
+              quantity: new Fraction(s.quantity)
+                .mul(new Fraction(s.ratio))
+                .toFraction(),
+              unitCode: s.code,
+            },
+          ],
         });
       } else {
         productStock.set(s.product_name, {
@@ -34,9 +41,11 @@ export const findAllStock = async () => {
           measures: [
             ...productStock.get(s.product_name)["measures"],
             {
-              quantity: new Fraction(s.quantity).mul(new Fraction(s.ratio)).toFraction(), 
+              quantity: new Fraction(s.quantity)
+                .mul(new Fraction(s.ratio))
+                .toFraction(),
               unitCode: s.code,
-            }, 
+            },
           ],
         });
       }
@@ -49,7 +58,10 @@ export const findAllStock = async () => {
 };
 
 // change stock manually
-export const updateStock = async (stockDto: StockRequestDto[], reason: string) => {
+export const updateStock = async (
+  stockDto: StockRequestDto[],
+  reason: string
+) => {
   try {
     const stockData: StockRequestDto[] = [];
     // validate each product stock
@@ -77,13 +89,12 @@ export const updateStock = async (stockDto: StockRequestDto[], reason: string) =
     return await prisma.$transaction(async (tx) => {
       const time = generateCurrentTime();
       // 1. create stock change history
-      const addedStockChangeHistory =
-        await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: reason,
-          },
-        });
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: reason,
+        },
+      });
       let changeCount = 0;
       for (const stock of stockData) {
         // 2. get current stock
@@ -111,9 +122,12 @@ export const updateStock = async (stockDto: StockRequestDto[], reason: string) =
 
         // validate if quantity change make sense
         if (
-          (reason === StockChangeReason.SELF_ADD && stockQuantityChange.compare(0) < 0) ||
-          (reason === StockChangeReason.DAMAGED && stockQuantityChange.compare(0) > 0) ||
-          (reason === StockChangeReason.SELF_USE && stockQuantityChange.compare(0) > 0)
+          (reason === StockChangeReason.SELF_ADD &&
+            stockQuantityChange.compare(0) < 0) ||
+          (reason === StockChangeReason.DAMAGED &&
+            stockQuantityChange.compare(0) > 0) ||
+          (reason === StockChangeReason.SELF_USE &&
+            stockQuantityChange.compare(0) > 0)
         ) {
           throw `Change doesn't make sense with reason ${reason}.`;
         }
@@ -151,6 +165,8 @@ export const updateStock = async (stockDto: StockRequestDto[], reason: string) =
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update stock with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update stock with the given data."
+    );
   }
 };

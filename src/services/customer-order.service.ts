@@ -15,7 +15,7 @@ import {
   convertLocalStart,
   convertLocalWeekEnd,
   convertLocalWeekStart,
-  generateCurrentTime
+  generateCurrentTime,
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
@@ -328,13 +328,12 @@ export const createCustomerOrder = async (
       });
 
       // 1. create stock change history
-      const addedStockChangeHistory =
-        await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
-          },
-        });
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
+        },
+      });
 
       for (const productOrder of productOrders) {
         // 2. get current stock
@@ -348,10 +347,12 @@ export const createCustomerOrder = async (
         const unit = await tx.unit.findUniqueOrThrow({
           where: {
             code: productOrder.unit_code,
-          }
+          },
         });
         const newRatio = new Fraction(unit.ratio);
-        const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+        const productOrderQuantity = newRatio.mul(
+          new Fraction(productOrder.quantity)
+        );
         const currentStockQuantity = new Fraction(currentStock.quantity);
         const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
         const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
@@ -461,13 +462,12 @@ export const updateCustomerOrder = async (
       }
 
       // create stock change history
-      const addedStockChangeHistory =
-        await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.CUSTOMER_ORDER_EDIT,
-          },
-        });
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: StockChangeReason.CUSTOMER_ORDER_EDIT,
+        },
+      });
 
       const existingProductOrders = new Map();
 
@@ -504,13 +504,17 @@ export const updateCustomerOrder = async (
           const unit = await tx.unit.findUniqueOrThrow({
             where: {
               code: productOrder.unit_code,
-            }
+            },
           });
           const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+          const productOrderQuantity = newRatio.mul(
+            new Fraction(productOrder.quantity)
+          );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
-          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
+          const newStockQuantity =
+            currentStockQuantity.add(productOrderQuantity);
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
 
           // update stock
           const updatedStock = await tx.stock.update({
@@ -545,10 +549,12 @@ export const updateCustomerOrder = async (
         const unit = await tx.unit.findUniqueOrThrow({
           where: {
             code: productOrder.unit_code,
-          }
+          },
         });
         const newRatio = new Fraction(unit.ratio);
-        const newProductOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+        const newProductOrderQuantity = newRatio.mul(
+          new Fraction(productOrder.quantity)
+        );
         const currentStockQuantity = new Fraction(currentStock.quantity);
 
         // find current product order
@@ -558,8 +564,11 @@ export const updateCustomerOrder = async (
 
         if (!currentProductOrder) {
           // create new product order
-          const newStockQuantity = currentStockQuantity.sub(newProductOrderQuantity);
-          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
+          const newStockQuantity = currentStockQuantity.sub(
+            newProductOrderQuantity
+          );
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
 
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
@@ -598,12 +607,18 @@ export const updateCustomerOrder = async (
           const currentUnit = await tx.unit.findUniqueOrThrow({
             where: {
               code: currentProductOrder.unit_code,
-            }
+            },
           });
           const currentRatio = new Fraction(currentUnit.ratio);
-          const currentProductOrderQuantity = currentRatio.mul(new Fraction(currentProductOrder.quantity));
-          const newStockQuantity = currentStockQuantity.add(currentProductOrderQuantity).sub(newProductOrderQuantity);
-          const stockQuantityChange = currentProductOrderQuantity.sub(newProductOrderQuantity);
+          const currentProductOrderQuantity = currentRatio.mul(
+            new Fraction(currentProductOrder.quantity)
+          );
+          const newStockQuantity = currentStockQuantity
+            .add(currentProductOrderQuantity)
+            .sub(newProductOrderQuantity);
+          const stockQuantityChange = currentProductOrderQuantity.sub(
+            newProductOrderQuantity
+          );
 
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;

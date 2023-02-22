@@ -11,7 +11,11 @@ export interface StockRequestDto {
 }
 
 export const stockSchema = Joi.object<StockRequestDto>({
-  productName: Joi.string().trim().max(255).required().regex(GENERAL_TEXT_REGEX, { invert: true }),
+  productName: Joi.string()
+    .trim()
+    .max(255)
+    .required()
+    .regex(GENERAL_TEXT_REGEX, { invert: true }),
   quantity: Joi.number().integer().positive().required(),
   unitCode: Joi.string().max(255).required(),
   createdAt: Joi.date(),

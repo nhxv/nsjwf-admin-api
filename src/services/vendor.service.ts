@@ -71,7 +71,9 @@ export const findVendorTendencyByName = async (name: string) => {
     });
     return tendency;
   } catch (error) {
-    throw new createError.BadRequest("Cannot find vendor tendency with the given data.");
+    throw new createError.BadRequest(
+      "Cannot find vendor tendency with the given data."
+    );
   }
 };
 
@@ -180,6 +182,8 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot update vendor with the given data.");
+    throw new createError.BadRequest(
+      "Cannot update vendor with the given data."
+    );
   }
 };

@@ -25,10 +25,7 @@ router.put(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await updateStock(
-        req.body.stock,
-        req.body.reason
-      );
+      const response = await updateStock(req.body.stock, req.body.reason);
       res.send(response);
     } catch (error) {
       next(error);

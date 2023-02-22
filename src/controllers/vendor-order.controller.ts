@@ -73,7 +73,7 @@ router.get(
     try {
       const response: any = await findVendorSale(
         decodeURIComponent(req.query.keyword as string),
-        req.query.date as string,
+        req.query.date as string
       );
       res.send(
         response.map((order) => {

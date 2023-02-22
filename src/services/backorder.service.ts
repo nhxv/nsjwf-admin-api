@@ -9,15 +9,15 @@ import { generateCode } from "../commons/utils/code.util";
 import {
   convertLocalExpected,
   convertLocalStart,
-  generateCurrentTime
+  generateCurrentTime,
 } from "../commons/utils/time.util";
 import {
   BackorderRequestDto,
-  backorderSchema
+  backorderSchema,
 } from "../dto/requests/backorder-request.dto";
 import {
   CustomerOrderRequestDto,
-  customerOrderSchema
+  customerOrderSchema,
 } from "../dto/requests/customer-order-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 
@@ -432,13 +432,12 @@ export const convertBackorder = async (
       });
 
       // create stock change history
-      const addedStockChangeHistory =
-        await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
-          },
-        });
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
+        },
+      });
 
       for (const productOrder of productOrders) {
         const currentStock = await tx.stock.findUniqueOrThrow({
@@ -451,13 +450,15 @@ export const convertBackorder = async (
         const unit = await tx.unit.findUniqueOrThrow({
           where: {
             code: productOrder.unit_code,
-          }
+          },
         });
         const newRatio = new Fraction(unit.ratio);
-        const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+        const productOrderQuantity = newRatio.mul(
+          new Fraction(productOrder.quantity)
+        );
         const currentStockQuantity = new Fraction(currentStock.quantity);
         const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
-        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);        
+        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
         if (newStockQuantity.compare(0) < 0)
           throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;

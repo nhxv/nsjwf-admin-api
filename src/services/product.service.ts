@@ -59,8 +59,8 @@ export const findProductById = async (id: number) => {
         units: {
           where: {
             NOT: {
-              name: "BOX"
-            }
+              name: "BOX",
+            },
           },
           orderBy: {
             name: "asc",

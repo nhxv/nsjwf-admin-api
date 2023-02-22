@@ -10,11 +10,11 @@ import {
   convertLocalExpected,
   convertLocalInterval,
   convertLocalStart,
-  generateCurrentTime
+  generateCurrentTime,
 } from "./../commons/utils/time.util";
 import {
   VendorOrderRequestDto,
-  vendorOrderSchema
+  vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
 
 export const findVendorOrderByStatus = async (status: string) => {
@@ -172,33 +172,36 @@ export const createVendorOrder = async (
         });
 
         // 1. create stock change history
-        const addedStockChangeHistory =
-          await tx.stockChangeHistory.create({
-            data: {
-              created_at: time,
-              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
-            },
-          });
+        const addedStockChangeHistory = await tx.stockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+          },
+        });
 
         for (const productOrder of productOrders) {
           // 2. get current stock
           const currentStock = await tx.stock.findUniqueOrThrow({
             where: {
               product_name: productOrder.product_name,
-            }
+            },
           });
 
           // 3. get unit ratio
           const unit = await tx.unit.findUniqueOrThrow({
             where: {
               code: productOrder.unit_code,
-            }
+            },
           });
           const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+          const productOrderQuantity = newRatio.mul(
+            new Fraction(productOrder.quantity)
+          );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const stockQuantityChange = productOrderQuantity.sub(currentStockQuantity);
-          const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+          const stockQuantityChange =
+            productOrderQuantity.sub(currentStockQuantity);
+          const newStockQuantity =
+            currentStockQuantity.add(productOrderQuantity);
 
           // 4. update stock
           const updatedStock = await tx.stock.update({
@@ -340,13 +343,12 @@ export const updateVendorOrder = async (
       let addedStockChangeHistory;
       if (isCompleted) {
         // 1. create stock change history only if order is completed
-        addedStockChangeHistory =
-          await tx.stockChangeHistory.create({
-            data: {
-              created_at: time,
-              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
-            },
-          });
+        addedStockChangeHistory = await tx.stockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+          },
+        });
       }
 
       for (const productOrder of productOrders) {
@@ -379,20 +381,24 @@ export const updateVendorOrder = async (
           const currentStock = await tx.stock.findUniqueOrThrow({
             where: {
               product_name: productOrder.product_name,
-            }
+            },
           });
 
           // 3. get unit ratio
           const unit = await tx.unit.findUniqueOrThrow({
             where: {
               code: productOrder.unit_code,
-            }
+            },
           });
           const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+          const productOrderQuantity = newRatio.mul(
+            new Fraction(productOrder.quantity)
+          );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
-          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
+          const newStockQuantity =
+            currentStockQuantity.add(productOrderQuantity);
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
 
           // 4. update stock
           const updatedStock = await tx.stock.update({

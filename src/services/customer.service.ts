@@ -3,7 +3,7 @@ import prisma from "../../prisma/prisma-client";
 import { handleValidationError } from "../commons/http.exception";
 import {
   CustomerRequestDto,
-  customerSchema
+  customerSchema,
 } from "../dto/requests/customer-request.dto";
 
 export const findAllCustomers = async () => {
@@ -105,7 +105,9 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest("Cannot add customer with the given data.");
+    throw new createError.BadRequest(
+      "Cannot add customer with the given data."
+    );
   }
 };
 

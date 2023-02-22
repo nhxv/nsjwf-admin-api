@@ -5,7 +5,7 @@ import {
   findActiveProducts,
   findAllProducts,
   findProductById,
-  updateProduct
+  updateProduct,
 } from "../services/product.service";
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { verifyAccessToken } from "./../services/auth/token.service";

@@ -7,7 +7,7 @@ import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
 import {
   CustomerReturnRequestDto,
-  customerReturnSchema
+  customerReturnSchema,
 } from "../dto/requests/customer-return-request.dto";
 import { convertLocalStart } from "./../commons/utils/time.util";
 
@@ -175,10 +175,14 @@ export const createCustomerReturn = async (
           order_code: customerReturnData.orderCode,
           created_at: time,
           recommended_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)
+            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
+              2
+            )
           ),
           final_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)
+            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
+              2
+            )
           ),
           productCustomerReturns: {
             create: productReturns,
@@ -188,32 +192,34 @@ export const createCustomerReturn = async (
 
       // increase stock
       // 1. create stock change history
-      const addedStockChangeHistory =
-        await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.CUSTOMER_RETURN_RECEIVED,
-          },
-        });
+      const addedStockChangeHistory = await tx.stockChangeHistory.create({
+        data: {
+          created_at: time,
+          reason: StockChangeReason.CUSTOMER_RETURN_RECEIVED,
+        },
+      });
 
       for (const productReturn of productReturns) {
         // 2. get current stock
         const currentStock = await tx.stock.findUniqueOrThrow({
           where: {
             product_name: productReturn.product_name,
-          }
+          },
         });
 
         // 3. get unit ratio
         const unit = await tx.unit.findUniqueOrThrow({
           where: {
             code: productReturn.unit_code,
-          }
+          },
         });
         const newRatio = new Fraction(unit.ratio);
-        const productOrderQuantity = newRatio.mul(new Fraction(productReturn.quantity));
+        const productOrderQuantity = newRatio.mul(
+          new Fraction(productReturn.quantity)
+        );
         const currentStockQuantity = new Fraction(currentStock.quantity);
-        const stockQuantityChange = productOrderQuantity.sub(currentStockQuantity);
+        const stockQuantityChange =
+          productOrderQuantity.sub(currentStockQuantity);
         const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
 
         // 4. update stock

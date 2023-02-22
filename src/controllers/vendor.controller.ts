@@ -60,7 +60,9 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findVendorTendencyByName(decodeURIComponent(req.params.name));
+      const response = await findVendorTendencyByName(
+        decodeURIComponent(req.params.name)
+      );
       res.send(response);
     } catch (error) {
       next(error);

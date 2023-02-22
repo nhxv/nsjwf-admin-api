@@ -3,7 +3,10 @@ import { handleValidationError } from "../commons/http.exception";
 import { UnitRequestDto, unitSchema } from "../dto/requests/unit-request.dto";
 import { generateCurrentTime } from "../commons/utils/time.util";
 
-export const createUnit = async (productId: number, unitRequestDto: UnitRequestDto) => {
+export const createUnit = async (
+  productId: number,
+  unitRequestDto: UnitRequestDto
+) => {
   try {
     const unitData: UnitRequestDto = await unitSchema.validateAsync(
       unitRequestDto
@@ -39,7 +42,6 @@ export const createUnit = async (productId: number, unitRequestDto: UnitRequestD
         },
       });
     });
-
   } catch (error) {
     if (error.details?.length > 0) {
       handleValidationError(error);
@@ -51,7 +53,10 @@ export const createUnit = async (productId: number, unitRequestDto: UnitRequestD
   }
 };
 
-export const updateUnit = async (id: number, unitRequestDto: UnitRequestDto) => {
+export const updateUnit = async (
+  id: number,
+  unitRequestDto: UnitRequestDto
+) => {
   try {
     const unitData: UnitRequestDto = await unitSchema.validateAsync(
       unitRequestDto
