@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createCustomer,
   findActiveCustomers,
   findAllCustomers,
   findCustomerById,
-  findCustomersByName,
   findCustomerTendencyByName,
   updateCustomer,
 } from "../services/customer.service";
@@ -42,7 +41,7 @@ router.get(
   }
 );
 
-// find active by id
+// find active customer by id
 router.get(
   `/customers/active/:id`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -56,26 +55,12 @@ router.get(
   }
 );
 
-// find customers with data from customer table
 router.get(
-  `/customers/basic-search`,
+  `/customers/active/tendency/:name`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findCustomersByName(req.query.keyword as string);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.get(
-  `/customers/tendency/:name`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findCustomerTendencyByName(req.params.name);
+      const response = await findCustomerTendencyByName(decodeURIComponent(req.params.name));
       res.send(response);
     } catch (error) {
       next(error);

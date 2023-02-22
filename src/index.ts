@@ -1,8 +1,8 @@
-import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
-import routes from "./routes/routes";
+import express, { NextFunction, Request, Response } from "express";
 import createError from "http-errors";
 import { HttpException } from "./commons/http.exception";
+import routes from "./routes/routes";
 
 require("dotenv").config();
 

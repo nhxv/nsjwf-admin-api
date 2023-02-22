@@ -36,6 +36,7 @@ export const findVendorSaleReturnByCode = async (code: string) => {
         productVendorSaleReturns: orderSold.productVendorOrders.map((p) => ({
           product_name: p.product_name,
           quantity: p.quantity,
+          unit_code: p.unit_code,
           unit_price: p.unit_price,
         })),
       };

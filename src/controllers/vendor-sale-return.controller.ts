@@ -1,7 +1,7 @@
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { verifyAccessToken } from "../services/auth/token.service";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import { findVendorSaleReturnByCode } from "../services/vendor-sale-return.service";
 
 const router = Router();

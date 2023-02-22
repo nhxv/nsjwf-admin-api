@@ -44,6 +44,7 @@ export const vendorSchema = Joi.object<VendorRequestDto>({
       .max(255)
       .regex(GENERAL_TEXT_REGEX, { invert: true }),
     quantity: Joi.number().integer().min(0),
+    unitCode: Joi.string().trim().max(20),
   }),
   id: Joi.number().positive().integer(),
 });

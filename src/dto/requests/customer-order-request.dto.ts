@@ -1,6 +1,6 @@
 import Joi from "joi";
 import { ProductCustomerOrderRequestDto } from "./product-customer-order-request.dto";
-import { OrderStatus } from "../../commons/order-status.enum";
+import { OrderStatus } from "../../commons//enums/order-status.enum";
 import { GENERAL_TEXT_REGEX, NUMBER_REGEX } from "../../commons/constant";
 
 export interface CustomerOrderRequestDto {
@@ -29,6 +29,7 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
         .max(255)
         .regex(GENERAL_TEXT_REGEX, { invert: true }),
       quantity: Joi.number().integer().positive().required(),
+      unitCode: Joi.string().trim().max(21).required(),
       unitPrice: Joi.number().positive().required(),
       id: Joi.number().integer().positive(),
       orderCode: Joi.string()

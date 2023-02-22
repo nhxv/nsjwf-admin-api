@@ -1,10 +1,10 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
+import { handleValidationError } from "../commons/http.exception";
 import {
   CustomerRequestDto,
-  customerSchema,
+  customerSchema
 } from "../dto/requests/customer-request.dto";
-import { handleValidationError } from "../commons/http.exception";
 
 export const findAllCustomers = async () => {
   try {
@@ -57,27 +57,6 @@ export const findCustomerById = async (id: number) => {
   }
 };
 
-export const findCustomersByName = async (keyword: string) => {
-  try {
-    const customers = await prisma.customer.findMany({
-      where: {
-        name: {
-          contains: keyword,
-          mode: "insensitive",
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-    return customers;
-  } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find customer with the given data."
-    );
-  }
-};
-
 export const findCustomerTendencyByName = async (name: string) => {
   try {
     const tendency = await prisma.customer.findUnique({
@@ -105,6 +84,7 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
       (product) => ({
         name: product.productName,
         quantity: product.quantity,
+        unit_code: product.unitCode,
       })
     );
     const newCustomer = await prisma.customer.create({
@@ -125,9 +105,7 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot add customer with the given data."
-    );
+    throw new createError.BadRequest("Cannot add customer with the given data.");
   }
 };
 
@@ -143,6 +121,7 @@ export const updateCustomer = async (
       (product) => ({
         name: product.productName,
         quantity: product.quantity,
+        unit_code: product.unitCode,
       })
     );
     return await prisma.$transaction(async (tx) => {
@@ -189,11 +168,13 @@ export const updateCustomer = async (
           },
           update: {
             quantity: product.quantity,
+            unit_code: product.unit_code,
           },
           create: {
             customer_name: customerData.name,
             name: product.name,
             quantity: product.quantity,
+            unit_code: product.unit_code,
           },
         });
       }

@@ -1,7 +1,7 @@
 import { hasAnyRole } from "./../services/auth/authorization.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { verifyAccessToken } from "../services/auth/token.service";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import {
   createVendorReturn,
   findVendorReturns,
@@ -28,6 +28,7 @@ router.get(
                 const prRes: ProductVendorReturnResponseDto = {
                   productName: pr.product_name,
                   quantity: pr.quantity,
+                  unitCode: pr.unit_code.split("_")[1].toLowerCase(),
                   unitPrice: pr.unit_price,
                 };
                 return prRes;

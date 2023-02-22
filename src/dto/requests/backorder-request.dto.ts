@@ -26,6 +26,7 @@ export const backorderSchema = Joi.object<BackorderRequestDto>({
         .max(255)
         .regex(GENERAL_TEXT_REGEX, { invert: true }),
       quantity: Joi.number().integer().positive().required(),
+      unitCode: Joi.string().trim().max(21).required(),
       unitPrice: Joi.number().positive().required(),
       id: Joi.number().integer().positive(),
       backorderId: Joi.number().integer().positive(),

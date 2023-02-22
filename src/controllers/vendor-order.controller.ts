@@ -8,7 +8,7 @@ import {
 import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import {
   createVendorOrder,
   updateVendorOrder,
@@ -34,6 +34,7 @@ router.get(
               const poRes: ProductVendorOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
                 unitPrice: po.unit_price,
               };
               return poRes;
@@ -71,8 +72,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response: any = await findVendorSale(
-        req.query.keyword as string,
-        req.query.date as string
+        decodeURIComponent(req.query.keyword as string),
+        req.query.date as string,
       );
       res.send(
         response.map((order) => {
@@ -85,6 +86,7 @@ router.get(
               const poRes: ProductVendorOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
                 unitPrice: po.unit_price,
               };
               return poRes;

@@ -1,20 +1,21 @@
-import {
-  generateCurrentTime,
-  convertLocalExpected,
-  convertLocalStart,
-  convertLocalInterval,
-} from "./../commons/time.util";
-import { ProductStockChangeReason } from "./../commons/product-stock-change-reason.enum";
-import { generateCode } from "../commons/code.util";
-import {
-  VendorOrderRequestDto,
-  vendorOrderSchema,
-} from "./../dto/requests/vendor-order-request.dto";
+import { Prisma } from "@prisma/client";
+import Fraction from "fraction.js";
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
-import { OrderStatus } from "../commons/order-status.enum";
-import { Prisma } from "@prisma/client";
+import { OrderStatus } from "../commons/enums/order-status.enum";
 import { handleValidationError } from "../commons/http.exception";
+import { generateCode } from "../commons/utils/code.util";
+import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
+import {
+  convertLocalExpected,
+  convertLocalInterval,
+  convertLocalStart,
+  generateCurrentTime
+} from "./../commons/utils/time.util";
+import {
+  VendorOrderRequestDto,
+  vendorOrderSchema
+} from "./../dto/requests/vendor-order-request.dto";
 
 export const findVendorOrderByStatus = async (status: string) => {
   try {
@@ -140,10 +141,11 @@ export const createVendorOrder = async (
       (productOrder) => ({
         product_name: productOrder.productName,
         order_code: productOrder.orderCode,
+        quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
           new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
         ),
-        quantity: productOrder.quantity,
         created_at: time,
         updated_at: time,
       })
@@ -168,35 +170,53 @@ export const createVendorOrder = async (
             },
           },
         });
-        // create product stock change history
-        const addedProductStockChangeHistory =
-          await tx.productStockChangeHistory.create({
+
+        // 1. create stock change history
+        const addedStockChangeHistory =
+          await tx.stockChangeHistory.create({
             data: {
               created_at: time,
-              reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
+              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
             },
           });
 
         for (const productOrder of productOrders) {
-          // update product stock
-          const updatedProductStock = await tx.productStock.update({
+          // 2. get current stock
+          const currentStock = await tx.stock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            }
+          });
+
+          // 3. get unit ratio
+          const unit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrder.unit_code,
+            }
+          });
+          const newRatio = new Fraction(unit.ratio);
+          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+          const currentStockQuantity = new Fraction(currentStock.quantity);
+          const stockQuantityChange = productOrderQuantity.sub(currentStockQuantity);
+          const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+
+          // 4. update stock
+          const updatedStock = await tx.stock.update({
             where: {
               product_name: productOrder.product_name,
             },
             data: {
-              quantity: {
-                increment: productOrder.quantity,
-              },
+              quantity: newStockQuantity.toFraction(),
               updated_at: time,
             },
           });
 
-          // create stock change
-          const addedProductStockChange = await tx.productStockChange.create({
+          // 5. create stock change
+          const addedStockChange = await tx.stockChange.create({
             data: {
-              stock_id: updatedProductStock.id,
-              change_id: addedProductStockChangeHistory.id,
-              quantity_change: productOrder.quantity,
+              stock_id: updatedStock.id,
+              change_id: addedStockChangeHistory.id,
+              quantity_change: stockQuantityChange.toFraction(),
             },
           });
 
@@ -264,6 +284,7 @@ export const updateVendorOrder = async (
       (productOrder) => ({
         product_name: productOrder.productName,
         quantity: productOrder.quantity,
+        unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
           new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
         ),
@@ -299,18 +320,6 @@ export const updateVendorOrder = async (
         throw `This order cannot be changed.`;
       }
 
-      let addedProductStockChangeHistory;
-      if (isCompleted) {
-        // create stock change history only if order is completed
-        addedProductStockChangeHistory =
-          await tx.productStockChangeHistory.create({
-            data: {
-              created_at: time,
-              reason: ProductStockChangeReason.VENDOR_ORDER_COMPLETED,
-            },
-          });
-      }
-
       // delete product order not found in request
       for (const productOrder of existingOrder.productVendorOrders) {
         const found = productOrders.find(
@@ -326,6 +335,18 @@ export const updateVendorOrder = async (
             },
           });
         }
+      }
+
+      let addedStockChangeHistory;
+      if (isCompleted) {
+        // 1. create stock change history only if order is completed
+        addedStockChangeHistory =
+          await tx.stockChangeHistory.create({
+            data: {
+              created_at: time,
+              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            },
+          });
       }
 
       for (const productOrder of productOrders) {
@@ -346,6 +367,7 @@ export const updateVendorOrder = async (
             product_name: productOrder.product_name,
             order_code: productOrder.order_code,
             quantity: productOrder.quantity,
+            unit_code: productOrder.unit_code,
             unit_price: productOrder.unit_price,
             created_at: time,
             updated_at: time,
@@ -353,26 +375,45 @@ export const updateVendorOrder = async (
         });
 
         if (isCompleted) {
-          // update product stock
-          const updatedProductStock = await tx.productStock.update({
+          // 2. get current stock
+          const currentStock = await tx.stock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            }
+          });
+
+          // 3. get unit ratio
+          const unit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrder.unit_code,
+            }
+          });
+          const newRatio = new Fraction(unit.ratio);
+          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
+          const currentStockQuantity = new Fraction(currentStock.quantity);
+          const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
+
+          // 4. update stock
+          const updatedStock = await tx.stock.update({
             where: {
               product_name: productOrder.product_name,
             },
             data: {
-              quantity: {
-                increment: productOrder.quantity,
-              },
+              quantity: newStockQuantity.toFraction(),
               updated_at: time,
             },
           });
-          // create stock change
-          const addedProductStockChange = await tx.productStockChange.create({
+
+          // 5. create stock change
+          const addedStockChange = await tx.stockChange.create({
             data: {
-              stock_id: updatedProductStock.id,
-              change_id: addedProductStockChangeHistory.id,
-              quantity_change: productOrder.quantity,
+              stock_id: updatedStock.id,
+              change_id: addedStockChangeHistory.id,
+              quantity_change: stockQuantityChange.toFraction(),
             },
           });
+
           // update product sell price suggestion
           const updatedProductSellPrice = await tx.product.update({
             where: {

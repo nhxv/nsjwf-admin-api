@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createCustomerOrder,
@@ -55,6 +55,7 @@ router.get(
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
               };
               return poRes;
             }),
@@ -95,7 +96,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response: any = await findCustomerSale(
-        req.query.keyword as string,
+        decodeURIComponent(req.query.keyword as string),
         req.query.date as string
       );
       res.send(
@@ -109,6 +110,7 @@ router.get(
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
                 unitPrice: po.unit_price,
               };
               return poRes;
@@ -164,6 +166,7 @@ router.get(
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
+                unitCode: po.unit_code,
                 unitPrice: po.unit_price,
               };
               return poRes;

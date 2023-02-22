@@ -1,14 +1,15 @@
-import { convertLocalStart } from "./../commons/time.util";
+import { Prisma } from "@prisma/client";
+import Fraction from "fraction.js";
+import createError from "http-errors";
+import { OrderStatus } from "../commons/enums/order-status.enum";
+import { StockChangeReason } from "../commons/enums/stock-change-reason.enum";
+import { handleValidationError } from "../commons/http.exception";
+import { generateCurrentTime } from "../commons/utils/time.util";
 import {
   CustomerReturnRequestDto,
-  customerReturnSchema,
+  customerReturnSchema
 } from "../dto/requests/customer-return-request.dto";
-import { Prisma } from "@prisma/client";
-import createError from "http-errors";
-import { ProductStockChangeReason } from "../commons/product-stock-change-reason.enum";
-import { generateCurrentTime } from "../commons/time.util";
-import { OrderStatus } from "../commons/order-status.enum";
-import { handleValidationError } from "../commons/http.exception";
+import { convertLocalStart } from "./../commons/utils/time.util";
 
 export const findCustomerReturns = async () => {
   try {
@@ -59,10 +60,11 @@ export const createCustomerReturn = async (
     const productReturns = notZero.map((productReturn) => ({
       product_name: productReturn.productName,
       return_id: productReturn.returnId,
+      quantity: productReturn.quantity,
+      unit_code: productReturn.unitCode,
       unit_price: new Prisma.Decimal(
         new Prisma.Decimal(productReturn.unitPrice).toPrecision(2)
       ),
-      quantity: productReturn.quantity,
       created_at: time,
     }));
 
@@ -96,6 +98,7 @@ export const createCustomerReturn = async (
           newProductSaleReturns.set(productSold.product_name, {
             product_name: productSold.product_name,
             quantity: productSold.quantity,
+            unit_code: productSold.unit_code,
             unit_price: productSold.unit_price,
           });
         }
@@ -122,7 +125,7 @@ export const createCustomerReturn = async (
             customer_name: customerReturnData.customerName,
             sold_at: orderSold.updated_at,
             productCustomerSaleReturns: {
-              create: Array.from(newProductSaleReturns.values()),
+              create: [...newProductSaleReturns.values()],
             },
           },
         });
@@ -132,6 +135,7 @@ export const createCustomerReturn = async (
         for (const productSaleReturn of existingSaleReturn.productCustomerSaleReturns) {
           existingProductSaleReturns.set(productSaleReturn.product_name, {
             quantity: productSaleReturn.quantity,
+            unit_code: productSaleReturn.unit_code,
             unit_price: productSaleReturn.unit_price,
           });
         }
@@ -171,14 +175,10 @@ export const createCustomerReturn = async (
           order_code: customerReturnData.orderCode,
           created_at: time,
           recommended_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
-              2
-            )
+            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)
           ),
           final_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
-              2
-            )
+            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(2)
           ),
           productCustomerReturns: {
             create: productReturns,
@@ -187,35 +187,52 @@ export const createCustomerReturn = async (
       });
 
       // increase stock
-      // create stock change history
-      const addedProductStockChangeHistory =
-        await tx.productStockChangeHistory.create({
+      // 1. create stock change history
+      const addedStockChangeHistory =
+        await tx.stockChangeHistory.create({
           data: {
             created_at: time,
-            reason: ProductStockChangeReason.CUSTOMER_RETURN_RECEIVED,
+            reason: StockChangeReason.CUSTOMER_RETURN_RECEIVED,
           },
         });
 
       for (const productReturn of productReturns) {
-        // update product stock
-        const updatedProductStock = await tx.productStock.update({
+        // 2. get current stock
+        const currentStock = await tx.stock.findUniqueOrThrow({
+          where: {
+            product_name: productReturn.product_name,
+          }
+        });
+
+        // 3. get unit ratio
+        const unit = await tx.unit.findUniqueOrThrow({
+          where: {
+            code: productReturn.unit_code,
+          }
+        });
+        const newRatio = new Fraction(unit.ratio);
+        const productOrderQuantity = newRatio.mul(new Fraction(productReturn.quantity));
+        const currentStockQuantity = new Fraction(currentStock.quantity);
+        const stockQuantityChange = productOrderQuantity.sub(currentStockQuantity);
+        const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+
+        // 4. update stock
+        const updatedStock = await tx.stock.update({
           where: {
             product_name: productReturn.product_name,
           },
           data: {
-            quantity: {
-              increment: productReturn.quantity,
-            },
+            quantity: newStockQuantity.toFraction(),
             updated_at: time,
           },
         });
 
-        // create stock change
-        const addedProductStockChange = await tx.productStockChange.create({
+        // 5. create stock change
+        const addedStockChange = await tx.stockChange.create({
           data: {
-            stock_id: updatedProductStock.id,
-            change_id: addedProductStockChangeHistory.id,
-            quantity_change: productReturn.quantity,
+            stock_id: updatedStock.id,
+            change_id: addedStockChangeHistory.id,
+            quantity_change: stockQuantityChange.toFraction(),
           },
         });
       }
