@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Role } from "../commons/role.enum";
+import { Role } from "../commons/enums/role.enum";
 import {
   createProduct,
   findActiveProducts,
   findAllProducts,
-  findProductsByName,
+  findProductById,
   updateProduct,
 } from "../services/product.service";
 import { hasAnyRole } from "./../services/auth/authorization.service";
@@ -12,7 +12,7 @@ import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 
-// find all products from product table
+// find all products
 router.get(
   `/products/all`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -26,7 +26,7 @@ router.get(
   }
 );
 
-// find active products from product table
+// find active products
 router.get(
   `/products/active`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
@@ -40,13 +40,13 @@ router.get(
   }
 );
 
-// find products by name from product table
+// find product by id
 router.get(
-  `/products/basic-search`,
+  `/products/find/:id`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findProductsByName(req.query.keyword as string);
+      const response = await findProductById(+req.params.id);
       res.send(response);
     } catch (error) {
       next(error);
@@ -60,7 +60,6 @@ router.post(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: set product stock to 0
       const response = await createProduct(req.body);
       res.send(response);
     } catch (error) {

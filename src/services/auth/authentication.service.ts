@@ -1,9 +1,9 @@
+import * as bcrypt from "bcryptjs";
 import createError from "http-errors";
 import {
   LoginRequestDto,
   loginSchema,
 } from "../../dto/requests/login-request.dto";
-import * as bcrypt from "bcryptjs";
 import { signAccessToken } from "./token.service";
 
 export const login = async (loginDto: LoginRequestDto) => {

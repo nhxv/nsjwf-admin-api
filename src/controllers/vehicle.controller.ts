@@ -1,13 +1,13 @@
-import { VehicleResponseDto } from "./../dto/responses/vehicle-response.dto";
 import { NextFunction, Request, Response, Router } from "express";
+import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import { verifyAccessToken } from "./../services/auth/token.service";
-import { Role } from "../commons/role.enum";
 import {
-  findVehiclesByName,
   createVehicle,
+  findVehiclesByName,
   updateVehicle,
 } from "../services/vehicle.service";
+import { VehicleResponseDto } from "./../dto/responses/vehicle-response.dto";
+import { verifyAccessToken } from "./../services/auth/token.service";
 
 const router = Router();
 

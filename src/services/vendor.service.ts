@@ -1,10 +1,10 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
+import { handleValidationError } from "../commons/http.exception";
 import {
   VendorRequestDto,
   vendorSchema,
 } from "../dto/requests/vendor-request.dto";
-import { handleValidationError } from "../commons/http.exception";
 
 export const findAllVendors = async () => {
   try {
@@ -55,25 +55,6 @@ export const findVendorById = async (id: number) => {
   }
 };
 
-export const findVendorsByName = async (keyword: string) => {
-  try {
-    const vendors = await prisma.vendor.findMany({
-      where: {
-        name: {
-          contains: keyword,
-          mode: "insensitive",
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-    return vendors;
-  } catch (error) {
-    throw new createError.BadRequest("Cannot find vendor with the given data.");
-  }
-};
-
 export const findVendorTendencyByName = async (name: string) => {
   try {
     const tendency = await prisma.vendor.findUniqueOrThrow({
@@ -81,7 +62,11 @@ export const findVendorTendencyByName = async (name: string) => {
         name: name,
       },
       include: {
-        vendorProductTendencies: true,
+        vendorProductTendencies: {
+          orderBy: {
+            name: "asc",
+          },
+        },
       },
     });
     return tendency;
@@ -101,6 +86,7 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
       (product) => ({
         name: product.productName,
         quantity: product.quantity,
+        unit_code: product.unitCode,
       })
     );
     const newVendor = await prisma.vendor.create({
@@ -134,6 +120,7 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
       (product) => ({
         name: product.productName,
         quantity: product.quantity,
+        unit_code: product.unitCode,
       })
     );
     return await prisma.$transaction(async (tx) => {
@@ -180,11 +167,13 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
           },
           update: {
             quantity: product.quantity,
+            unit_code: product.unit_code,
           },
           create: {
             vendor_name: vendorData.name,
             name: product.name,
             quantity: product.quantity,
+            unit_code: product.unit_code,
           },
         });
       }

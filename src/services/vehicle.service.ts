@@ -1,10 +1,10 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
+import { handleValidationError } from "../commons/http.exception";
 import {
   VehicleRequestDto,
   vehicleSchema,
 } from "../dto/requests/vehicle-request.dto";
-import { handleValidationError } from "../commons/http.exception";
 
 export const findVehiclesByName = async (keyword: string) => {
   try {

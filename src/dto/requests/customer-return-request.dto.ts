@@ -26,6 +26,7 @@ export const customerReturnSchema = Joi.object<CustomerReturnRequestDto>({
         .max(255)
         .regex(GENERAL_TEXT_REGEX, { invert: true }),
       quantity: Joi.number().integer().min(0).required(),
+      unitCode: Joi.string().trim().max(21).required(),
       unitPrice: Joi.number().min(0).required(),
       id: Joi.number().integer().positive().allow(0),
       returnCode: Joi.string()

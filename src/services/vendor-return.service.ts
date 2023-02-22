@@ -1,13 +1,13 @@
-import { convertLocalStart } from "./../commons/time.util";
+import { Prisma } from "@prisma/client";
+import createError from "http-errors";
+import { OrderStatus } from "../commons/enums/order-status.enum";
+import { handleValidationError } from "../commons/http.exception";
+import { generateCurrentTime } from "../commons/utils/time.util";
 import {
   VendorReturnRequestDto,
   vendorReturnSchema,
 } from "../dto/requests/vendor-return-request.dto";
-import { Prisma } from "@prisma/client";
-import createError from "http-errors";
-import { generateCurrentTime } from "../commons/time.util";
-import { OrderStatus } from "../commons/order-status.enum";
-import { handleValidationError } from "../commons/http.exception";
+import { convertLocalStart } from "./../commons/utils/time.util";
 
 export const findVendorReturns = async () => {
   try {
@@ -43,7 +43,7 @@ export const createVendorReturn = async (
   vendorReturnRequestDto: VendorReturnRequestDto
 ) => {
   try {
-    // Validate vendor return
+    // validate vendor return
     const vendorReturnData: VendorReturnRequestDto =
       await vendorReturnSchema.validateAsync(vendorReturnRequestDto);
     const notZero = vendorReturnData.productVendorReturns.filter(
@@ -58,8 +58,9 @@ export const createVendorReturn = async (
     const productReturns = notZero.map((productReturn) => ({
       product_name: productReturn.productName,
       return_id: productReturn.returnId,
-      unit_price: new Prisma.Decimal(productReturn.unitPrice),
       quantity: productReturn.quantity,
+      unit_code: productReturn.unitCode,
+      unit_price: new Prisma.Decimal(productReturn.unitPrice),
       created_at: time,
     }));
 
@@ -93,6 +94,7 @@ export const createVendorReturn = async (
           newProductSaleReturns.set(productSold.product_name, {
             product_name: productSold.product_name,
             quantity: productSold.quantity,
+            unit_code: productSold.unit_code,
             unit_price: productSold.unit_price,
           });
         }
@@ -119,7 +121,7 @@ export const createVendorReturn = async (
             vendor_name: vendorReturnData.vendorName,
             sold_at: orderSold.updated_at,
             productVendorSaleReturns: {
-              create: Array.from(newProductSaleReturns.values()),
+              create: [...newProductSaleReturns.values()],
             },
           },
         });

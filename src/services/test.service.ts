@@ -21,8 +21,9 @@ export const nukeConfigure = async () => {
     const deletedCustomers = await prisma.customer.deleteMany({});
     const deletedVendors = await prisma.vendor.deleteMany({});
     const deletedVehicles = await prisma.vehicle.deleteMany({});
+    const deletedUnits = await prisma.unit.deleteMany({});
   } catch (error) {
-    throw new createError.BadRequest("Try again, master.");
+    throw new createError.BadRequest(error);
   }
 };
 
@@ -47,7 +48,7 @@ export const nukeOperation = async () => {
     const deletedProductCustomerSaleReturn =
       await prisma.productCustomerSaleReturn.deleteMany({});
     const deletedProductStockChangeHistory =
-      await prisma.productStockChangeHistory.deleteMany({});
+      await prisma.stockChangeHistory.deleteMany({});
     const deletedProductVendorOrder =
       await prisma.productVendorOrder.deleteMany({});
     const deletedProductVendorReturn =
@@ -65,20 +66,20 @@ export const nukeOperation = async () => {
       },
     });
     return await prisma.$transaction(async (tx) => {
-      const allStocks = await tx.productStock.findMany();
+      const allStocks = await tx.stock.findMany();
       for (const stock of allStocks) {
-        const updatedStock = await tx.productStock.update({
+        const updatedStock = await tx.stock.update({
           where: {
             id: stock.id,
           },
           data: {
-            quantity: 0,
+            quantity: "0",
             updated_at: stock.created_at,
           },
         });
       }
     });
   } catch (error) {
-    throw new createError.BadRequest("Try again, master.");
+    throw new createError.BadRequest(error);
   }
 };
