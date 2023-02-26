@@ -131,7 +131,9 @@ export const findCustomerSale = async (customerName: string, date: string) => {
       });
       if (
         !saleReturn ||
-        saleReturn.productCustomerSaleReturns.find((p) => p.quantity !== 0)
+        saleReturn.productCustomerSaleReturns.find(
+          (p) => !new Fraction(p.quantity).equals(0)
+        )
       ) {
         customerSolds[i]["fullReturn"] = false;
       } else {
@@ -208,7 +210,7 @@ export const reportCustomerSale = async () => {
       let found = false;
       for (let i = 0; i < reports.length; i++) {
         if (customerReturn.customer_name === reports[i].customer_name) {
-          const newRefund = customerReturn.final_price;
+          const newRefund = customerReturn.refund;
           if (newRefund <= reports[i].sale) {
             found = true;
             reports[i] = {
@@ -226,7 +228,7 @@ export const reportCustomerSale = async () => {
           order_code: "NONE",
           customer_name: customerReturn.customer_name,
           sale: -1,
-          refund: customerReturn.final_price,
+          refund: customerReturn.refund,
           refund_order: customerReturn.order_code,
           date: customerReturn.created_at,
           productCustomerOrders: [],
@@ -306,9 +308,90 @@ export const createCustomerOrder = async (
       })
     );
 
-    return await prisma.$transaction(async (tx) => {
+    if (customerOrderData.status === OrderStatus.COMPLETED) {
+      return await prisma.$transaction(async (tx) => {
+        // create customer order
+        const newCustomerOrder = await tx.customerOrder.create({
+          data: {
+            code: code,
+            customer_name: customerOrderData.customerName,
+            status: customerOrderData.status,
+            created_at: time,
+            updated_at: time,
+            expected_at: convertLocalExpected(customerOrderData.expectedAt),
+            is_test: customerOrderData.isTest,
+            assign_to: employee.nickname,
+            priority: 0,
+            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            manual_code: customerOrderData.manualCode
+              ? customerOrderData.manualCode
+              : null,
+            productCustomerOrders: {
+              create: productOrders,
+            },
+          },
+        });
+
+        // 1. create stock change history
+        const addedStockChangeHistory = await tx.stockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+          },
+        });
+
+        for (const productOrder of productOrders) {
+          // 2. get current stock
+          const currentStock = await tx.stock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            },
+          });
+
+          // 3. get unit ratio
+          const unit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrder.unit_code,
+            },
+          });
+          const newRatio = new Fraction(unit.ratio);
+          const productOrderQuantity = newRatio.mul(
+            new Fraction(productOrder.quantity)
+          );
+          const currentStockQuantity = new Fraction(currentStock.quantity);
+          const newStockQuantity =
+            currentStockQuantity.sub(productOrderQuantity);
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
+
+          if (newStockQuantity.compare(0) < 0) {
+            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
+          }
+
+          // 4. update stock
+          const updatedStock = await tx.stock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: newStockQuantity.toFraction(),
+              updated_at: time,
+            },
+          });
+
+          // 5. create stock change
+          const addedStockChange = await tx.stockChange.create({
+            data: {
+              stock_id: updatedStock.id,
+              change_id: addedStockChangeHistory.id,
+              quantity_change: stockQuantityChange.toFraction(),
+            },
+          });
+        }
+      });
+    } else {
       // create customer order
-      const newCustomerOrder = await tx.customerOrder.create({
+      const newCustomerOrder = await prisma.customerOrder.create({
         data: {
           code: code,
           customer_name: customerOrderData.customerName,
@@ -320,68 +403,16 @@ export const createCustomerOrder = async (
           assign_to: employee.nickname,
           priority: 0,
           is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-          manual_code: customerOrderData.manualCode,
+          manual_code: customerOrderData.manualCode
+            ? customerOrderData.manualCode
+            : null,
           productCustomerOrders: {
             create: productOrders,
           },
         },
       });
-
-      // 1. create stock change history
-      const addedStockChangeHistory = await tx.stockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: StockChangeReason.CUSTOMER_ORDER_CREATE,
-        },
-      });
-
-      for (const productOrder of productOrders) {
-        // 2. get current stock
-        const currentStock = await tx.stock.findUniqueOrThrow({
-          where: {
-            product_name: productOrder.product_name,
-          },
-        });
-
-        // 3. get unit ratio
-        const unit = await tx.unit.findUniqueOrThrow({
-          where: {
-            code: productOrder.unit_code,
-          },
-        });
-        const newRatio = new Fraction(unit.ratio);
-        const productOrderQuantity = newRatio.mul(
-          new Fraction(productOrder.quantity)
-        );
-        const currentStockQuantity = new Fraction(currentStock.quantity);
-        const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
-        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
-
-        if (newStockQuantity.compare(0) < 0) {
-          throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
-        }
-
-        // 4. update stock
-        const updatedStock = await tx.stock.update({
-          where: {
-            product_name: productOrder.product_name,
-          },
-          data: {
-            quantity: newStockQuantity.toFraction(),
-            updated_at: time,
-          },
-        });
-
-        // 5. create stock change
-        const addedStockChange = await tx.stockChange.create({
-          data: {
-            stock_id: updatedStock.id,
-            change_id: addedStockChangeHistory.id,
-            quantity_change: stockQuantityChange.toFraction(),
-          },
-        });
-      }
-    });
+      return newCustomerOrder;
+    }
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -431,12 +462,204 @@ export const updateCustomerOrder = async (
         updated_at: time,
       })
     );
+    if (customerOrderData.status === OrderStatus.COMPLETED) {
+      return await prisma.$transaction(async (tx) => {
+        // update customer order if that order IS NOT completed
+        let existingOrder;
+        try {
+          existingOrder = await tx.customerOrder.update({
+            where: {
+              CustomerOrderSold_key: {
+                code: customerOrderData.code,
+                is_sold: false,
+              },
+            },
+            include: {
+              productCustomerOrders: true,
+            },
+            data: {
+              customer_name: customerOrderData.customerName,
+              status: customerOrderData.status,
+              updated_at: time,
+              is_test: customerOrderData.isTest,
+              assign_to: employee.nickname,
+              is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+              manual_code: customerOrderData.manualCode
+                ? customerOrderData.manualCode
+                : null,
+              expected_at: convertLocalExpected(customerOrderData.expectedAt),
+            },
+          });
+        } catch (e) {
+          console.log(e);
+          throw `This order cannot be changed.`;
+        }
 
-    return await prisma.$transaction(async (tx) => {
+        // create stock change history
+        const addedStockChangeHistory = await tx.stockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+          },
+        });
+
+        const existingProductOrders = new Map();
+
+        // delete product order not in request
+        for (const productOrder of existingOrder.productCustomerOrders) {
+          existingProductOrders.set(productOrder.product_name, {
+            product_name: productOrder.product_name,
+            quantity: productOrder.quantity,
+            unit_code: productOrder.unit_code,
+            unit_price: productOrder.unit_price,
+            updated_at: productOrder.updated_at,
+          });
+          const found = productOrders.find(
+            (po) => po.product_name === productOrder.product_name
+          );
+          if (!found) {
+            const deletedProductOrder = await tx.productCustomerOrder.delete({
+              where: {
+                ProductCustomerOrder_key: {
+                  product_name: productOrder.product_name,
+                  order_code: productOrder.order_code,
+                },
+              },
+            });
+
+            // get current stock
+            const currentStock = await tx.stock.findUniqueOrThrow({
+              where: {
+                product_name: productOrder.product_name,
+              },
+            });
+
+            // get unit ratio
+            const unit = await tx.unit.findUniqueOrThrow({
+              where: {
+                code: productOrder.unit_code,
+              },
+            });
+            const newRatio = new Fraction(unit.ratio);
+            const productOrderQuantity = newRatio.mul(
+              new Fraction(productOrder.quantity)
+            );
+            const currentStockQuantity = new Fraction(currentStock.quantity);
+            const newStockQuantity =
+              currentStockQuantity.add(productOrderQuantity);
+            const stockQuantityChange =
+              newStockQuantity.sub(currentStockQuantity);
+
+            const updatedStock = await tx.stock.update({
+              where: {
+                product_name: productOrder.product_name,
+              },
+              data: {
+                quantity: newStockQuantity.toFraction(),
+                updated_at: time,
+              },
+            });
+
+            // create stock change
+            const addedStockChange = await tx.stockChange.create({
+              data: {
+                stock_id: updatedStock.id,
+                change_id: addedStockChangeHistory.id,
+                quantity_change: stockQuantityChange.toFraction(),
+              },
+            });
+          }
+        }
+
+        for (const productOrder of productOrders) {
+          // get current stock
+          const currentStock = await tx.stock.findUniqueOrThrow({
+            where: {
+              product_name: productOrder.product_name,
+            },
+          });
+
+          // get new unit ratio
+          const unit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrder.unit_code,
+            },
+          });
+          const newRatio = new Fraction(unit.ratio);
+          const newProductOrderQuantity = newRatio.mul(
+            new Fraction(productOrder.quantity)
+          );
+          const currentStockQuantity = new Fraction(currentStock.quantity);
+
+          // find current product order
+          const currentProductOrder = existingProductOrders.get(
+            productOrder.product_name
+          );
+
+          if (!currentProductOrder) {
+            // create new product order
+            const newProductOrder = await tx.productCustomerOrder.create({
+              data: {
+                product_name: productOrder.product_name,
+                order_code: productOrder.order_code,
+                quantity: productOrder.quantity,
+                unit_code: productOrder.unit_code,
+                unit_price: productOrder.unit_price,
+                created_at: time,
+                updated_at: time,
+              },
+            });
+          } else {
+            // update product order
+            const updatedProductOrder = await tx.productCustomerOrder.update({
+              where: {
+                ProductCustomerOrder_key: {
+                  product_name: productOrder.product_name,
+                  order_code: productOrder.order_code,
+                },
+              },
+              data: {
+                quantity: productOrder.quantity,
+                unit_code: productOrder.unit_code,
+                unit_price: productOrder.unit_price,
+                updated_at: productOrder.updated_at,
+              },
+            });
+          }
+
+          const newStockQuantity = currentStockQuantity.sub(
+            newProductOrderQuantity
+          );
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
+
+          if (newStockQuantity.compare(0) < 0) {
+            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
+          }
+          // update stock
+          const updatedStock = await tx.stock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: newStockQuantity.toFraction(),
+              updated_at: time,
+            },
+          });
+          // create stock change
+          const addedStockChange = await tx.stockChange.create({
+            data: {
+              stock_id: updatedStock.id,
+              change_id: addedStockChangeHistory.id,
+              quantity_change: stockQuantityChange.toFraction(),
+            },
+          });
+        }
+      });
+    } else {
       // update customer order if that order IS NOT completed
-      let existingOrder;
       try {
-        existingOrder = await tx.customerOrder.update({
+        const existingOrder = await prisma.customerOrder.update({
           where: {
             CustomerOrderSold_key: {
               code: customerOrderData.code,
@@ -453,215 +676,16 @@ export const updateCustomerOrder = async (
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-            manual_code: customerOrderData.manualCode,
+            manual_code: customerOrderData.manualCode
+              ? customerOrderData.manualCode
+              : null,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
           },
         });
       } catch (e) {
         throw `This order cannot be changed.`;
       }
-
-      // create stock change history
-      const addedStockChangeHistory = await tx.stockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: StockChangeReason.CUSTOMER_ORDER_EDIT,
-        },
-      });
-
-      const existingProductOrders = new Map();
-
-      // delete product order not in request
-      for (const productOrder of existingOrder.productCustomerOrders) {
-        existingProductOrders.set(productOrder.product_name, {
-          product_name: productOrder.product_name,
-          quantity: productOrder.quantity,
-          unit_code: productOrder.unit_code,
-          unit_price: productOrder.unit_price,
-          updated_at: productOrder.updated_at,
-        });
-        const found = productOrders.find(
-          (po) => po.product_name === productOrder.product_name
-        );
-        if (!found) {
-          const deletedProductOrder = await tx.productCustomerOrder.delete({
-            where: {
-              ProductCustomerOrder_key: {
-                product_name: productOrder.product_name,
-                order_code: productOrder.order_code,
-              },
-            },
-          });
-
-          // get current stock
-          const currentStock = await tx.stock.findUniqueOrThrow({
-            where: {
-              product_name: productOrder.product_name,
-            },
-          });
-
-          // get unit ratio
-          const unit = await tx.unit.findUniqueOrThrow({
-            where: {
-              code: productOrder.unit_code,
-            },
-          });
-          const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(
-            new Fraction(productOrder.quantity)
-          );
-          const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity =
-            currentStockQuantity.add(productOrderQuantity);
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
-
-          // update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
-          // create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
-        }
-      }
-
-      for (const productOrder of productOrders) {
-        // get current stock
-        const currentStock = await tx.stock.findUniqueOrThrow({
-          where: {
-            product_name: productOrder.product_name,
-          },
-        });
-
-        // get new unit ratio
-        const unit = await tx.unit.findUniqueOrThrow({
-          where: {
-            code: productOrder.unit_code,
-          },
-        });
-        const newRatio = new Fraction(unit.ratio);
-        const newProductOrderQuantity = newRatio.mul(
-          new Fraction(productOrder.quantity)
-        );
-        const currentStockQuantity = new Fraction(currentStock.quantity);
-
-        // find current product order
-        const currentProductOrder = existingProductOrders.get(
-          productOrder.product_name
-        );
-
-        if (!currentProductOrder) {
-          // create new product order
-          const newStockQuantity = currentStockQuantity.sub(
-            newProductOrderQuantity
-          );
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
-
-          if (newStockQuantity.compare(0) < 0) {
-            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
-          }
-          const newProductOrder = await tx.productCustomerOrder.create({
-            data: {
-              product_name: productOrder.product_name,
-              order_code: productOrder.order_code,
-              quantity: productOrder.quantity,
-              unit_code: productOrder.unit_code,
-              unit_price: productOrder.unit_price,
-              created_at: time,
-              updated_at: time,
-            },
-          });
-          // update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
-          // create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
-        } else {
-          // get current unit of the product order
-          const currentUnit = await tx.unit.findUniqueOrThrow({
-            where: {
-              code: currentProductOrder.unit_code,
-            },
-          });
-          const currentRatio = new Fraction(currentUnit.ratio);
-          const currentProductOrderQuantity = currentRatio.mul(
-            new Fraction(currentProductOrder.quantity)
-          );
-          const newStockQuantity = currentStockQuantity
-            .add(currentProductOrderQuantity)
-            .sub(newProductOrderQuantity);
-          const stockQuantityChange = currentProductOrderQuantity.sub(
-            newProductOrderQuantity
-          );
-
-          if (newStockQuantity.compare(0) < 0) {
-            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
-          }
-
-          // update product order
-          const updatedProductOrder = await tx.productCustomerOrder.update({
-            where: {
-              ProductCustomerOrder_key: {
-                product_name: productOrder.product_name,
-                order_code: productOrder.order_code,
-              },
-            },
-            data: {
-              quantity: productOrder.quantity,
-              unit_code: productOrder.unit_code,
-              unit_price: productOrder.unit_price,
-              updated_at: productOrder.updated_at,
-            },
-          });
-
-          // update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
-
-          // create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
-        }
-      }
-    });
+    }
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);

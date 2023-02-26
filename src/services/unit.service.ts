@@ -1,7 +1,7 @@
 import createError from "http-errors";
 import { handleValidationError } from "../commons/http.exception";
-import { UnitRequestDto, unitSchema } from "../dto/requests/unit-request.dto";
 import { generateCurrentTime } from "../commons/utils/time.util";
+import { UnitRequestDto, unitSchema } from "../dto/requests/unit-request.dto";
 
 export const createUnit = async (
   productId: number,
@@ -25,14 +25,17 @@ export const createUnit = async (
     if (parseInt(numerator) > parseInt(denominator)) {
       throw `Box is the largest unit.`;
     }
+    if (parseInt(numerator) < 0 || parseInt(denominator) < 0) {
+      throw `Ratio cannot be negative.`;
+    }
     return await prisma.$transaction(async (tx) => {
       const time = generateCurrentTime();
-      const product = await prisma.product.findUniqueOrThrow({
+      const product = await tx.product.findUniqueOrThrow({
         where: {
           id: productId,
         },
       });
-      const addedUnit = await prisma.unit.create({
+      const addedUnit = await tx.unit.create({
         data: {
           code: `${product.id}_${unitName}`,
           name: unitName,

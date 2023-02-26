@@ -49,12 +49,10 @@ export const createCustomerReturn = async (
     const customerReturnData: CustomerReturnRequestDto =
       await customerReturnSchema.validateAsync(customerReturnRequestDto);
     const notZero = customerReturnData.productCustomerReturns.filter(
-      (pr) =>
-        pr.quantity > 0 &&
-        new Prisma.Decimal(pr.unitPrice).greaterThan(new Prisma.Decimal(0))
+      (pr) => pr.quantity > 0
     );
     if (notZero.length < 1) {
-      throw `Hollow order.`;
+      throw `Hollow return.`;
     }
     const time = generateCurrentTime();
     const productReturns = notZero.map((productReturn) => ({
@@ -62,9 +60,6 @@ export const createCustomerReturn = async (
       return_id: productReturn.returnId,
       quantity: productReturn.quantity,
       unit_code: productReturn.unitCode,
-      unit_price: new Prisma.Decimal(
-        new Prisma.Decimal(productReturn.unitPrice).toPrecision(2)
-      ),
       created_at: time,
     }));
 
@@ -78,7 +73,7 @@ export const createCustomerReturn = async (
         },
       });
       if (!existingSaleReturn) {
-        // validate with order sold
+        // validate with order sold -- this is the first return
         const orderSold = await tx.customerOrder.findUniqueOrThrow({
           where: {
             CustomerOrderSold_key: {
@@ -106,16 +101,38 @@ export const createCustomerReturn = async (
           const productOrderSold = newProductSaleReturns.get(
             productReturn.product_name
           );
-          if (
-            !productOrderSold ||
-            productOrderSold.quantity - productReturn.quantity < 0 ||
-            !productReturn.unit_price.equals(productOrderSold.unit_price)
-          ) {
-            throw `${productReturn.product_name}: Invalid product data.`;
+          if (!productOrderSold) {
+            throw `Invalid product data.`;
+          }
+          // find product return unit ratio
+          const returnUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productReturn.unit_code,
+            },
+          });
+          // find product order sold unit ratio
+          const soldUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrderSold.unit_code,
+            },
+          });
+          const returnRatio = new Fraction(returnUnit.ratio);
+          const soldRatio = new Fraction(soldUnit.ratio);
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productOrderSoldQuantity = soldRatio.mul(
+            new Fraction(productOrderSold.quantity)
+          );
+          const productSoldChange = productOrderSoldQuantity
+            .sub(productReturnQuantity)
+            .div(soldRatio);
+          if (productSoldChange.compare(0) < 0) {
+            throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
           newProductSaleReturns.set(productReturn.product_name, {
             ...newProductSaleReturns.get(productReturn.product_name),
-            quantity: productOrderSold.quantity - productReturn.quantity,
+            quantity: productSoldChange.toFraction(),
           });
         }
         // create sale return -- since this is the first return
@@ -130,7 +147,7 @@ export const createCustomerReturn = async (
           },
         });
       } else {
-        // validate with existing sale returns -- this is NOT the first return
+        // validate with existing sale returns -- this is not the first return
         const existingProductSaleReturns = new Map();
         for (const productSaleReturn of existingSaleReturn.productCustomerSaleReturns) {
           existingProductSaleReturns.set(productSaleReturn.product_name, {
@@ -143,13 +160,36 @@ export const createCustomerReturn = async (
           const productSaleReturn = existingProductSaleReturns.get(
             productReturn.product_name
           );
-          if (
-            !productSaleReturn ||
-            productSaleReturn.quantity - productReturn.quantity < 0 ||
-            !productReturn.unit_price.equals(productSaleReturn.unit_price)
-          ) {
-            throw `${productReturn.product_name}: Invalid product data.`;
+          if (!productSaleReturn) {
+            throw `Invalid product data.`;
           }
+          // find product return unit ratio
+          const returnUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productReturn.unit_code,
+            },
+          });
+          // find product sale return unit ratio
+          const saleUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productSaleReturn.unit_code,
+            },
+          });
+          const returnRatio = new Fraction(returnUnit.ratio);
+          const saleRatio = new Fraction(saleUnit.ratio);
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productSaleReturnQuantity = saleRatio.mul(
+            new Fraction(productSaleReturn.quantity)
+          );
+          const productSaleChange = productSaleReturnQuantity
+            .sub(productReturnQuantity)
+            .div(saleRatio);
+          if (productSaleChange.compare(0) < 0) {
+            throw `${productReturn.product_name}: Invalid product quantity or price.`;
+          }
+
           // update product sale return quantity
           const updatedProductSaleReturn =
             await tx.productCustomerSaleReturn.update({
@@ -160,9 +200,7 @@ export const createCustomerReturn = async (
                 },
               },
               data: {
-                quantity: {
-                  increment: 0 - productReturn.quantity,
-                },
+                quantity: productSaleChange.toFraction(),
               },
             });
         }
@@ -174,23 +212,13 @@ export const createCustomerReturn = async (
           customer_name: customerReturnData.customerName,
           order_code: customerReturnData.orderCode,
           created_at: time,
-          recommended_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
-              2
-            )
-          ),
-          final_price: new Prisma.Decimal(
-            new Prisma.Decimal(customerReturnData.recommendedPrice).toPrecision(
-              2
-            )
-          ),
+          refund: new Prisma.Decimal(customerReturnData.refund).toPrecision(2),
           productCustomerReturns: {
             create: productReturns,
           },
         },
       });
 
-      // increase stock
       // 1. create stock change history
       const addedStockChangeHistory = await tx.stockChangeHistory.create({
         data: {
@@ -214,13 +242,14 @@ export const createCustomerReturn = async (
           },
         });
         const newRatio = new Fraction(unit.ratio);
-        const productOrderQuantity = newRatio.mul(
+        const productReturnQuantity = newRatio.mul(
           new Fraction(productReturn.quantity)
         );
         const currentStockQuantity = new Fraction(currentStock.quantity);
-        const stockQuantityChange =
-          productOrderQuantity.sub(currentStockQuantity);
-        const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+        const newStockQuantity = currentStockQuantity.add(
+          productReturnQuantity
+        );
+        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
         // 4. update stock
         const updatedStock = await tx.stock.update({

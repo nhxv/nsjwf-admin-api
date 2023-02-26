@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import Fraction from "fraction.js";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
 import { handleValidationError } from "../commons/http.exception";
@@ -47,12 +48,10 @@ export const createVendorReturn = async (
     const vendorReturnData: VendorReturnRequestDto =
       await vendorReturnSchema.validateAsync(vendorReturnRequestDto);
     const notZero = vendorReturnData.productVendorReturns.filter(
-      (pr) =>
-        pr.quantity > 0 &&
-        new Prisma.Decimal(pr.unitPrice).greaterThan(new Prisma.Decimal(0))
+      (pr) => pr.quantity > 0
     );
     if (notZero.length < 1) {
-      throw `Hollow order.`;
+      throw `Hollow return.`;
     }
     const time = generateCurrentTime();
     const productReturns = notZero.map((productReturn) => ({
@@ -60,7 +59,6 @@ export const createVendorReturn = async (
       return_id: productReturn.returnId,
       quantity: productReturn.quantity,
       unit_code: productReturn.unitCode,
-      unit_price: new Prisma.Decimal(productReturn.unitPrice),
       created_at: time,
     }));
 
@@ -74,7 +72,7 @@ export const createVendorReturn = async (
         },
       });
       if (!existingSaleReturn) {
-        // validate with order sold
+        // validate with order sold -- this is the first return
         const orderSold = await tx.vendorOrder.findUniqueOrThrow({
           where: {
             VendorOrderSold_key: {
@@ -102,16 +100,38 @@ export const createVendorReturn = async (
           const productOrderSold = newProductSaleReturns.get(
             productReturn.product_name
           );
-          if (
-            !productOrderSold ||
-            productOrderSold.quantity - productReturn.quantity < 0 ||
-            !productReturn.unit_price.equals(productOrderSold.unit_price)
-          ) {
-            throw `${productReturn.product_name}: Invalid product data.`;
+          if (!productOrderSold) {
+            throw `Invalid product data.`;
+          }
+          // find product return unit ratio
+          const returnUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productReturn.unit_code,
+            },
+          });
+          // find product order sold unit ratio
+          const soldUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productOrderSold.unit_code,
+            },
+          });
+          const returnRatio = new Fraction(returnUnit.ratio);
+          const soldRatio = new Fraction(soldUnit.ratio);
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productOrderSoldQuantity = soldRatio.mul(
+            new Fraction(productOrderSold.quantity)
+          );
+          const productSoldChange = productOrderSoldQuantity
+            .sub(productReturnQuantity)
+            .div(soldRatio);
+          if (productSoldChange.compare(0) < 0) {
+            throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
           newProductSaleReturns.set(productReturn.product_name, {
             ...newProductSaleReturns.get(productReturn.product_name),
-            quantity: productOrderSold.quantity - productReturn.quantity,
+            quantity: productSoldChange.toFraction(),
           });
         }
         // create sale return -- since this is the first return
@@ -131,6 +151,7 @@ export const createVendorReturn = async (
         for (const productSaleReturn of existingSaleReturn.productVendorSaleReturns) {
           existingProductSaleReturns.set(productSaleReturn.product_name, {
             quantity: productSaleReturn.quantity,
+            unit_code: productSaleReturn.unit_code,
             unit_price: productSaleReturn.unit_price,
           });
         }
@@ -138,13 +159,36 @@ export const createVendorReturn = async (
           const productSaleReturn = existingProductSaleReturns.get(
             productReturn.product_name
           );
-          if (
-            !productSaleReturn ||
-            productSaleReturn.quantity - productReturn.quantity < 0 ||
-            !productReturn.unit_price.equals(productSaleReturn.unit_price)
-          ) {
-            throw `${productReturn.product_name}: Invalid product data.`;
+          if (!productSaleReturn) {
+            throw `Invalid product data.`;
           }
+          // find product return unit ratio
+          const returnUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productReturn.unit_code,
+            },
+          });
+          // find product sale return unit ratio
+          const saleUnit = await tx.unit.findUniqueOrThrow({
+            where: {
+              code: productSaleReturn.unit_code,
+            },
+          });
+          const returnRatio = new Fraction(returnUnit.ratio);
+          const saleRatio = new Fraction(saleUnit.ratio);
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productSaleReturnQuantity = saleRatio.mul(
+            new Fraction(productSaleReturn.quantity)
+          );
+          const productSaleChange = productSaleReturnQuantity
+            .sub(productReturnQuantity)
+            .div(saleRatio);
+          if (productSaleChange.compare(0) < 0) {
+            throw `${productReturn.product_name}: Invalid product quantity or price.`;
+          }
+
           // update product sale return quantity
           const updatedProductSaleReturn =
             await tx.productVendorSaleReturn.update({
@@ -155,9 +199,7 @@ export const createVendorReturn = async (
                 },
               },
               data: {
-                quantity: {
-                  increment: 0 - productReturn.quantity,
-                },
+                quantity: productSaleChange.toFraction(),
               },
             });
         }
@@ -169,8 +211,7 @@ export const createVendorReturn = async (
           vendor_name: vendorReturnData.vendorName,
           order_code: vendorReturnData.orderCode,
           created_at: time,
-          recommended_price: vendorReturnData.recommendedPrice,
-          final_price: vendorReturnData.finalPrice,
+          refund: new Prisma.Decimal(vendorReturnData.refund).toPrecision(2),
           productVendorReturns: {
             create: productReturns,
           },
