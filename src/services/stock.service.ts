@@ -77,8 +77,7 @@ export const updateStock = async (
     // validate reason
     if (
       !(Object.values(StockChangeReason) as string[]).includes(reason) ||
-      reason === StockChangeReason.CUSTOMER_ORDER_CREATE ||
-      reason === StockChangeReason.CUSTOMER_ORDER_EDIT ||
+      reason === StockChangeReason.CUSTOMER_ORDER_COMPLETED ||
       reason === StockChangeReason.CUSTOMER_RETURN_RECEIVED ||
       reason === StockChangeReason.VENDOR_ORDER_COMPLETED ||
       reason === StockChangeReason.VENDOR_RETURN_RECEIVED ||

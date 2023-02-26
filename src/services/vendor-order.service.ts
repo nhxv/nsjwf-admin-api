@@ -110,7 +110,7 @@ export const findVendorSale = async (vendorName: string, date: string) => {
       });
       if (
         !saleReturn ||
-        saleReturn.productVendorSaleReturns.find((p) => p.quantity !== 0)
+        saleReturn.productVendorSaleReturns.find((p) => !(new Fraction(p.quantity).equals(0)))
       ) {
         vendorSolds[i]["fullReturn"] = false;
       } else {

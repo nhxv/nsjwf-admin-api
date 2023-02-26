@@ -29,11 +29,11 @@ router.get(
                   productName: pr.product_name,
                   quantity: pr.quantity,
                   unitCode: pr.unit_code.split("_")[1].toLowerCase(),
-                  unitPrice: pr.unit_price,
                 };
                 return prRes;
               }
             ),
+            refund: customerReturn.refund,
             createdAt: customerReturn.created_at,
           };
           return customerReturnRes;

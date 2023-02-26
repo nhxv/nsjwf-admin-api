@@ -1,5 +1,6 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
+import { Location } from "../commons/enums/location.enum";
 import { handleValidationError } from "../commons/http.exception";
 import {
   ProductRequestDto,
@@ -86,6 +87,7 @@ export const createProduct = async (productDto: ProductRequestDto) => {
       const addedProduct = await tx.product.create({
         data: {
           name: productData.name,
+          location_name: productData.location ? productData.location : Location.COOLER_1,
           discontinued: productData.discontinued,
         },
       });
@@ -135,10 +137,10 @@ export const updateProduct = async (
       },
       data: {
         name: productData.name,
+        location_name: productData.location ? productData.location : Location.COOLER_1,
         discontinued: productData.discontinued,
       },
     });
-    return updatedProduct;
   } catch (error) {
     if (error.details?.length > 0) {
       handleValidationError(error);

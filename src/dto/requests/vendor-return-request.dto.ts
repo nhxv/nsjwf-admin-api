@@ -7,8 +7,7 @@ export interface VendorReturnRequestDto {
   vendorName: string;
   productVendorReturns: ProductVendorReturnRequestDto[];
   orderCode: string;
-  recommendedPrice: Prisma.Decimal;
-  finalPrice: Prisma.Decimal;
+  refund: Prisma.Decimal;
   status?: string;
   createdAt?: Date;
   id?: number;
@@ -27,7 +26,6 @@ export const vendorReturnSchema = Joi.object<VendorReturnRequestDto>({
         .regex(GENERAL_TEXT_REGEX, { invert: true }),
       quantity: Joi.number().integer().min(0).required(),
       unitCode: Joi.string().trim().max(21).required(),
-      unitPrice: Joi.number().min(0).required(),
       id: Joi.number().integer().positive().allow(0),
       returnCode: Joi.string()
         .max(20)
@@ -42,8 +40,7 @@ export const vendorReturnSchema = Joi.object<VendorReturnRequestDto>({
     .required()
     .max(20)
     .regex(GENERAL_TEXT_REGEX, { invert: true }),
-  recommendedPrice: Joi.number().min(0).required(),
-  finalPrice: Joi.number().min(0).required(),
+  refund: Joi.number().min(0).required(),
   id: Joi.number().integer().positive().allow(0),
   createdAt: Joi.date(),
 });
