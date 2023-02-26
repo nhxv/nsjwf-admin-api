@@ -131,7 +131,9 @@ export const findCustomerSale = async (customerName: string, date: string) => {
       });
       if (
         !saleReturn ||
-        saleReturn.productCustomerSaleReturns.find((p) => !(new Fraction(p.quantity)).equals(0))
+        saleReturn.productCustomerSaleReturns.find(
+          (p) => !new Fraction(p.quantity).equals(0)
+        )
       ) {
         customerSolds[i]["fullReturn"] = false;
       } else {
@@ -321,13 +323,15 @@ export const createCustomerOrder = async (
             assign_to: employee.nickname,
             priority: 0,
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-            manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
+            manual_code: customerOrderData.manualCode
+              ? customerOrderData.manualCode
+              : null,
             productCustomerOrders: {
               create: productOrders,
             },
           },
         });
-  
+
         // 1. create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
@@ -335,7 +339,7 @@ export const createCustomerOrder = async (
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
           },
         });
-  
+
         for (const productOrder of productOrders) {
           // 2. get current stock
           const currentStock = await tx.stock.findUniqueOrThrow({
@@ -343,7 +347,7 @@ export const createCustomerOrder = async (
               product_name: productOrder.product_name,
             },
           });
-  
+
           // 3. get unit ratio
           const unit = await tx.unit.findUniqueOrThrow({
             where: {
@@ -355,13 +359,15 @@ export const createCustomerOrder = async (
             new Fraction(productOrder.quantity)
           );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
-          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
-  
+          const newStockQuantity =
+            currentStockQuantity.sub(productOrderQuantity);
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
+
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
           }
-  
+
           // 4. update stock
           const updatedStock = await tx.stock.update({
             where: {
@@ -372,7 +378,7 @@ export const createCustomerOrder = async (
               updated_at: time,
             },
           });
-  
+
           // 5. create stock change
           const addedStockChange = await tx.stockChange.create({
             data: {
@@ -397,7 +403,9 @@ export const createCustomerOrder = async (
           assign_to: employee.nickname,
           priority: 0,
           is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-          manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
+          manual_code: customerOrderData.manualCode
+            ? customerOrderData.manualCode
+            : null,
           productCustomerOrders: {
             create: productOrders,
           },
@@ -476,25 +484,27 @@ export const updateCustomerOrder = async (
               is_test: customerOrderData.isTest,
               assign_to: employee.nickname,
               is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-              manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
+              manual_code: customerOrderData.manualCode
+                ? customerOrderData.manualCode
+                : null,
               expected_at: convertLocalExpected(customerOrderData.expectedAt),
             },
           });
         } catch (e) {
-          console.log(e)
+          console.log(e);
           throw `This order cannot be changed.`;
         }
-  
+
         // create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
             created_at: time,
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
           },
-        }); 
-  
+        });
+
         const existingProductOrders = new Map();
-  
+
         // delete product order not in request
         for (const productOrder of existingOrder.productCustomerOrders) {
           existingProductOrders.set(productOrder.product_name, {
@@ -516,14 +526,14 @@ export const updateCustomerOrder = async (
                 },
               },
             });
-            
+
             // get current stock
             const currentStock = await tx.stock.findUniqueOrThrow({
               where: {
                 product_name: productOrder.product_name,
               },
             });
-  
+
             // get unit ratio
             const unit = await tx.unit.findUniqueOrThrow({
               where: {
@@ -539,7 +549,7 @@ export const updateCustomerOrder = async (
               currentStockQuantity.add(productOrderQuantity);
             const stockQuantityChange =
               newStockQuantity.sub(currentStockQuantity);
-  
+
             const updatedStock = await tx.stock.update({
               where: {
                 product_name: productOrder.product_name,
@@ -549,7 +559,7 @@ export const updateCustomerOrder = async (
                 updated_at: time,
               },
             });
-  
+
             // create stock change
             const addedStockChange = await tx.stockChange.create({
               data: {
@@ -560,7 +570,7 @@ export const updateCustomerOrder = async (
             });
           }
         }
-  
+
         for (const productOrder of productOrders) {
           // get current stock
           const currentStock = await tx.stock.findUniqueOrThrow({
@@ -568,7 +578,7 @@ export const updateCustomerOrder = async (
               product_name: productOrder.product_name,
             },
           });
-  
+
           // get new unit ratio
           const unit = await tx.unit.findUniqueOrThrow({
             where: {
@@ -580,12 +590,12 @@ export const updateCustomerOrder = async (
             new Fraction(productOrder.quantity)
           );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-  
+
           // find current product order
           const currentProductOrder = existingProductOrders.get(
             productOrder.product_name
           );
-  
+
           if (!currentProductOrder) {
             // create new product order
             const newProductOrder = await tx.productCustomerOrder.create({
@@ -616,7 +626,7 @@ export const updateCustomerOrder = async (
               },
             });
           }
-          
+
           const newStockQuantity = currentStockQuantity.sub(
             newProductOrderQuantity
           );
@@ -643,7 +653,7 @@ export const updateCustomerOrder = async (
               change_id: addedStockChangeHistory.id,
               quantity_change: stockQuantityChange.toFraction(),
             },
-          });          
+          });
         }
       });
     } else {
@@ -666,13 +676,15 @@ export const updateCustomerOrder = async (
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             is_sold: customerOrderData.status === OrderStatus.COMPLETED,
-            manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
+            manual_code: customerOrderData.manualCode
+              ? customerOrderData.manualCode
+              : null,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
           },
         });
       } catch (e) {
         throw `This order cannot be changed.`;
-      }      
+      }
     }
   } catch (error) {
     if (typeof error === "string") {

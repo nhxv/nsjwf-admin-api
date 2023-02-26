@@ -87,7 +87,9 @@ export const createProduct = async (productDto: ProductRequestDto) => {
       const addedProduct = await tx.product.create({
         data: {
           name: productData.name,
-          location_name: productData.location ? productData.location : Location.COOLER_1,
+          location_name: productData.location
+            ? productData.location
+            : Location.COOLER_1,
           discontinued: productData.discontinued,
         },
       });
@@ -137,7 +139,9 @@ export const updateProduct = async (
       },
       data: {
         name: productData.name,
-        location_name: productData.location ? productData.location : Location.COOLER_1,
+        location_name: productData.location
+          ? productData.location
+          : Location.COOLER_1,
         discontinued: productData.discontinued,
       },
     });

@@ -14,6 +14,10 @@ export const productSchema = Joi.object<ProductRequestDto>({
     .required()
     .max(255)
     .regex(GENERAL_TEXT_REGEX, { invert: true }),
-  location: Joi.string().trim().max(20).valid(...Object.values(Location)).regex(GENERAL_TEXT_REGEX, { invert: true }),
+  location: Joi.string()
+    .trim()
+    .max(20)
+    .valid(...Object.values(Location))
+    .regex(GENERAL_TEXT_REGEX, { invert: true }),
   discontinued: Joi.boolean().required(),
 });

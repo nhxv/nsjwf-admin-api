@@ -6,7 +6,7 @@ import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
 import {
   VendorReturnRequestDto,
-  vendorReturnSchema
+  vendorReturnSchema,
 } from "../dto/requests/vendor-return-request.dto";
 import { convertLocalStart } from "./../commons/utils/time.util";
 
@@ -117,9 +117,15 @@ export const createVendorReturn = async (
           });
           const returnRatio = new Fraction(returnUnit.ratio);
           const soldRatio = new Fraction(soldUnit.ratio);
-          const productReturnQuantity = (returnRatio).mul(new Fraction(productReturn.quantity));
-          const productOrderSoldQuantity = (soldRatio).mul(new Fraction(productOrderSold.quantity));
-          const productSoldChange = (productOrderSoldQuantity.sub(productReturnQuantity)).div(soldRatio);          
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productOrderSoldQuantity = soldRatio.mul(
+            new Fraction(productOrderSold.quantity)
+          );
+          const productSoldChange = productOrderSoldQuantity
+            .sub(productReturnQuantity)
+            .div(soldRatio);
           if (productSoldChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
@@ -170,9 +176,15 @@ export const createVendorReturn = async (
           });
           const returnRatio = new Fraction(returnUnit.ratio);
           const saleRatio = new Fraction(saleUnit.ratio);
-          const productReturnQuantity = (returnRatio).mul(new Fraction(productReturn.quantity));
-          const productSaleReturnQuantity = (saleRatio).mul(new Fraction(productSaleReturn.quantity));
-          const productSaleChange = (productSaleReturnQuantity.sub(productReturnQuantity)).div(saleRatio);
+          const productReturnQuantity = returnRatio.mul(
+            new Fraction(productReturn.quantity)
+          );
+          const productSaleReturnQuantity = saleRatio.mul(
+            new Fraction(productSaleReturn.quantity)
+          );
+          const productSaleChange = productSaleReturnQuantity
+            .sub(productReturnQuantity)
+            .div(saleRatio);
           if (productSaleChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
@@ -188,7 +200,7 @@ export const createVendorReturn = async (
               },
               data: {
                 quantity: productSaleChange.toFraction(),
-              }
+              },
             });
         }
       }

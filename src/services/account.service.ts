@@ -5,7 +5,7 @@ import { OrderStatus } from "./../commons/enums/order-status.enum";
 import { convertLocalStart } from "./../commons/utils/time.util";
 import {
   EmployeeRequestDto,
-  employeeSchema
+  employeeSchema,
 } from "./../dto/requests/employee-request.dto";
 
 export const findAllEmployees = async () => {
