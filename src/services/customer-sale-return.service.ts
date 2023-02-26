@@ -31,6 +31,7 @@ export const findCustomerSaleReturnByCode = async (code: string) => {
         sold_at: orderSold.updated_at,
         productCustomerSaleReturns: orderSold.productCustomerOrders.map(
           (p) => ({
+            id: p.id,
             product_name: p.product_name,
             quantity: p.quantity,
             unit_code: p.unit_code,
