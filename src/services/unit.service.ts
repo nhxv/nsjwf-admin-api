@@ -12,7 +12,7 @@ export const createUnit = async (
     const unitData: UnitRequestDto = await unitSchema.validateAsync(
       unitRequestDto
     );
-    const unitName = unitData.name.split(" ").join("_").toUpperCase();
+    const unitName = unitData.name.replace(/\s/g,"").toUpperCase();
     if (unitName === "BOX") {
       throw `Box is the default unit.`;
     }
