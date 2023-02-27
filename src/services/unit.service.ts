@@ -1,3 +1,4 @@
+import Fraction from "fraction.js";
 import createError from "http-errors";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
@@ -39,7 +40,7 @@ export const createUnit = async (
         data: {
           code: `${product.id}_${unitName}`,
           name: unitName,
-          ratio: unitData.ratio,
+          ratio: new Fraction(unitData.ratio).toFraction(),
           product_name: product.name,
           discontinued: unitData.discontinued,
         },
