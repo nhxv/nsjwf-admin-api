@@ -89,7 +89,7 @@ export const createProduct = async (productDto: ProductRequestDto) => {
           name: productData.name,
           location_name: productData.location
             ? productData.location
-            : Location.COOLER_1,
+            : Location.OTHERS,
           discontinued: productData.discontinued,
         },
       });

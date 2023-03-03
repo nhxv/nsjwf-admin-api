@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
+import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
@@ -115,6 +116,7 @@ export const findCustomerSale = async (customerName: string, date: string) => {
             product_name: "asc",
           },
         },
+        customerPayment: true,
       },
       orderBy: {
         updated_at: "asc",
@@ -165,6 +167,7 @@ export const reportCustomerSale = async () => {
             product_name: "asc",
           },
         },
+        customerPayment: true,
       },
       orderBy: {
         updated_at: "asc",
@@ -203,6 +206,7 @@ export const reportCustomerSale = async () => {
         refund: 0,
         refund_order: "",
         date: sold.updated_at,
+        payment_status: sold.customerPayment.status,
         productCustomerOrders: sold.productCustomerOrders,
       });
     }
@@ -310,6 +314,16 @@ export const createCustomerOrder = async (
 
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
+        // create customer payment
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+
         // create customer order
         const newCustomerOrder = await tx.customerOrder.create({
           data: {
@@ -322,10 +336,11 @@ export const createCustomerOrder = async (
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             priority: 0,
-            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            is_sold: true,
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
+            payment_code: code,
             productCustomerOrders: {
               create: productOrders,
             },
@@ -402,7 +417,7 @@ export const createCustomerOrder = async (
           is_test: customerOrderData.isTest,
           assign_to: employee.nickname,
           priority: 0,
-          is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+          is_sold: false,
           manual_code: customerOrderData.manualCode
             ? customerOrderData.manualCode
             : null,
@@ -464,6 +479,16 @@ export const updateCustomerOrder = async (
     );
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
+        // create customer payment
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+
         // update customer order if that order IS NOT completed
         let existingOrder;
         try {
@@ -483,15 +508,15 @@ export const updateCustomerOrder = async (
               updated_at: time,
               is_test: customerOrderData.isTest,
               assign_to: employee.nickname,
-              is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+              is_sold: true,
               manual_code: customerOrderData.manualCode
                 ? customerOrderData.manualCode
                 : null,
               expected_at: convertLocalExpected(customerOrderData.expectedAt),
+              payment_code: customerOrderData.code,
             },
           });
         } catch (e) {
-          console.log(e);
           throw `This order cannot be changed.`;
         }
 
@@ -675,7 +700,7 @@ export const updateCustomerOrder = async (
             updated_at: time,
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
-            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            is_sold: false,
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,

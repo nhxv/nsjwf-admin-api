@@ -15,6 +15,7 @@ import vendorReturnController from "../controllers/vendor-return.controller";
 import vendorSaleReturnController from "../controllers/vendor-sale-return.controller";
 import accountController from "../controllers/account.controller";
 import unitController from "../controllers/unit.controller";
+import customerPaymentController from "../controllers/customer-payment.controller";
 
 const api = Router()
   .use(testController)
@@ -32,6 +33,7 @@ const api = Router()
   .use(vendorReturnController)
   .use(vendorSaleReturnController)
   .use(accountController)
-  .use(unitController);
+  .use(unitController)
+  .use(customerPaymentController);
 
 export default Router().use("/api", api);

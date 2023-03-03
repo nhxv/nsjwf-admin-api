@@ -199,6 +199,8 @@ model CustomerOrder {
   priority              Int
   is_doing              Boolean                @default(false)
   manual_code           String?                @unique @db.VarChar(6)
+  payment_code          String?                @unique @db.VarChar(20)
+  customerPayment       CustomerPayment?       @relation(fields: [payment_code], references: [code], onDelete: Cascade)
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
   customerSaleReturn    CustomerSaleReturn?
@@ -408,4 +410,20 @@ model CustomerProductTendency {
   unit          Unit     @relation(fields: [unit_code], references: [code], onDelete: Cascade)
 
   @@unique([customer_name, name], name: "CustomerProductTendency_key")
+}
+
+model CustomerPayment {
+  id            Int            @unique @default(autoincrement())
+  code          String         @unique @db.VarChar(20)
+  status        String         @db.VarChar(32)
+  paymentStatus PaymentStatus  @relation(fields: [status], references: [name], onDelete: Cascade)
+  created_at    DateTime
+  updated_at    DateTime
+  customerOrder CustomerOrder?
+}
+
+model PaymentStatus {
+  id               Int               @unique @default(autoincrement())
+  name             String            @unique @db.VarChar(32)
+  customerPayments CustomerPayment[]
 }
