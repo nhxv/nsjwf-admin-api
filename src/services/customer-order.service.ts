@@ -5,7 +5,6 @@ import { OrderStatus } from "../commons/enums/order-status.enum";
 import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
-import { CustomerOrderPaymentRequestDto, customerOrderPaymentSchema } from "../dto/requests/customer-order-payment-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
@@ -117,6 +116,7 @@ export const findCustomerSale = async (customerName: string, date: string) => {
             product_name: "asc",
           },
         },
+        customerPayment: true,
       },
       orderBy: {
         updated_at: "asc",
@@ -167,6 +167,7 @@ export const reportCustomerSale = async () => {
             product_name: "asc",
           },
         },
+        customerPayment: true,
       },
       orderBy: {
         updated_at: "asc",
@@ -205,7 +206,7 @@ export const reportCustomerSale = async () => {
         refund: 0,
         refund_order: "",
         date: sold.updated_at,
-        payment_status: sold.payment_status,
+        payment_status: sold.customerPayment.status,
         productCustomerOrders: sold.productCustomerOrders,
       });
     }
@@ -313,6 +314,16 @@ export const createCustomerOrder = async (
 
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
+        // create customer payment
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          }
+        });
+
         // create customer order
         const newCustomerOrder = await tx.customerOrder.create({
           data: {
@@ -326,10 +337,10 @@ export const createCustomerOrder = async (
             assign_to: employee.nickname,
             priority: 0,
             is_sold: true,
-            payment_status: PaymentStatus.RECEIVABLE,
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
+            payment_code: code,  
             productCustomerOrders: {
               create: productOrders,
             },
@@ -468,6 +479,16 @@ export const updateCustomerOrder = async (
     );
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
+        // create customer payment
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          }
+        });
+
         // update customer order if that order IS NOT completed
         let existingOrder;
         try {
@@ -488,16 +509,16 @@ export const updateCustomerOrder = async (
               is_test: customerOrderData.isTest,
               assign_to: employee.nickname,
               is_sold: true,
-              payment_status: PaymentStatus.RECEIVABLE,
               manual_code: customerOrderData.manualCode
                 ? customerOrderData.manualCode
                 : null,
               expected_at: convertLocalExpected(customerOrderData.expectedAt),
+              payment_code: customerOrderData.code,
             },
           });
         } catch (e) {
           throw `This order cannot be changed.`;
-        }
+        }     
 
         // create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
@@ -959,27 +980,3 @@ export const stopDoingTask = async (code: string) => {
     throw new createError.BadRequest("Cannot register finished task.");
   }
 };
-
-export const updatePaymentStatus = async (
-  code: string,
-  customerOrderPaymentDto: CustomerOrderPaymentRequestDto
-) => {
-  try {
-    const customerOrderPaymentData: CustomerOrderPaymentRequestDto =
-    await customerOrderPaymentSchema.validateAsync(customerOrderPaymentDto);
-    const updatedCustomerOrder = await prisma.customerOrder.update({
-      where: {
-        code: code,
-      },
-      data: {
-        payment_status: customerOrderPaymentData.status,
-      },
-    });
-    return updatedCustomerOrder;
-  } catch (error) {
-    if (error.details?.length > 0) {
-      handleValidationError(error);
-    }
-    throw new createError.BadRequest("Cannot update payment status.");
-  }
-}

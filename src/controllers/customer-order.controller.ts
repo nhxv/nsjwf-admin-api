@@ -3,7 +3,7 @@ import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createCustomerOrder,
-  updateCustomerOrder
+  updateCustomerOrder,
 } from "../services/customer-order.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
@@ -11,12 +11,15 @@ import { verifyAccessToken } from "./../services/auth/token.service";
 import {
   findCustomerOrderByCode,
   findCustomerOrderByStatus,
-  findCustomerSale, findDailyCustomerOrder, findEmployeeTask,
+  findCustomerSale,
+  findDailyCustomerOrder,
+  findEmployeeTask,
   finishTask,
   reportCustomerSale,
-  reportTask, startDoingTask,
+  reportTask,
+  startDoingTask,
   stopDoingTask,
-  updatePaymentStatus, updatePriority
+  updatePriority,
 } from "./../services/customer-order.service";
 
 const router = Router();
@@ -119,7 +122,7 @@ router.get(
             updatedAt: order.updated_at,
             fullReturn: !!order.fullReturn,
             manualCode: order.manual_code,
-            paymentStatus: order.payment_status,
+            paymentStatus: order.customerPayment.status,
           };
           return orderRes;
         })
@@ -278,20 +281,6 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updatePriority(req.body);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// update payment status
-router.put(
-  `/customer-orders/payment/status/:code`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await updatePaymentStatus(req.params.code, req.body);
       res.send(response);
     } catch (error) {
       next(error);
