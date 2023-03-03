@@ -9,17 +9,17 @@ import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-resp
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import {
-  findDailyCustomerOrder,
   findCustomerOrderByCode,
   findCustomerOrderByStatus,
   findCustomerSale,
+  findDailyCustomerOrder,
   findEmployeeTask,
   finishTask,
   reportCustomerSale,
   reportTask,
-  updatePriority,
   startDoingTask,
   stopDoingTask,
+  updatePriority,
 } from "./../services/customer-order.service";
 
 const router = Router();
@@ -122,6 +122,7 @@ router.get(
             updatedAt: order.updated_at,
             fullReturn: !!order.fullReturn,
             manualCode: order.manual_code,
+            paymentStatus: order.customerPayment.status,
           };
           return orderRes;
         })
