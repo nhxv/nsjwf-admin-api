@@ -6,10 +6,9 @@ export interface CustomerPaymentRequestDto {
   status: string;
 }
 
-export const customerPaymentSchema =
-  Joi.object<CustomerPaymentRequestDto>({
-    status: Joi.string()
-      .max(32)
-      .valid(...Object.values(PaymentStatus))
-      .regex(GENERAL_TEXT_REGEX, { invert: true }),
-  });
+export const customerPaymentSchema = Joi.object<CustomerPaymentRequestDto>({
+  status: Joi.string()
+    .max(32)
+    .valid(...Object.values(PaymentStatus))
+    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+});

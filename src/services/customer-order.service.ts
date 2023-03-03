@@ -16,7 +16,7 @@ import {
   convertLocalStart,
   convertLocalWeekEnd,
   convertLocalWeekStart,
-  generateCurrentTime
+  generateCurrentTime,
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
@@ -321,7 +321,7 @@ export const createCustomerOrder = async (
             status: PaymentStatus.RECEIVABLE,
             created_at: time,
             updated_at: time,
-          }
+          },
         });
 
         // create customer order
@@ -340,7 +340,7 @@ export const createCustomerOrder = async (
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
-            payment_code: code,  
+            payment_code: code,
             productCustomerOrders: {
               create: productOrders,
             },
@@ -486,7 +486,7 @@ export const updateCustomerOrder = async (
             status: PaymentStatus.RECEIVABLE,
             created_at: time,
             updated_at: time,
-          }
+          },
         });
 
         // update customer order if that order IS NOT completed
@@ -518,7 +518,7 @@ export const updateCustomerOrder = async (
           });
         } catch (e) {
           throw `This order cannot be changed.`;
-        }     
+        }
 
         // create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
