@@ -2,8 +2,10 @@ import { Prisma } from "@prisma/client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
+import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
+import { CustomerOrderPaymentRequestDto, customerOrderPaymentSchema } from "../dto/requests/customer-order-payment-request.dto";
 import { CustomerOrderRequestDto } from "../dto/requests/customer-order-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
@@ -15,7 +17,7 @@ import {
   convertLocalStart,
   convertLocalWeekEnd,
   convertLocalWeekStart,
-  generateCurrentTime,
+  generateCurrentTime
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
@@ -203,6 +205,7 @@ export const reportCustomerSale = async () => {
         refund: 0,
         refund_order: "",
         date: sold.updated_at,
+        payment_status: sold.payment_status,
         productCustomerOrders: sold.productCustomerOrders,
       });
     }
@@ -322,7 +325,8 @@ export const createCustomerOrder = async (
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             priority: 0,
-            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            is_sold: true,
+            payment_status: PaymentStatus.RECEIVABLE,
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
@@ -402,7 +406,7 @@ export const createCustomerOrder = async (
           is_test: customerOrderData.isTest,
           assign_to: employee.nickname,
           priority: 0,
-          is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+          is_sold: false,
           manual_code: customerOrderData.manualCode
             ? customerOrderData.manualCode
             : null,
@@ -483,7 +487,8 @@ export const updateCustomerOrder = async (
               updated_at: time,
               is_test: customerOrderData.isTest,
               assign_to: employee.nickname,
-              is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+              is_sold: true,
+              payment_status: PaymentStatus.RECEIVABLE,
               manual_code: customerOrderData.manualCode
                 ? customerOrderData.manualCode
                 : null,
@@ -491,7 +496,6 @@ export const updateCustomerOrder = async (
             },
           });
         } catch (e) {
-          console.log(e);
           throw `This order cannot be changed.`;
         }
 
@@ -675,7 +679,7 @@ export const updateCustomerOrder = async (
             updated_at: time,
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
-            is_sold: customerOrderData.status === OrderStatus.COMPLETED,
+            is_sold: false,
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
@@ -955,3 +959,27 @@ export const stopDoingTask = async (code: string) => {
     throw new createError.BadRequest("Cannot register finished task.");
   }
 };
+
+export const updatePaymentStatus = async (
+  code: string,
+  customerOrderPaymentDto: CustomerOrderPaymentRequestDto
+) => {
+  try {
+    const customerOrderPaymentData: CustomerOrderPaymentRequestDto =
+    await customerOrderPaymentSchema.validateAsync(customerOrderPaymentDto);
+    const updatedCustomerOrder = await prisma.customerOrder.update({
+      where: {
+        code: code,
+      },
+      data: {
+        payment_status: customerOrderPaymentData.status,
+      },
+    });
+    return updatedCustomerOrder;
+  } catch (error) {
+    if (error.details?.length > 0) {
+      handleValidationError(error);
+    }
+    throw new createError.BadRequest("Cannot update payment status.");
+  }
+}

@@ -13,5 +13,6 @@ export interface CustomerOrderResponseDto {
   updatedAt?: Date;
   fullReturn?: boolean;
   manualCode?: string;
+  paymentStatus?: string;
   id?: number;
 }

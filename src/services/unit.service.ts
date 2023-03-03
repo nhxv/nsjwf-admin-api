@@ -36,6 +36,13 @@ export const createUnit = async (
           id: productId,
         },
       });
+      console.log({
+        code: `${product.id}_${unitName}`,
+        name: unitName,
+        ratio: new Fraction(unitData.ratio).toFraction(),
+        product_name: product.name,
+        discontinued: unitData.discontinued,
+      });
       const addedUnit = await tx.unit.create({
         data: {
           code: `${product.id}_${unitName}`,
