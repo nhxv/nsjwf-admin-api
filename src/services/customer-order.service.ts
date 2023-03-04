@@ -332,7 +332,7 @@ export const createCustomerOrder = async (
               status: PaymentStatus.CASH,
               created_at: time,
               updated_at: time,
-            }
+            },
           });
         }
 
@@ -509,7 +509,7 @@ export const updateCustomerOrder = async (
               status: PaymentStatus.CASH,
               created_at: time,
               updated_at: time,
-            }
+            },
           });
         }
 
