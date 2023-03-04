@@ -315,14 +315,26 @@ export const createCustomerOrder = async (
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
         // create customer payment
-        const newCustomerPayment = await tx.customerPayment.create({
-          data: {
-            code: code,
-            status: PaymentStatus.RECEIVABLE,
-            created_at: time,
-            updated_at: time,
-          },
-        });
+        let newCustomerPayment;
+        if (!customerOrderData.isTest) {
+          newCustomerPayment = await tx.customerPayment.create({
+            data: {
+              code: code,
+              status: PaymentStatus.RECEIVABLE,
+              created_at: time,
+              updated_at: time,
+            },
+          });
+        } else {
+          newCustomerPayment = await tx.customerPayment.create({
+            data: {
+              code: code,
+              status: PaymentStatus.CASH,
+              created_at: time,
+              updated_at: time,
+            }
+          });
+        }
 
         // create customer order
         const newCustomerOrder = await tx.customerOrder.create({
@@ -480,14 +492,26 @@ export const updateCustomerOrder = async (
     if (customerOrderData.status === OrderStatus.COMPLETED) {
       return await prisma.$transaction(async (tx) => {
         // create customer payment
-        const newCustomerPayment = await tx.customerPayment.create({
-          data: {
-            code: code,
-            status: PaymentStatus.RECEIVABLE,
-            created_at: time,
-            updated_at: time,
-          },
-        });
+        let newCustomerPayment;
+        if (!customerOrderData.isTest) {
+          newCustomerPayment = await tx.customerPayment.create({
+            data: {
+              code: code,
+              status: PaymentStatus.RECEIVABLE,
+              created_at: time,
+              updated_at: time,
+            },
+          });
+        } else {
+          newCustomerPayment = await tx.customerPayment.create({
+            data: {
+              code: code,
+              status: PaymentStatus.CASH,
+              created_at: time,
+              updated_at: time,
+            }
+          });
+        }
 
         // update customer order if that order IS NOT completed
         let existingOrder;
