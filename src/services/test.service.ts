@@ -22,6 +22,7 @@ export const nukeConfigure = async () => {
     const deletedVendors = await prisma.vendor.deleteMany({});
     const deletedVehicles = await prisma.vehicle.deleteMany({});
     const deletedUnits = await prisma.unit.deleteMany({});
+    const deletedStock = await prisma.stock.deleteMany({});
   } catch (error) {
     throw new createError.BadRequest(error);
   }
