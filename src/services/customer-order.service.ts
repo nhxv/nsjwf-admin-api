@@ -707,33 +707,100 @@ export const updateCustomerOrder = async (
       });
     } else {
       // update customer order if that order IS NOT completed
-      try {
-        const existingOrder = await prisma.customerOrder.update({
-          where: {
-            CustomerOrderSold_key: {
-              code: customerOrderData.code,
-              is_sold: false,
+      return await prisma.$transaction(async (tx) => {
+        let existingOrder;
+        try {
+          existingOrder = await tx.customerOrder.update({
+            where: {
+              CustomerOrderSold_key: {
+                code: customerOrderData.code,
+                is_sold: false,
+              },
             },
-          },
-          include: {
-            productCustomerOrders: true,
-          },
-          data: {
-            customer_name: customerOrderData.customerName,
-            status: customerOrderData.status,
-            updated_at: time,
-            is_test: customerOrderData.isTest,
-            assign_to: employee.nickname,
-            is_sold: false,
-            manual_code: customerOrderData.manualCode
-              ? customerOrderData.manualCode
-              : null,
-            expected_at: convertLocalExpected(customerOrderData.expectedAt),
-          },
-        });
-      } catch (e) {
-        throw `This order cannot be changed.`;
-      }
+            include: {
+              productCustomerOrders: true,
+            },
+            data: {
+              customer_name: customerOrderData.customerName,
+              status: customerOrderData.status,
+              updated_at: time,
+              is_test: customerOrderData.isTest,
+              assign_to: employee.nickname,
+              is_sold: false,
+              manual_code: customerOrderData.manualCode
+                ? customerOrderData.manualCode
+                : null,
+              expected_at: convertLocalExpected(customerOrderData.expectedAt),
+            },
+          });
+        } catch (e) {
+          throw `This order cannot be changed.`;
+        }
+
+        const existingProductOrders = new Map();
+
+        // delete product order not in request
+        for (const productOrder of existingOrder.productCustomerOrders) {
+          existingProductOrders.set(productOrder.product_name, {
+            product_name: productOrder.product_name,
+            quantity: productOrder.quantity,
+            unit_code: productOrder.unit_code,
+            unit_price: productOrder.unit_price,
+            updated_at: productOrder.updated_at,
+          });
+          const found = productOrders.find(
+            (po) => po.product_name === productOrder.product_name
+          );
+          if (!found) {
+            const deletedProductOrder = await tx.productCustomerOrder.delete({
+              where: {
+                ProductCustomerOrder_key: {
+                  product_name: productOrder.product_name,
+                  order_code: productOrder.order_code,
+                },
+              },
+            });
+          }
+        }
+
+        for (const productOrder of productOrders) {
+          // find current product order
+          const currentProductOrder = existingProductOrders.get(
+            productOrder.product_name
+          );
+
+          if (!currentProductOrder) {
+            // create new product order
+            const newProductOrder = await tx.productCustomerOrder.create({
+              data: {
+                product_name: productOrder.product_name,
+                order_code: productOrder.order_code,
+                quantity: productOrder.quantity,
+                unit_code: productOrder.unit_code,
+                unit_price: productOrder.unit_price,
+                created_at: time,
+                updated_at: time,
+              },
+            });
+          } else {
+            // update product order
+            const updatedProductOrder = await tx.productCustomerOrder.update({
+              where: {
+                ProductCustomerOrder_key: {
+                  product_name: productOrder.product_name,
+                  order_code: productOrder.order_code,
+                },
+              },
+              data: {
+                quantity: productOrder.quantity,
+                unit_code: productOrder.unit_code,
+                unit_price: productOrder.unit_price,
+                updated_at: productOrder.updated_at,
+              },
+            });
+          }
+        }
+      });
     }
   } catch (error) {
     if (typeof error === "string") {
