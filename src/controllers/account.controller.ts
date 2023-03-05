@@ -1,6 +1,6 @@
 import { EmployeeResponseDto } from "./../dto/responses/employee-response.dto";
 import {
-  findAllEmployeeTasks,
+  findActiveEmployeeTasks,
   findAllEmployees,
   findActiveEmployees,
   updateEmployee,
@@ -61,7 +61,7 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findAllEmployeeTasks(req.params.status);
+      const response = await findActiveEmployeeTasks(req.params.status);
       res.send(response);
     } catch (error) {
       next(error);
