@@ -372,7 +372,7 @@ model OrderTaskHistory {
   employee_name String        @db.VarChar(255)
   account       Account       @relation(fields: [employee_name], references: [nickname], onDelete: Cascade)
   type          String        @db.VarChar(32)
-  orderTaskType OrderTaskType @relation(fields: [type], references: [name], onDelete: Cascade)
+  orderTaskType OrderTaskType @relation(fields: [type], references: [name])
   created_at    DateTime
   updated_at    DateTime
 

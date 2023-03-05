@@ -37,7 +37,6 @@ export const nukeOperation = async () => {
     const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany(
       {}
     );
-    const deletedOrderTaskType = await prisma.orderTaskType.deleteMany({});
     const deletedProductBackorder = await prisma.productBackorder.deleteMany(
       {}
     );
