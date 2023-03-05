@@ -815,64 +815,6 @@ export const updateCustomerOrder = async (
   }
 };
 
-export const finishTask = async (code: string) => {
-  try {
-    const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
-      where: {
-        code: code,
-      },
-    });
-    if (
-      currentOrder.status !== OrderStatus.PICKING &&
-      currentOrder.status !== OrderStatus.SHIPPING
-    ) {
-      throw `Please don't hack us.`;
-    }
-    const time = generateCurrentTime();
-    return await prisma.$transaction(async (tx) => {
-      // update order
-      const updatedOrder = await tx.customerOrder.update({
-        where: {
-          code: code,
-        },
-        data: {
-          status:
-            currentOrder.status === OrderStatus.PICKING
-              ? OrderStatus.CHECKING
-              : OrderStatus.DELIVERED,
-          is_doing: false,
-          updated_at: time,
-        },
-      });
-
-      // register task history
-      const createdTask = await tx.orderTaskHistory.upsert({
-        where: {
-          OrderTask_key: {
-            order_code: updatedOrder.code,
-            type: currentOrder.status,
-          },
-        },
-        update: {
-          updated_at: time,
-        },
-        create: {
-          order_code: updatedOrder.code,
-          employee_name: updatedOrder.assign_to,
-          type: currentOrder.status,
-          created_at: time,
-          updated_at: time,
-        },
-      });
-    });
-  } catch (error) {
-    if (typeof error === "string") {
-      throw new createError.BadRequest(error);
-    }
-    throw new createError.BadRequest("Cannot register finished task.");
-  }
-};
-
 export const reportTask = async (nickname: string) => {
   try {
     const daily = await prisma.orderTaskHistory.findMany({
@@ -1063,6 +1005,64 @@ export const stopDoingTask = async (code: string) => {
         is_doing: false,
         updated_at: time,
       },
+    });
+  } catch (error) {
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot register finished task.");
+  }
+};
+
+export const finishTask = async (code: string) => {
+  try {
+    const currentOrder = await prisma.customerOrder.findUniqueOrThrow({
+      where: {
+        code: code,
+      },
+    });
+    if (
+      currentOrder.status !== OrderStatus.PICKING &&
+      currentOrder.status !== OrderStatus.SHIPPING
+    ) {
+      throw `Please don't hack us.`;
+    }
+    const time = generateCurrentTime();
+    return await prisma.$transaction(async (tx) => {
+      // update order
+      const updatedOrder = await tx.customerOrder.update({
+        where: {
+          code: code,
+        },
+        data: {
+          status:
+            currentOrder.status === OrderStatus.PICKING
+              ? OrderStatus.CHECKING
+              : OrderStatus.DELIVERED,
+          is_doing: false,
+          updated_at: time,
+        },
+      });
+
+      // register task history
+      const createdTask = await tx.orderTaskHistory.upsert({
+        where: {
+          OrderTask_key: {
+            order_code: updatedOrder.code,
+            type: currentOrder.status,
+          },
+        },
+        update: {
+          updated_at: time,
+        },
+        create: {
+          order_code: updatedOrder.code,
+          employee_name: updatedOrder.assign_to,
+          type: currentOrder.status,
+          created_at: time,
+          updated_at: time,
+        },
+      });
     });
   } catch (error) {
     if (typeof error === "string") {

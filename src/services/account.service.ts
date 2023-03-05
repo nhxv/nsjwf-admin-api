@@ -41,7 +41,7 @@ export const findActiveEmployees = async () => {
   }
 };
 
-export const findAllEmployeeTasks = async (status: string) => {
+export const findActiveEmployeeTasks = async (status: string) => {
   try {
     if (status !== OrderStatus.PICKING && status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
@@ -49,6 +49,7 @@ export const findAllEmployeeTasks = async (status: string) => {
     const employees = await prisma.account.findMany({
       where: {
         role_id: Role.OPERATOR,
+        active: true,
       },
       select: {
         customerOrders: {

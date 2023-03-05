@@ -167,7 +167,7 @@ router.get(
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
                 quantity: po.quantity,
-                unitCode: po.unit_code,
+                unitCode: po.unit_code.split("_")[1].toLowerCase(),
                 unitPrice: po.unit_price,
               };
               return poRes;
