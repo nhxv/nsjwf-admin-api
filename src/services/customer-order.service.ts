@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
@@ -204,7 +205,6 @@ export const reportCustomerSale = async () => {
           0
         ),
         refund: 0,
-        refund_order: "",
         date: sold.updated_at,
         payment_status: sold.customerPayment.status,
         productCustomerOrders: sold.productCustomerOrders,
@@ -219,8 +219,7 @@ export const reportCustomerSale = async () => {
             found = true;
             reports[i] = {
               ...reports[i],
-              refund: newRefund,
-              refund_order: customerReturn.order_code,
+              refund: Decimal.sum(reports[i].refund, newRefund),
             };
             break;
           }
@@ -233,7 +232,6 @@ export const reportCustomerSale = async () => {
           customer_name: customerReturn.customer_name,
           sale: -1,
           refund: customerReturn.refund,
-          refund_order: customerReturn.order_code,
           date: customerReturn.created_at,
           productCustomerOrders: [],
         });
