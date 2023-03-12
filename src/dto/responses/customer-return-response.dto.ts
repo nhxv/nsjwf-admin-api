@@ -1,4 +1,4 @@
-import { Decimal } from "@prisma/client/runtime";
+import { Decimal } from "@prisma/client/runtime/library";
 import { ProductCustomerReturnResponseDto } from "./product-customer-return-response.dto";
 
 export interface CustomerReturnResponseDto {
