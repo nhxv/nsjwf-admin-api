@@ -26,7 +26,7 @@ export const findActiveStock = async () => {
           orderBy: {
             code: "asc",
           },
-        },        
+        },
       },
       orderBy: {
         name: "asc",
