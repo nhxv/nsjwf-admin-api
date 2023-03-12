@@ -8,50 +8,31 @@ import {
 } from "../dto/requests/stock-request.dto";
 import { handleValidationError } from "../commons/http.exception";
 
-export const findAllStock = async () => {
+export const findActiveStock = async () => {
   try {
-    const stock: any = await prisma.$queryRaw`
-    SELECT s.id, s.product_name, s.quantity, u.code, u.ratio
-    FROM "Stock" AS s
-    INNER JOIN "Product" AS p
-    ON s.product_name = p.name
-    INNER JOIN "Unit" AS u
-    ON s.product_name = u.product_name
-    WHERE p.discontinued = false AND u.discontinued = false
-    ORDER BY s.product_name
-    `;
-    const productStock = new Map();
-    for (const s of stock) {
-      if (!productStock.get(s.product_name)) {
-        productStock.set(s.product_name, {
-          id: s.id,
-          name: s.product_name,
-          measures: [
-            {
-              quantity: new Fraction(s.quantity)
-                .mul(new Fraction(s.ratio))
-                .toFraction(),
-              unitCode: s.code,
-            },
-          ],
-        });
-      } else {
-        productStock.set(s.product_name, {
-          ...productStock.get(s.product_name),
-          measures: [
-            ...productStock.get(s.product_name)["measures"],
-            {
-              quantity: new Fraction(s.quantity)
-                .mul(new Fraction(s.ratio))
-                .toFraction(),
-              unitCode: s.code,
-            },
-          ],
-        });
-      }
-    }
-    const stockRes = [...productStock.values()];
-    return stockRes;
+    const products = await prisma.product.findMany({
+      where: {
+        discontinued: false,
+      },
+      include: {
+        stock: true,
+        units: {
+          where: {
+            discontinued: false,
+          },
+          select: {
+            code: true,
+          },
+          orderBy: {
+            code: "asc",
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return products;
   } catch (error) {
     throw new createError.BadRequest("Cannot get stock with the given data.");
   }
