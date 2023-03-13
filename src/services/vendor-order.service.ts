@@ -10,11 +10,11 @@ import {
   convertLocalExpected,
   convertLocalInterval,
   convertLocalStart,
-  generateCurrentTime
+  generateCurrentTime,
 } from "./../commons/utils/time.util";
 import {
   VendorOrderRequestDto,
-  vendorOrderSchema
+  vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
 
 export const findVendorOrderByStatus = async (status: string) => {
@@ -34,7 +34,7 @@ export const findVendorOrderByStatus = async (status: string) => {
           {
             NOT: {
               status: OrderStatus.COMPLETED,
-            }
+            },
           },
         ],
       },

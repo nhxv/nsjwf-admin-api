@@ -57,7 +57,7 @@ export const findCustomerOrderByStatus = async (status: string) => {
           {
             NOT: {
               status: OrderStatus.COMPLETED,
-            }
+            },
           },
         ],
       },
