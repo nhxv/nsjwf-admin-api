@@ -7,6 +7,7 @@ import {
   EmployeeRequestDto,
   employeeSchema,
 } from "./../dto/requests/employee-request.dto";
+import * as bcrypt from "bcryptjs";
 
 export const findAllEmployees = async () => {
   try {
@@ -84,11 +85,14 @@ export const updateEmployee = async (
     const employeeData: EmployeeRequestDto = await employeeSchema.validateAsync(
       employeeDto
     );
+    const hashedPw = bcrypt.hashSync(employeeData.password, 12);
     const updatedEmployee = await prisma.account.update({
       where: {
         id: id,
       },
       data: {
+        username: employeeData.username,
+        password: hashedPw,
         nickname: employeeData.nickname,
         active: employeeData.active,
       },
