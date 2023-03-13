@@ -10,11 +10,11 @@ import {
   convertLocalExpected,
   convertLocalInterval,
   convertLocalStart,
-  generateCurrentTime,
+  generateCurrentTime
 } from "./../commons/utils/time.util";
 import {
   VendorOrderRequestDto,
-  vendorOrderSchema,
+  vendorOrderSchema
 } from "./../dto/requests/vendor-order-request.dto";
 
 export const findVendorOrderByStatus = async (status: string) => {
@@ -25,9 +25,18 @@ export const findVendorOrderByStatus = async (status: string) => {
     const vendorOrders = await prisma.vendorOrder.findMany({
       where: {
         status: status,
-        expected_at: {
-          gte: convertLocalStart(),
-        },
+        OR: [
+          {
+            expected_at: {
+              gte: convertLocalStart(),
+            },
+          },
+          {
+            NOT: {
+              status: OrderStatus.COMPLETED,
+            }
+          },
+        ],
       },
       include: {
         productVendorOrders: {
