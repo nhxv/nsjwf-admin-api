@@ -48,9 +48,18 @@ export const findCustomerOrderByStatus = async (status: string) => {
     const customerOrders = await prisma.customerOrder.findMany({
       where: {
         status: status,
-        expected_at: {
-          gte: convertLocalStart(),
-        },
+        OR: [
+          {
+            expected_at: {
+              gte: convertLocalStart(),
+            },
+          },
+          {
+            NOT: {
+              status: OrderStatus.COMPLETED,
+            },
+          },
+        ],
       },
       include: {
         productCustomerOrders: {
