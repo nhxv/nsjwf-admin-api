@@ -121,7 +121,10 @@ model StockChangeHistory {
   created_at        DateTime
   reason            String            @db.VarChar(32)
   stockChangeReason StockChangeReason @relation(fields: [reason], references: [name])
+  order_code        String?           @db.VarChar(20)
   stockChanges      StockChange[]
+
+  @@unique([reason, order_code], name: "OrderStockChangeHistory_key")
 }
 
 model StockChange {
@@ -200,7 +203,7 @@ model CustomerOrder {
   is_doing              Boolean                @default(false)
   manual_code           String?                @unique @db.VarChar(6)
   payment_code          String?                @unique @db.VarChar(20)
-  customerPayment       CustomerPayment?       @relation(fields: [payment_code], references: [code], onDelete: Cascade)
+  customerPayment       CustomerPayment?       @relation(fields: [payment_code], references: [code])
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
   customerSaleReturn    CustomerSaleReturn?
