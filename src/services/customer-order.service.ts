@@ -311,9 +311,7 @@ export const createCustomerOrder = async (
         order_code: productOrder.orderCode,
         unit_code: productOrder.unitCode,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(
-          productOrder.unitPrice.toFixed(2)
-        ),
+        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
         created_at: time,
         updated_at: time,
       })
@@ -491,9 +489,7 @@ export const updateCustomerOrder = async (
         order_code: customerOrderData.code,
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
-        unit_price: new Prisma.Decimal(
-          productOrder.unitPrice.toFixed(2)
-        ),
+        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
         updated_at: time,
       })
     );
