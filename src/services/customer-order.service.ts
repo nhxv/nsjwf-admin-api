@@ -1106,10 +1106,10 @@ export const revertCustomerOrder = async (code: string) => {
       // revert stock
       const stockChangeHistory = await tx.stockChangeHistory.findUniqueOrThrow({
         where: {
-          "OrderStockChangeHistory_key": {
+          OrderStockChangeHistory_key: {
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
             order_code: code,
-          }
+          },
         },
         include: {
           stockChanges: true,
@@ -1120,31 +1120,32 @@ export const revertCustomerOrder = async (code: string) => {
         const stock = await tx.stock.findUniqueOrThrow({
           where: {
             id: stockChange.stock_id,
-          }
+          },
         });
         const currentStockQuantity = new Fraction(stock.quantity);
         const stockQuantityChange = new Fraction(stockChange.quantity_change);
-        const revertedStockQuantity = currentStockQuantity.sub(stockQuantityChange);
+        const revertedStockQuantity =
+          currentStockQuantity.sub(stockQuantityChange);
         const updatedStock = await tx.stock.update({
           where: {
             id: stockChange.stock_id,
           },
           data: {
             quantity: revertedStockQuantity.toFraction(),
-          }
+          },
         });
       }
 
       const deletedStockChangeHistory = await tx.stockChangeHistory.delete({
         where: {
-          "OrderStockChangeHistory_key": {
+          OrderStockChangeHistory_key: {
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
             order_code: code,
-          }
+          },
         },
       });
     });
   } catch (error) {
     throw new createError.BadRequest("Cannot revert customer order.");
   }
-}
+};
