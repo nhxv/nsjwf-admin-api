@@ -371,6 +371,7 @@ export const createCustomerOrder = async (
           data: {
             created_at: time,
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+            order_code: code,
           },
         });
 
@@ -556,6 +557,7 @@ export const updateCustomerOrder = async (
           data: {
             created_at: time,
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+            order_code: code,
           },
         });
 
@@ -1076,5 +1078,74 @@ export const finishTask = async (code: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot register finished task.");
+  }
+};
+
+export const revertCustomerOrder = async (code: string) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // revert payment
+      const deletedCustomerPayment = await prisma.customerPayment.delete({
+        where: {
+          code: code,
+        },
+      });
+
+      // revert customer order
+      const updatedCustomerOrder = await prisma.customerOrder.update({
+        where: {
+          code: code,
+        },
+        data: {
+          status: OrderStatus.DELIVERED,
+          is_sold: false,
+          payment_code: null,
+        },
+      });
+
+      // revert stock
+      const stockChangeHistory = await tx.stockChangeHistory.findUniqueOrThrow({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+        include: {
+          stockChanges: true,
+        },
+      });
+
+      for (const stockChange of stockChangeHistory.stockChanges) {
+        const stock = await tx.stock.findUniqueOrThrow({
+          where: {
+            id: stockChange.stock_id,
+          },
+        });
+        const currentStockQuantity = new Fraction(stock.quantity);
+        const stockQuantityChange = new Fraction(stockChange.quantity_change);
+        const revertedStockQuantity =
+          currentStockQuantity.sub(stockQuantityChange);
+        const updatedStock = await tx.stock.update({
+          where: {
+            id: stockChange.stock_id,
+          },
+          data: {
+            quantity: revertedStockQuantity.toFraction(),
+          },
+        });
+      }
+
+      const deletedStockChangeHistory = await tx.stockChangeHistory.delete({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+      });
+    });
+  } catch (error) {
+    throw new createError.BadRequest("Cannot revert customer order.");
   }
 };

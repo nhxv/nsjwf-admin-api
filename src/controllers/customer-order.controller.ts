@@ -4,6 +4,7 @@ import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createCustomerOrder,
   updateCustomerOrder,
+  revertCustomerOrder,
 } from "../services/customer-order.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
@@ -281,6 +282,20 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updatePriority(req.body);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// revert customer order by code
+router.put(
+  `/customer-orders/revert/:code`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await revertCustomerOrder(req.params.code);
       res.send(response);
     } catch (error) {
       next(error);
