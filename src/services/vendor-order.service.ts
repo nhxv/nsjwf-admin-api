@@ -155,7 +155,7 @@ export const createVendorOrder = async (
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
-          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+          productOrder.unitPrice.toFixed(2)
         ),
         created_at: time,
         updated_at: time,
@@ -300,7 +300,7 @@ export const updateVendorOrder = async (
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
         unit_price: new Prisma.Decimal(
-          new Prisma.Decimal(productOrder.unitPrice).toPrecision(2)
+          productOrder.unitPrice.toFixed(2)
         ),
         order_code: vendorOrderData.code,
         updated_at: time,

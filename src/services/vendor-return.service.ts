@@ -211,7 +211,7 @@ export const createVendorReturn = async (
           vendor_name: vendorReturnData.vendorName,
           order_code: vendorReturnData.orderCode,
           created_at: time,
-          refund: new Prisma.Decimal(vendorReturnData.refund).toPrecision(2),
+          refund: new Prisma.Decimal(vendorReturnData.refund.toFixed(2)),
           productVendorReturns: {
             create: productReturns,
           },

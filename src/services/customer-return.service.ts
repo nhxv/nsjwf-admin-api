@@ -212,7 +212,7 @@ export const createCustomerReturn = async (
           customer_name: customerReturnData.customerName,
           order_code: customerReturnData.orderCode,
           created_at: time,
-          refund: new Prisma.Decimal(customerReturnData.refund).toPrecision(2),
+          refund: new Prisma.Decimal(customerReturnData.refund.toFixed(2)),
           productCustomerReturns: {
             create: productReturns,
           },
