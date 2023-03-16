@@ -26,9 +26,18 @@ export const findDailyCustomerOrder = async () => {
   try {
     const customerOrders = await prisma.customerOrder.findMany({
       where: {
-        expected_at: {
-          gte: convertLocalStart(),
-        },
+        OR: [
+          {
+            expected_at: {
+              gte: convertLocalStart(),
+            },
+          },
+          {
+            NOT: {
+              status: OrderStatus.COMPLETED,
+            },
+          },          
+        ],
       },
     });
     return customerOrders;
