@@ -36,7 +36,7 @@ export const findDailyCustomerOrder = async () => {
             NOT: {
               status: OrderStatus.COMPLETED,
             },
-          },          
+          },
         ],
       },
     });
