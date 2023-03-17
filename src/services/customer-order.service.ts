@@ -41,7 +41,7 @@ export const findDailyCustomerOrder = async () => {
       },
       orderBy: {
         manual_code: "asc",
-      }
+      },
     });
     return customerOrders;
   } catch (error) {
