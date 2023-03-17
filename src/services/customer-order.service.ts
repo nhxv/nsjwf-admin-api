@@ -39,6 +39,9 @@ export const findDailyCustomerOrder = async () => {
           },
         ],
       },
+      orderBy: {
+        manual_code: "asc",
+      },
     });
     return customerOrders;
   } catch (error) {
@@ -78,7 +81,7 @@ export const findCustomerOrderByStatus = async (status: string) => {
         },
       },
       orderBy: {
-        expected_at: "asc",
+        manual_code: "asc",
       },
     });
     return customerOrders;
