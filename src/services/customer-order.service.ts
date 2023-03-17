@@ -40,7 +40,7 @@ export const findDailyCustomerOrder = async () => {
         ],
       },
       orderBy: {
-        manual_code: "asc",
+        manual_code: "desc",
       },
     });
     return customerOrders;
@@ -81,7 +81,7 @@ export const findCustomerOrderByStatus = async (status: string) => {
         },
       },
       orderBy: {
-        manual_code: "asc",
+        manual_code: "desc",
       },
     });
     return customerOrders;
