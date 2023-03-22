@@ -1,26 +1,19 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import {
-  createCustomerOrder,
-  updateCustomerOrder,
-  revertCustomerOrder,
-} from "../services/customer-order.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
 import { verifyAccessToken } from "./../services/auth/token.service";
 import {
-  findCustomerOrderByCode,
+  createCustomerOrder, findCustomerOrderByCode,
   findCustomerOrderByStatus,
   findCustomerSale,
   findDailyCustomerOrder,
   findEmployeeTask,
   finishTask,
   reportCustomerSale,
-  reportTask,
-  startDoingTask,
-  stopDoingTask,
-  updatePriority,
+  reportTask, revertCustomerOrder, startDoingTask,
+  stopDoingTask, updateCustomerOrder, updatePriority
 } from "./../services/customer-order.service";
 
 const router = Router();
