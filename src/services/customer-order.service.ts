@@ -34,8 +34,8 @@ export const findDailyCustomerOrder = async () => {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
-          }
-        }
+          },
+        },
       },
       orderBy: {
         manual_code: "desc",
