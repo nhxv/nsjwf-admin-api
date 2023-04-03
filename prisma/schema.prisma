@@ -226,7 +226,7 @@ model ProductCustomerOrder {
   created_at    DateTime
   updated_at    DateTime
 
-  @@unique([product_name, order_code], name: "ProductCustomerOrder_key")
+  @@unique([order_code, unit_code], name: "ProductCustomerOrder_key")
 }
 
 model OrderStatus {

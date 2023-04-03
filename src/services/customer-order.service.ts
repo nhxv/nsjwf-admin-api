@@ -297,6 +297,15 @@ export const createCustomerOrder = async (
     ) {
       throw `Please don't attack us.`;
     }
+    // Validate unique unit code
+    const unitCodes = new Map();
+    for (const po of customerOrderData.productCustomerOrders) {
+      if (unitCodes.has(po.unitCode)) {
+        throw `Duplicated ${po.unitCode}.`;
+      } else {
+        unitCodes.set(po.unitCode, true);
+      }
+    }
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
@@ -482,6 +491,15 @@ export const updateCustomerOrder = async (
     if (customerOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
+    // Validate unique unit code
+    const unitCodes = new Map();
+    for (const po of customerOrderData.productCustomerOrders) {
+      if (unitCodes.has(po.unitCode)) {
+        throw `Duplicated ${po.unitCode}.`;
+      } else {
+        unitCodes.set(po.unitCode, true);
+      }
+    }
     const employee = await prisma.account.findUniqueOrThrow({
       where: {
         nickname: customerOrderData.assignTo,
@@ -566,7 +584,7 @@ export const updateCustomerOrder = async (
 
         // delete product order not in request
         for (const productOrder of existingOrder.productCustomerOrders) {
-          existingProductOrders.set(productOrder.product_name, {
+          existingProductOrders.set(productOrder.unit_code, {
             product_name: productOrder.product_name,
             quantity: productOrder.quantity,
             unit_code: productOrder.unit_code,
@@ -574,14 +592,14 @@ export const updateCustomerOrder = async (
             updated_at: productOrder.updated_at,
           });
           const found = productOrders.find(
-            (po) => po.product_name === productOrder.product_name
+            (po) => po.unit_code === productOrder.unit_code
           );
           if (!found) {
             const deletedProductOrder = await tx.productCustomerOrder.delete({
               where: {
                 ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
+                  unit_code: productOrder.unit_code,
                 },
               },
             });
@@ -657,7 +675,7 @@ export const updateCustomerOrder = async (
 
           // find current product order
           const currentProductOrder = existingProductOrders.get(
-            productOrder.product_name
+            productOrder.unit_code
           );
 
           if (!currentProductOrder) {
@@ -678,8 +696,8 @@ export const updateCustomerOrder = async (
             const updatedProductOrder = await tx.productCustomerOrder.update({
               where: {
                 ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
+                  unit_code: productOrder.unit_code,
                 },
               },
               data: {
@@ -756,7 +774,7 @@ export const updateCustomerOrder = async (
 
         // delete product order not in request
         for (const productOrder of existingOrder.productCustomerOrders) {
-          existingProductOrders.set(productOrder.product_name, {
+          existingProductOrders.set(productOrder.unit_code, {
             product_name: productOrder.product_name,
             quantity: productOrder.quantity,
             unit_code: productOrder.unit_code,
@@ -764,14 +782,14 @@ export const updateCustomerOrder = async (
             updated_at: productOrder.updated_at,
           });
           const found = productOrders.find(
-            (po) => po.product_name === productOrder.product_name
+            (po) => po.unit_code === productOrder.unit_code
           );
           if (!found) {
             const deletedProductOrder = await tx.productCustomerOrder.delete({
               where: {
                 ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
+                  unit_code: productOrder.unit_code,
                 },
               },
             });
@@ -781,7 +799,7 @@ export const updateCustomerOrder = async (
         for (const productOrder of productOrders) {
           // find current product order
           const currentProductOrder = existingProductOrders.get(
-            productOrder.product_name
+            productOrder.unit_code
           );
 
           if (!currentProductOrder) {
@@ -802,8 +820,8 @@ export const updateCustomerOrder = async (
             const updatedProductOrder = await tx.productCustomerOrder.update({
               where: {
                 ProductCustomerOrder_key: {
-                  product_name: productOrder.product_name,
                   order_code: productOrder.order_code,
+                  unit_code: productOrder.unit_code,
                 },
               },
               data: {
