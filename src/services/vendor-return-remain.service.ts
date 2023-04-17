@@ -1,21 +1,21 @@
 import createError from "http-errors";
 
-export const findVendorSaleReturnByCode = async (code: string) => {
-  let vendorSaleReturn;
+export const findVendorReturnRemainByCode = async (code: string) => {
+  let vendorReturnRemain;
   try {
-    vendorSaleReturn = await prisma.vendorSaleReturn.findUnique({
+    vendorReturnRemain = await prisma.vendorReturnRemain.findUnique({
       where: {
-        sale_code: code,
+        order_code: code,
       },
       include: {
-        productVendorSaleReturns: {
+        productVendorReturnRemains: {
           orderBy: {
             product_name: "asc",
           },
         },
       },
     });
-    if (!vendorSaleReturn) {
+    if (!vendorReturnRemain) {
       // get order sold instead
       const orderSold = await prisma.vendorOrder.findUniqueOrThrow({
         where: {
@@ -29,11 +29,11 @@ export const findVendorSaleReturnByCode = async (code: string) => {
           },
         },
       });
-      vendorSaleReturn = {
+      vendorReturnRemain = {
         sale_code: orderSold.code,
         vendor_name: orderSold.vendor_name,
         sold_at: orderSold.updated_at,
-        productVendorSaleReturns: orderSold.productVendorOrders.map((p) => ({
+        productVendorReturnRemains: orderSold.productVendorOrders.map((p) => ({
           product_name: p.product_name,
           quantity: p.quantity,
           unit_code: p.unit_code,
@@ -41,10 +41,10 @@ export const findVendorSaleReturnByCode = async (code: string) => {
         })),
       };
     }
-    return vendorSaleReturn;
+    return vendorReturnRemain;
   } catch (error) {
     throw new createError.BadRequest(
-      "Cannot get vendor sale return with the given data."
+      "Cannot get vendor return remain with the given data."
     );
   }
 };

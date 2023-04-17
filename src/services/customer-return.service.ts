@@ -54,6 +54,15 @@ export const createCustomerReturn = async (
     if (notZero.length < 1) {
       throw `Hollow return.`;
     }
+    // Validate unique unit code
+    const unitCodes = new Set();
+    for (const pr of customerReturnData.productCustomerReturns) {
+      if (unitCodes.has(pr.unitCode)) {
+        throw `Duplicated ${pr.unitCode}`;
+      } else {
+        unitCodes.add(pr.unitCode);
+      }
+    }
     const time = generateCurrentTime();
     const productReturns = notZero.map((productReturn) => ({
       product_name: productReturn.productName,
@@ -64,15 +73,15 @@ export const createCustomerReturn = async (
     }));
 
     return await prisma.$transaction(async (tx) => {
-      const existingSaleReturn = await tx.customerSaleReturn.findUnique({
+      const existingReturnRemain = await tx.customerReturnRemain.findUnique({
         where: {
-          sale_code: customerReturnData.orderCode,
+          order_code: customerReturnData.orderCode,
         },
         include: {
-          productCustomerSaleReturns: true,
+          productCustomerReturnRemains: true,
         },
       });
-      if (!existingSaleReturn) {
+      if (!existingReturnRemain) {
         // validate with order sold -- this is the first return
         const orderSold = await tx.customerOrder.findUniqueOrThrow({
           where: {
@@ -88,9 +97,9 @@ export const createCustomerReturn = async (
         if (orderSold.status !== OrderStatus.COMPLETED) {
           return `Please don't hack us.`;
         }
-        const newProductSaleReturns = new Map();
+        const newProductReturnRemains = new Map();
         for (const productSold of orderSold.productCustomerOrders) {
-          newProductSaleReturns.set(productSold.product_name, {
+          newProductReturnRemains.set(productSold.unit_code, {
             product_name: productSold.product_name,
             quantity: productSold.quantity,
             unit_code: productSold.unit_code,
@@ -98,8 +107,8 @@ export const createCustomerReturn = async (
           });
         }
         for (const productReturn of productReturns) {
-          const productOrderSold = newProductSaleReturns.get(
-            productReturn.product_name
+          const productOrderSold = newProductReturnRemains.get(
+            productReturn.unit_code
           );
           if (!productOrderSold) {
             throw `Invalid product data.`;
@@ -130,37 +139,37 @@ export const createCustomerReturn = async (
           if (productSoldChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
-          newProductSaleReturns.set(productReturn.product_name, {
-            ...newProductSaleReturns.get(productReturn.product_name),
+          newProductReturnRemains.set(productReturn.unit_code, {
+            ...newProductReturnRemains.get(productReturn.unit_code),
             quantity: productSoldChange.toFraction(),
           });
         }
-        // create sale return -- since this is the first return
-        const newSaleReturn = await tx.customerSaleReturn.create({
+        // create return remain -- since this is the first return
+        const newReturnRemain = await tx.customerReturnRemain.create({
           data: {
-            sale_code: customerReturnData.orderCode,
+            order_code: customerReturnData.orderCode,
             customer_name: customerReturnData.customerName,
             sold_at: orderSold.updated_at,
-            productCustomerSaleReturns: {
-              create: [...newProductSaleReturns.values()],
+            productCustomerReturnRemains: {
+              create: [...newProductReturnRemains.values()],
             },
           },
         });
       } else {
-        // validate with existing sale returns -- this is not the first return
-        const existingProductSaleReturns = new Map();
-        for (const productSaleReturn of existingSaleReturn.productCustomerSaleReturns) {
-          existingProductSaleReturns.set(productSaleReturn.product_name, {
-            quantity: productSaleReturn.quantity,
-            unit_code: productSaleReturn.unit_code,
-            unit_price: productSaleReturn.unit_price,
+        // validate with existing return remain -- this is not the first return
+        const existingProductReturnRemains = new Map();
+        for (const productReturnRemain of existingReturnRemain.productCustomerReturnRemains) {
+          existingProductReturnRemains.set(productReturnRemain.unit_code, {
+            quantity: productReturnRemain.quantity,
+            unit_code: productReturnRemain.unit_code,
+            unit_price: productReturnRemain.unit_price,
           });
         }
         for (const productReturn of productReturns) {
-          const productSaleReturn = existingProductSaleReturns.get(
-            productReturn.product_name
+          const productReturnRemain = existingProductReturnRemains.get(
+            productReturn.unit_code
           );
-          if (!productSaleReturn) {
+          if (!productReturnRemain) {
             throw `Invalid product data.`;
           }
           // find product return unit ratio
@@ -169,34 +178,34 @@ export const createCustomerReturn = async (
               code: productReturn.unit_code,
             },
           });
-          // find product sale return unit ratio
-          const saleUnit = await tx.unit.findUniqueOrThrow({
+          // find product return remain unit ratio
+          const remainUnit = await tx.unit.findUniqueOrThrow({
             where: {
-              code: productSaleReturn.unit_code,
+              code: productReturnRemain.unit_code,
             },
           });
           const returnRatio = new Fraction(returnUnit.ratio);
-          const saleRatio = new Fraction(saleUnit.ratio);
+          const remainRatio = new Fraction(remainUnit.ratio);
           const productReturnQuantity = returnRatio.mul(
             new Fraction(productReturn.quantity)
           );
-          const productSaleReturnQuantity = saleRatio.mul(
-            new Fraction(productSaleReturn.quantity)
+          const productReturnRemainQuantity = remainRatio.mul(
+            new Fraction(productReturnRemain.quantity)
           );
-          const productSaleChange = productSaleReturnQuantity
+          const productSaleChange = productReturnRemainQuantity
             .sub(productReturnQuantity)
-            .div(saleRatio);
+            .div(remainRatio);
           if (productSaleChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
 
-          // update product sale return quantity
-          const updatedProductSaleReturn =
-            await tx.productCustomerSaleReturn.update({
+          // update product return remain quantity
+          const updatedProductReturnRemain =
+            await tx.productCustomerReturnRemain.update({
               where: {
-                ProductCustomerSaleReturn_key: {
-                  customer_sale_return_code: customerReturnData.orderCode,
-                  product_name: productReturn.product_name,
+                ProductCustomerReturnRemain_key: {
+                  customer_return_remain_code: customerReturnData.orderCode,
+                  unit_code: productReturn.unit_code,
                 },
               },
               data: {

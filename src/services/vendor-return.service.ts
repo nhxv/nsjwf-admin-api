@@ -63,15 +63,15 @@ export const createVendorReturn = async (
     }));
 
     return await prisma.$transaction(async (tx) => {
-      const existingSaleReturn = await tx.vendorSaleReturn.findUnique({
+      const existingReturnRemain = await tx.vendorReturnRemain.findUnique({
         where: {
-          sale_code: vendorReturnData.orderCode,
+          order_code: vendorReturnData.orderCode,
         },
         include: {
-          productVendorSaleReturns: true,
+          productVendorReturnRemains: true,
         },
       });
-      if (!existingSaleReturn) {
+      if (!existingReturnRemain) {
         // validate with order sold -- this is the first return
         const orderSold = await tx.vendorOrder.findUniqueOrThrow({
           where: {
@@ -87,9 +87,9 @@ export const createVendorReturn = async (
         if (orderSold.status !== OrderStatus.COMPLETED) {
           return `Please don't hack us.`;
         }
-        const newProductSaleReturns = new Map();
+        const newProductReturnRemains = new Map();
         for (const productSold of orderSold.productVendorOrders) {
-          newProductSaleReturns.set(productSold.product_name, {
+          newProductReturnRemains.set(productSold.product_name, {
             product_name: productSold.product_name,
             quantity: productSold.quantity,
             unit_code: productSold.unit_code,
@@ -97,7 +97,7 @@ export const createVendorReturn = async (
           });
         }
         for (const productReturn of productReturns) {
-          const productOrderSold = newProductSaleReturns.get(
+          const productOrderSold = newProductReturnRemains.get(
             productReturn.product_name
           );
           if (!productOrderSold) {
@@ -129,37 +129,37 @@ export const createVendorReturn = async (
           if (productSoldChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
-          newProductSaleReturns.set(productReturn.product_name, {
-            ...newProductSaleReturns.get(productReturn.product_name),
+          newProductReturnRemains.set(productReturn.product_name, {
+            ...newProductReturnRemains.get(productReturn.product_name),
             quantity: productSoldChange.toFraction(),
           });
         }
-        // create sale return -- since this is the first return
-        const newSaleReturn = await tx.vendorSaleReturn.create({
+        // create return remain -- since this is the first return
+        const newReturnRemain = await tx.vendorReturnRemain.create({
           data: {
-            sale_code: vendorReturnData.orderCode,
+            order_code: vendorReturnData.orderCode,
             vendor_name: vendorReturnData.vendorName,
             sold_at: orderSold.updated_at,
-            productVendorSaleReturns: {
-              create: [...newProductSaleReturns.values()],
+            productVendorReturnRemains: {
+              create: [...newProductReturnRemains.values()],
             },
           },
         });
       } else {
-        // validate with existing sale returns -- this is NOT the first return
-        const existingProductSaleReturns = new Map();
-        for (const productSaleReturn of existingSaleReturn.productVendorSaleReturns) {
-          existingProductSaleReturns.set(productSaleReturn.product_name, {
-            quantity: productSaleReturn.quantity,
-            unit_code: productSaleReturn.unit_code,
-            unit_price: productSaleReturn.unit_price,
+        // validate with existing return remains -- this is NOT the first return
+        const existingProductReturnRemains = new Map();
+        for (const productReturnRemain of existingReturnRemain.productVendorReturnRemains) {
+          existingProductReturnRemains.set(productReturnRemain.product_name, {
+            quantity: productReturnRemain.quantity,
+            unit_code: productReturnRemain.unit_code,
+            unit_price: productReturnRemain.unit_price,
           });
         }
         for (const productReturn of productReturns) {
-          const productSaleReturn = existingProductSaleReturns.get(
+          const productReturnRemain = existingProductReturnRemains.get(
             productReturn.product_name
           );
-          if (!productSaleReturn) {
+          if (!productReturnRemain) {
             throw `Invalid product data.`;
           }
           // find product return unit ratio
@@ -168,10 +168,10 @@ export const createVendorReturn = async (
               code: productReturn.unit_code,
             },
           });
-          // find product sale return unit ratio
+          // find product return remain unit ratio
           const saleUnit = await tx.unit.findUniqueOrThrow({
             where: {
-              code: productSaleReturn.unit_code,
+              code: productReturnRemain.unit_code,
             },
           });
           const returnRatio = new Fraction(returnUnit.ratio);
@@ -179,22 +179,22 @@ export const createVendorReturn = async (
           const productReturnQuantity = returnRatio.mul(
             new Fraction(productReturn.quantity)
           );
-          const productSaleReturnQuantity = saleRatio.mul(
-            new Fraction(productSaleReturn.quantity)
+          const productReturnRemainQuantity = saleRatio.mul(
+            new Fraction(productReturnRemain.quantity)
           );
-          const productSaleChange = productSaleReturnQuantity
+          const productSaleChange = productReturnRemainQuantity
             .sub(productReturnQuantity)
             .div(saleRatio);
           if (productSaleChange.compare(0) < 0) {
             throw `${productReturn.product_name}: Invalid product quantity or price.`;
           }
 
-          // update product sale return quantity
-          const updatedProductSaleReturn =
-            await tx.productVendorSaleReturn.update({
+          // update product return remain quantity
+          const updatedProductReturnRemain =
+            await tx.productVendorReturnRemain.update({
               where: {
-                ProductVendorSaleReturn_key: {
-                  vendor_sale_return_code: vendorReturnData.orderCode,
+                ProductVendorReturnRemain_key: {
+                  vendor_return_remain_code: vendorReturnData.orderCode,
                   product_name: productReturn.product_name,
                 },
               },

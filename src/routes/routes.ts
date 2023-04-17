@@ -10,9 +10,9 @@ import vendorOrderController from "../controllers/vendor-order.controller";
 import customerOrderController from "../controllers/customer-order.controller";
 // import backorderController from "../controllers/backorder.controller";
 import customerReturnController from "../controllers/customer-return.controller";
-import customerSaleReturnController from "../controllers/customer-sale-return.controller";
+import customerReturnRemainController from "../controllers/customer-return-remain.controller";
 import vendorReturnController from "../controllers/vendor-return.controller";
-import vendorSaleReturnController from "../controllers/vendor-sale-return.controller";
+import vendorReturnRemainController from "../controllers/vendor-return-remain.controller";
 import accountController from "../controllers/account.controller";
 import unitController from "../controllers/unit.controller";
 import customerPaymentController from "../controllers/customer-payment.controller";
@@ -29,9 +29,9 @@ const api = Router()
   .use(customerOrderController)
   // .use(backorderController)
   .use(customerReturnController)
-  .use(customerSaleReturnController)
+  .use(customerReturnRemainController)
   .use(vendorReturnController)
-  .use(vendorSaleReturnController)
+  .use(vendorReturnRemainController)
   .use(accountController)
   .use(unitController)
   .use(customerPaymentController);
