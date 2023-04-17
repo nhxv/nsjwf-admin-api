@@ -57,9 +57,8 @@ export const nukeOperation = async () => {
       await prisma.productVendorReturnRemain.deleteMany({});
     const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
     const deletedVendorReturn = await prisma.vendorReturn.deleteMany({});
-    const deletedVendorReturnRemain = await prisma.vendorReturnRemain.deleteMany(
-      {}
-    );
+    const deletedVendorReturnRemain =
+      await prisma.vendorReturnRemain.deleteMany({});
     const deletedCustomerPayment = await prisma.customerPayment.deleteMany({});
     const updatedProducts = await prisma.product.updateMany({
       data: {
