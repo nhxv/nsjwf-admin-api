@@ -131,17 +131,17 @@ export const findCustomerSale = async (customerName: string, date: string) => {
       },
     });
     for (let i = 0; i < customerSolds.length; i++) {
-      const saleReturn = await prisma.customerSaleReturn.findUnique({
+      const returnRemain = await prisma.customerReturnRemain.findUnique({
         where: {
-          sale_code: customerSolds[i].code,
+          order_code: customerSolds[i].code,
         },
         include: {
-          productCustomerSaleReturns: true,
+          productCustomerReturnRemains: true,
         },
       });
       if (
-        !saleReturn ||
-        saleReturn.productCustomerSaleReturns.find(
+        !returnRemain ||
+        returnRemain.productCustomerReturnRemains.find(
           (p) => !new Fraction(p.quantity).equals(0)
         )
       ) {
@@ -298,12 +298,12 @@ export const createCustomerOrder = async (
       throw `Please don't attack us.`;
     }
     // Validate unique unit code
-    const unitCodes = new Map();
+    const unitCodes = new Set();
     for (const po of customerOrderData.productCustomerOrders) {
       if (unitCodes.has(po.unitCode)) {
         throw `Duplicated ${po.unitCode}.`;
       } else {
-        unitCodes.set(po.unitCode, true);
+        unitCodes.add(po.unitCode);
       }
     }
     const employee = await prisma.account.findUniqueOrThrow({
@@ -492,12 +492,12 @@ export const updateCustomerOrder = async (
       throw `Please don't attack us.`;
     }
     // Validate unique unit code
-    const unitCodes = new Map();
+    const unitCodes = new Set();
     for (const po of customerOrderData.productCustomerOrders) {
       if (unitCodes.has(po.unitCode)) {
         throw `Duplicated ${po.unitCode}.`;
       } else {
-        unitCodes.set(po.unitCode, true);
+        unitCodes.add(po.unitCode);
       }
     }
     const employee = await prisma.account.findUniqueOrThrow({

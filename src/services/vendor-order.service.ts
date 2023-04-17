@@ -109,17 +109,17 @@ export const findVendorSale = async (vendorName: string, date: string) => {
       },
     });
     for (let i = 0; i < vendorSolds.length; i++) {
-      const saleReturn = await prisma.vendorSaleReturn.findUnique({
+      const returnRemain = await prisma.vendorReturnRemain.findUnique({
         where: {
-          sale_code: vendorSolds[i].code,
+          order_code: vendorSolds[i].code,
         },
         include: {
-          productVendorSaleReturns: true,
+          productVendorReturnRemains: true,
         },
       });
       if (
-        !saleReturn ||
-        saleReturn.productVendorSaleReturns.find(
+        !returnRemain ||
+        returnRemain.productVendorReturnRemains.find(
           (p) => !new Fraction(p.quantity).equals(0)
         )
       ) {
