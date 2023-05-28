@@ -435,6 +435,7 @@ export const createCustomerOrder = async (
             },
           });
         }
+        return newCustomerOrder;
       });
     } else {
       // create customer order
