@@ -350,8 +350,8 @@ export const createCustomerOrder = async (
 
         // check for valid unit price when complete order
         for (const po of productOrders) {
-          if (po.unit_price.comparedTo(0) !== 1) {
-            throw `Price needs to be a positive number.`;
+          if (po.unit_price.comparedTo(0) < 0) {
+            throw `Price needs to be at least 0.`;
           }
         }
 
@@ -651,8 +651,8 @@ export const updateCustomerOrder = async (
 
         for (const productOrder of productOrders) {
           // validate unit price when completing order
-          if (productOrder.unit_price.comparedTo(0) !== 1) {
-            throw `Price needs to be a positive number.`;
+          if (productOrder.unit_price.comparedTo(0) < 0) {
+            throw `Price needs to be at least 0.`;
           }
 
           // get current stock
