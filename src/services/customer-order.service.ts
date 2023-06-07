@@ -218,30 +218,23 @@ export const reportCustomerSale = async () => {
       });
     }
     for (const customerReturn of returns) {
-      let found = false;
-      for (let i = 0; i < reports.length; i++) {
-        if (customerReturn.customer_name === reports[i].customer_name) {
-          const newRefund = customerReturn.refund;
-          if (newRefund <= reports[i].sale) {
-            found = true;
-            reports[i] = {
-              ...reports[i],
-              refund: Decimal.sum(reports[i].refund, newRefund),
-            };
-            break;
-          }
+      const matchingIndex = reports.findIndex((r) => r.customer_name === customerReturn.customer_name);
+      if (matchingIndex !== -1) {
+        const newRefund = customerReturn.refund;
+        if (newRefund <= reports[matchingIndex].sale) {
+          reports[matchingIndex] = {
+            ...reports[matchingIndex],
+            refund: Decimal.sum(reports[matchingIndex].refund, newRefund),
+          };
         }
       }
-      if (!found) {
-        reports.push({
-          is_test: false,
-          order_code: "NONE",
-          customer_name: customerReturn.customer_name,
-          sale: -1,
-          refund: customerReturn.refund,
-          date: customerReturn.created_at,
-          productCustomerOrders: [],
-        });
+      // This else is Debug only, this can be removed or raised to frontend somehow.
+      else {
+        console.log("No matching completed order despite having returns. This is a bug.");
+        console.log(`Can't find '${customerReturn.customer_name}' inside reports.`)
+        console.log(reports);
+        // I choose not to break here cuz we'll try to pretend to user that everything is alright.
+        //break;
       }
     }
     return reports;
