@@ -218,7 +218,9 @@ export const reportCustomerSale = async () => {
       });
     }
     for (const customerReturn of returns) {
-      const matchingIndex = reports.findIndex((r) => r.customer_name === customerReturn.customer_name);
+      const matchingIndex = reports.findIndex(
+        (r) => r.customer_name === customerReturn.customer_name
+      );
       if (matchingIndex !== -1) {
         const newRefund = customerReturn.refund;
         if (newRefund <= reports[matchingIndex].sale) {
@@ -230,8 +232,12 @@ export const reportCustomerSale = async () => {
       }
       // This else is Debug only, this can be removed or raised to frontend somehow.
       else {
-        console.log("No matching completed order despite having returns. This is a bug.");
-        console.log(`Can't find '${customerReturn.customer_name}' inside reports.`)
+        console.log(
+          "No matching completed order despite having returns. This is a bug."
+        );
+        console.log(
+          `Can't find '${customerReturn.customer_name}' inside reports.`
+        );
         console.log(reports);
         // I choose not to break here cuz we'll try to pretend to user that everything is alright.
         //break;
@@ -1109,10 +1115,10 @@ export const revertCustomerOrder = async (code: string) => {
       const isReturned = await prisma.customerReturn.findFirst({
         where: {
           order_code: code,
-        }
+        },
       });
       if (isReturned) {
-        throw "Can't revert order because it has at least one return."
+        throw "Can't revert order because it has at least one return.";
       }
       // revert payment
       const deletedCustomerPayment = await prisma.customerPayment.delete({

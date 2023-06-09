@@ -101,7 +101,7 @@ export const createCustomerReturn = async (
         for (const productSold of orderSold.productCustomerOrders) {
           // In the for loop after this, we iterate over productReturns to convert this qty field into a fraction/string field.
           // However, productReturns only contains products that are being returned, while productCustomerOrders
-          // has ALL products in an order. So it is possible that a return doesn't return all products, 
+          // has ALL products in an order. So it is possible that a return doesn't return all products,
           // maybe just one out of 2 different products. This will remain Integer so can't insert to return table.
           // The fix here is to convert qty to String by default.
           newProductReturnRemains.set(productSold.unit_code, {
