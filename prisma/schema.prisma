@@ -203,7 +203,7 @@ model CustomerOrder {
   is_doing              Boolean                @default(false)
   manual_code           String?                @unique @db.VarChar(6)
   payment_code          String?                @unique @db.VarChar(20)
-  note                  String?                @default("") @db.VarChar(128)
+  note                  String?                @db.VarChar(128)
   customerPayment       CustomerPayment?       @relation(fields: [payment_code], references: [code])
   productCustomerOrders ProductCustomerOrder[]
   customerReturns       CustomerReturn[]
