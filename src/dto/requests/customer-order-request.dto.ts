@@ -15,6 +15,7 @@ export interface CustomerOrderRequestDto {
   updatedAt?: Date;
   manualCode?: string;
   id?: number;
+  note?: string;
 }
 
 export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
@@ -53,4 +54,5 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
   manualCode: Joi.string().allow("").max(6).regex(NUMBER_REGEX),
+  note: Joi.string().allow("").max(128),
 });

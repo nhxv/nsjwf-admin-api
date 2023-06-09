@@ -364,6 +364,7 @@ export const createCustomerOrder = async (
             manual_code: customerOrderData.manualCode
               ? customerOrderData.manualCode
               : null,
+            note: customerOrderData.note,
             payment_code: code,
             productCustomerOrders: {
               create: productOrders,
@@ -447,6 +448,7 @@ export const createCustomerOrder = async (
           manual_code: customerOrderData.manualCode
             ? customerOrderData.manualCode
             : null,
+          note: customerOrderData.note,
           productCustomerOrders: {
             create: productOrders,
           },
@@ -557,6 +559,7 @@ export const updateCustomerOrder = async (
               manual_code: customerOrderData.manualCode
                 ? customerOrderData.manualCode
                 : null,
+              note: customerOrderData.note,
               expected_at: convertLocalExpected(customerOrderData.expectedAt),
               payment_code: customerOrderData.code,
             },
@@ -757,6 +760,7 @@ export const updateCustomerOrder = async (
               manual_code: customerOrderData.manualCode
                 ? customerOrderData.manualCode
                 : null,
+              note: customerOrderData.note,
               expected_at: convertLocalExpected(customerOrderData.expectedAt),
             },
           });
