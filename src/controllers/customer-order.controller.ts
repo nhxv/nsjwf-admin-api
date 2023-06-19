@@ -94,9 +94,27 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      let [code, date, customerName, productName] = ["", "", "", ""];
+      if (Object.keys(req.query).length === 0) {
+        date = "";
+      } else if ("code" in req.query) {
+        code = decodeURIComponent(req.query.code as string);
+      } else {
+        if ("date" in req.query) {
+          date = req.query.date as string;
+        }
+        if ("customer" in req.query) {
+          customerName = decodeURIComponent(req.query.customer as string);
+        }
+        if ("product" in req.query) {
+          productName = decodeURIComponent(req.query.product as string);
+        }
+      }
       const response: any = await findCustomerSale(
-        decodeURIComponent(req.query.keyword as string),
-        req.query.date as string
+        code,
+        date,
+        customerName,
+        productName
       );
       res.send(
         response.map((order) => {
