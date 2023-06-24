@@ -103,33 +103,71 @@ export const findCustomerOrderByCode = async (code: string) => {
   }
 };
 
-export const findCustomerSale = async (customerName: string, date: string) => {
+export const findCustomerSale = async (
+  code: string,
+  date: string,
+  customerName: string,
+  productName: string
+) => {
   try {
-    const { start, end } = convertLocalInterval(new Date(date));
-    const customerSolds = await prisma.customerOrder.findMany({
-      where: {
-        customer_name: {
-          contains: customerName,
-          mode: "insensitive",
+    // Construct dynamic query for prisma.
+    // Note that there's no known way to not select an entry based on a condition on a relation
+    // we'll have to manually filter out later on.
+    const whereClause = new Map();
+    const includeProductCustomerOrderClause = new Map();
+
+    // Prefill with default stuff.
+    whereClause.set("status", OrderStatus.COMPLETED);
+    includeProductCustomerOrderClause.set("orderBy", {
+      product_name: "asc",
+    });
+
+    if (code) {
+      whereClause.set("OR", [
+        {
+          code: code,
         },
-        status: OrderStatus.COMPLETED,
-        updated_at: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        productCustomerOrders: {
-          orderBy: {
-            product_name: "asc",
+        // This might be useful to check for continuity of the code.
+        {
+          manual_code: {
+            contains: code,
           },
         },
+      ]);
+    } else {
+      if (date) {
+        const { start, end } = convertLocalInterval(new Date(date));
+        whereClause.set("updated_at", { gte: start, lte: end });
+      }
+      if (customerName)
+        whereClause.set("customer_name", {
+          contains: customerName,
+          mode: "insensitive",
+        });
+      if (productName) {
+        includeProductCustomerOrderClause.set("where", {
+          product_name: {
+            contains: productName,
+            mode: "insensitive",
+          },
+        });
+      }
+    }
+    let result = await prisma.customerOrder.findMany({
+      where: Object.fromEntries(whereClause),
+      include: {
+        productCustomerOrders: Object.fromEntries(
+          includeProductCustomerOrderClause
+        ),
         customerPayment: true,
       },
       orderBy: {
         updated_at: "asc",
       },
     });
+    const customerSolds = result.filter(
+      (co) => co.productCustomerOrders.length > 0
+    );
     for (let i = 0; i < customerSolds.length; i++) {
       const returnRemain = await prisma.customerReturnRemain.findUnique({
         where: {
