@@ -20,6 +20,7 @@ import {
   updateCustomerOrder,
   updatePriority,
 } from "./../services/customer-order.service";
+import { CustomerSaleResponseDto } from "../dto/responses/customer-sale-response.dto";
 
 const router = Router();
 
@@ -118,11 +119,12 @@ router.get(
       );
       res.send(
         response.map((order) => {
-          const orderRes: CustomerOrderResponseDto = {
+          const orderRes: CustomerSaleResponseDto = {
             customerName: order.customer_name,
             isTest: order.is_test,
-            code: order.code,
-            status: order.status,
+            orderCode: order.order_code,
+            sale: order.sale,
+            refund: order.refund,
             productCustomerOrders: order.productCustomerOrders.map((po) => {
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
@@ -132,14 +134,12 @@ router.get(
               };
               return poRes;
             }),
-            expectedAt: order.expected_at,
-            assignTo: order.assign_to,
-            isDoing: order.is_doing,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
+            // For now we don't need to provide returns detail, but maybe later.
+            //createdAt: order.created_at,
+            updatedAt: order.date,
             fullReturn: !!order.fullReturn,
             manualCode: order.manual_code,
-            paymentStatus: order.customerPayment.status,
+            paymentStatus: order.payment_status,
           };
           return orderRes;
         })
