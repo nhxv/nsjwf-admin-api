@@ -169,9 +169,9 @@ export const findCustomerSale = async (
     const customerSolds = result.filter(
       (co) => co.productCustomerOrders.length > 0
     );
-    
+
     const reports = customerSolds.map((sold) => {
-      return ({ 
+      return {
         is_test: sold.is_test,
         order_code: sold.code,
         manual_code: sold.manual_code ? sold.manual_code : "",
@@ -182,15 +182,15 @@ export const findCustomerSale = async (
         ),
         refund: sold.customerReturns.reduce(
           // Not sure why curr.refund is a string when it is supposed to be a number.
-          (prev, curr: any) => prev + +curr.refund, 
+          (prev, curr: any) => prev + +curr.refund,
           0
         ),
         fullReturn: false,
         date: sold.updated_at,
         payment_status: sold.customerPayment.status,
-        productCustomerOrders: sold.productCustomerOrders, 
-      })
-    })
+        productCustomerOrders: sold.productCustomerOrders,
+      };
+    });
 
     // Check whether the order is fully returned (can't return if there's nothing to return left)
     for (let i = 0; i < reports.length; i++) {
