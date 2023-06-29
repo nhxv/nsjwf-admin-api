@@ -160,15 +160,40 @@ export const findCustomerSale = async (
           includeProductCustomerOrderClause
         ),
         customerPayment: true,
+        customerReturns: true,
       },
       orderBy: {
-        updated_at: "asc",
+        updated_at: "desc",
       },
     });
     const customerSolds = result.filter(
       (co) => co.productCustomerOrders.length > 0
     );
-    for (let i = 0; i < customerSolds.length; i++) {
+
+    const reports = customerSolds.map((sold) => {
+      return {
+        is_test: sold.is_test,
+        order_code: sold.code,
+        manual_code: sold.manual_code ? sold.manual_code : "",
+        customer_name: sold.customer_name,
+        sale: sold.productCustomerOrders.reduce(
+          (prev, curr: any) => prev + curr.quantity * curr.unit_price,
+          0
+        ),
+        refund: sold.customerReturns.reduce(
+          // Not sure why curr.refund is a string when it is supposed to be a number.
+          (prev, curr: any) => prev + +curr.refund,
+          0
+        ),
+        fullReturn: false,
+        date: sold.updated_at,
+        payment_status: sold.customerPayment.status,
+        productCustomerOrders: sold.productCustomerOrders,
+      };
+    });
+
+    // Check whether the order is fully returned (can't return if there's nothing to return left)
+    for (let i = 0; i < reports.length; i++) {
       const returnRemain = await prisma.customerReturnRemain.findUnique({
         where: {
           order_code: customerSolds[i].code,
@@ -183,12 +208,12 @@ export const findCustomerSale = async (
           (p) => !new Fraction(p.quantity).equals(0)
         )
       ) {
-        customerSolds[i]["fullReturn"] = false;
+        reports[i].fullReturn = false;
       } else {
-        customerSolds[i]["fullReturn"] = true;
+        reports[i].fullReturn = true;
       }
     }
-    return customerSolds;
+    return reports;
   } catch (error) {
     throw new createError.BadRequest(
       "Cannot find customer sale with the given data."
@@ -196,6 +221,7 @@ export const findCustomerSale = async (
   }
 };
 
+// DEPRECATED
 export const reportCustomerSale = async () => {
   try {
     // find daily solds
