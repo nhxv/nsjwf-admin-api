@@ -163,7 +163,7 @@ export const findCustomerSale = async (
         customerReturns: true,
       },
       orderBy: {
-        updated_at: "asc",
+        updated_at: "desc",
       },
     });
     const customerSolds = result.filter(
