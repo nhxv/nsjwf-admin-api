@@ -308,7 +308,7 @@ router.put(
 // revert customer order by code
 router.put(
   `/customer-orders/revert/:code`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER])],
+  [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await revertCustomerOrder(req.params.code);
