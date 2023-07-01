@@ -165,6 +165,8 @@ export const findCustomerSale = async (
       orderBy: {
         updated_at: "desc",
       },
+      // Limit this because it's very possible to take all completed orders.
+      take: 100,
     });
     const customerSolds = result.filter(
       (co) => co.productCustomerOrders.length > 0
