@@ -114,13 +114,7 @@ export const findCustomerSale = async (
     // Note that there's no known way to not select an entry based on a condition on a relation
     // we'll have to manually filter out later on.
     const whereClause = new Map();
-    const includeProductCustomerOrderClause = new Map();
-
-    // Prefill with default stuff.
     whereClause.set("status", OrderStatus.COMPLETED);
-    includeProductCustomerOrderClause.set("orderBy", {
-      product_name: "asc",
-    });
 
     if (code) {
       whereClause.set("OR", [
@@ -144,21 +138,15 @@ export const findCustomerSale = async (
           contains: customerName,
           mode: "insensitive",
         });
-      if (productName) {
-        includeProductCustomerOrderClause.set("where", {
-          product_name: {
-            contains: productName,
-            mode: "insensitive",
-          },
-        });
-      }
     }
     let result = await prisma.customerOrder.findMany({
       where: Object.fromEntries(whereClause),
       include: {
-        productCustomerOrders: Object.fromEntries(
-          includeProductCustomerOrderClause
-        ),
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          },
+        },
         customerPayment: true,
       },
       orderBy: {
@@ -167,8 +155,10 @@ export const findCustomerSale = async (
       // Limit this because it's very possible to take all completed orders.
       take: 100,
     });
-    const customerSolds = result.filter(
-      (co) => co.productCustomerOrders.length > 0
+    const customerSolds = result.filter((co) =>
+      co.productCustomerOrders.some((pco) =>
+        pco.product_name.includes(productName)
+      )
     );
 
     const reports = customerSolds.map((sold) => {
