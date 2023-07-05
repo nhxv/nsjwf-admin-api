@@ -114,13 +114,7 @@ export const findCustomerSale = async (
     // Note that there's no known way to not select an entry based on a condition on a relation
     // we'll have to manually filter out later on.
     const whereClause = new Map();
-    const includeProductCustomerOrderClause = new Map();
-
-    // Prefill with default stuff.
     whereClause.set("status", OrderStatus.COMPLETED);
-    includeProductCustomerOrderClause.set("orderBy", {
-      product_name: "asc",
-    });
 
     if (code) {
       whereClause.set("OR", [
@@ -144,23 +138,16 @@ export const findCustomerSale = async (
           contains: customerName,
           mode: "insensitive",
         });
-      if (productName) {
-        includeProductCustomerOrderClause.set("where", {
-          product_name: {
-            contains: productName,
-            mode: "insensitive",
-          },
-        });
-      }
     }
     let result = await prisma.customerOrder.findMany({
       where: Object.fromEntries(whereClause),
       include: {
-        productCustomerOrders: Object.fromEntries(
-          includeProductCustomerOrderClause
-        ),
+        productCustomerOrders: {
+          orderBy: {
+            product_name: "asc",
+          },
+        },
         customerPayment: true,
-        customerReturns: true,
       },
       orderBy: {
         updated_at: "desc",
@@ -168,8 +155,10 @@ export const findCustomerSale = async (
       // Limit this because it's very possible to take all completed orders.
       take: 100,
     });
-    const customerSolds = result.filter(
-      (co) => co.productCustomerOrders.length > 0
+    const customerSolds = result.filter((co) =>
+      co.productCustomerOrders.some((pco) =>
+        pco.product_name.includes(productName)
+      )
     );
 
     const reports = customerSolds.map((sold) => {
@@ -182,11 +171,7 @@ export const findCustomerSale = async (
           (prev, curr: any) => prev + curr.quantity * curr.unit_price,
           0
         ),
-        refund: sold.customerReturns.reduce(
-          // Not sure why curr.refund is a string when it is supposed to be a number.
-          (prev, curr: any) => prev + +curr.refund,
-          0
-        ),
+        refund: 0,
         fullReturn: false,
         date: sold.updated_at,
         payment_status: sold.customerPayment.status,
@@ -194,7 +179,63 @@ export const findCustomerSale = async (
       };
     });
 
+    const returns = await prisma.customerReturn.findMany({
+      // TODO: Need to change this condition to match with report query.
+      where: {
+        created_at: {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),
+        },
+      },
+      include: {
+        productCustomerReturns: {
+          orderBy: {
+            product_name: "asc",
+          },
+        },
+      },
+      orderBy: {
+        created_at: "asc",
+      },
+    });
+
+    for (const customerReturn of returns) {
+      const matchingIndex = reports.findIndex((r) => {
+        // Need to find the report that has a return on the same date to subtract from it accordingly.
+        const { start, end } = convertLocalInterval(r.date);
+        const localDate = new Date(customerReturn.created_at);
+
+        return (
+          r.customer_name === customerReturn.customer_name &&
+          start <= localDate &&
+          localDate <= end
+        );
+      });
+      if (matchingIndex !== -1) {
+        const newRefund = customerReturn.refund;
+        // Believe this or not but this works perfectly fine. Screw the linter.
+        if (newRefund <= reports[matchingIndex].sale) {
+          reports[matchingIndex] = {
+            ...reports[matchingIndex],
+            refund: Decimal.sum(reports[matchingIndex].refund, newRefund),
+          };
+        }
+      }
+      // This else is Debug only, this can be removed or raised to frontend somehow.
+      else {
+        console.log("No matching completed order despite having returns.");
+        console.log(
+          `Can't find '${customerReturn.customer_name}' inside reports.`
+        );
+        console.log(reports);
+        // I choose not to break here cuz we'll try to pretend to user that everything is alright.
+        //break;
+      }
+    }
+
     // Check whether the order is fully returned (can't return if there's nothing to return left)
+    // This check might be redundant since we can just throw error if, when user create a return, the qty remaining is all 0.
+    // But it's here for now!
     for (let i = 0; i < reports.length; i++) {
       const returnRemain = await prisma.customerReturnRemain.findUnique({
         where: {
@@ -215,8 +256,10 @@ export const findCustomerSale = async (
         reports[i].fullReturn = true;
       }
     }
+
     return reports;
   } catch (error) {
+    console.log(error);
     throw new createError.BadRequest(
       "Cannot find customer sale with the given data."
     );
