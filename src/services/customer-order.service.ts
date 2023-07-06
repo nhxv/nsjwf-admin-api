@@ -161,8 +161,10 @@ export const findCustomerSale = async (
       )
     );
 
-    const reports = customerSolds.map((sold) => {
-      return {
+    // Apparently .map() won't work cuz TS is BS :)
+    const reports = [];
+    for (const sold of customerSolds) {
+      reports.push({
         is_test: sold.is_test,
         order_code: sold.code,
         manual_code: sold.manual_code ? sold.manual_code : "",
@@ -176,8 +178,8 @@ export const findCustomerSale = async (
         date: sold.updated_at,
         payment_status: sold.customerPayment.status,
         productCustomerOrders: sold.productCustomerOrders,
-      };
-    });
+      });
+    }
 
     const returns = await prisma.customerReturn.findMany({
       // TODO: Need to change this condition to match with report query.
@@ -201,19 +203,10 @@ export const findCustomerSale = async (
 
     for (const customerReturn of returns) {
       const matchingIndex = reports.findIndex((r) => {
-        // Need to find the report that has a return on the same date to subtract from it accordingly.
-        const { start, end } = convertLocalInterval(r.date);
-        const localDate = new Date(customerReturn.created_at);
-
-        return (
-          r.customer_name === customerReturn.customer_name &&
-          start <= localDate &&
-          localDate <= end
-        );
+        return r.customer_name === customerReturn.customer_name;
       });
       if (matchingIndex !== -1) {
         const newRefund = customerReturn.refund;
-        // Believe this or not but this works perfectly fine. Screw the linter.
         if (newRefund <= reports[matchingIndex].sale) {
           reports[matchingIndex] = {
             ...reports[matchingIndex],
