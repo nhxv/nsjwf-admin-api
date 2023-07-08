@@ -14,6 +14,16 @@ export const findAllProducts = async () => {
       orderBy: {
         name: "asc",
       },
+      include: {
+        units: {
+          select: {
+            code: true,
+          },
+          orderBy: {
+            code: "asc",
+          }
+        }
+      }
     });
     return products;
   } catch (error) {
