@@ -21,9 +21,9 @@ export const findAllProducts = async () => {
           },
           orderBy: {
             code: "asc",
-          }
-        }
-      }
+          },
+        },
+      },
     });
     return products;
   } catch (error) {
