@@ -708,48 +708,6 @@ export const updateCustomerOrder = async (
                 },
               },
             });
-
-            // get current stock
-            const currentStock = await tx.stock.findUniqueOrThrow({
-              where: {
-                product_name: productOrder.product_name,
-              },
-            });
-
-            // get unit ratio
-            const unit = await tx.unit.findUniqueOrThrow({
-              where: {
-                code: productOrder.unit_code,
-              },
-            });
-            const newRatio = new Fraction(unit.ratio);
-            const productOrderQuantity = newRatio.mul(
-              new Fraction(productOrder.quantity)
-            );
-            const currentStockQuantity = new Fraction(currentStock.quantity);
-            const newStockQuantity =
-              currentStockQuantity.add(productOrderQuantity);
-            const stockQuantityChange =
-              newStockQuantity.sub(currentStockQuantity);
-
-            const updatedStock = await tx.stock.update({
-              where: {
-                product_name: productOrder.product_name,
-              },
-              data: {
-                quantity: newStockQuantity.toFraction(),
-                updated_at: time,
-              },
-            });
-
-            // create stock change
-            const addedStockChange = await tx.stockChange.create({
-              data: {
-                stock_id: updatedStock.id,
-                change_id: addedStockChangeHistory.id,
-                quantity_change: stockQuantityChange.toFraction(),
-              },
-            });
           }
         }
 
@@ -777,6 +735,34 @@ export const updateCustomerOrder = async (
             new Fraction(productOrder.quantity)
           );
           const currentStockQuantity = new Fraction(currentStock.quantity);
+          const newStockQuantity = currentStockQuantity.sub(
+            newProductOrderQuantity
+          );
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
+
+          if (newStockQuantity.compare(0) < 0) {
+            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
+          }
+
+          // update stock
+          const updatedStock = await tx.stock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: newStockQuantity.toFraction(),
+              updated_at: time,
+            },
+          });
+          // create stock change
+          const addedStockChange = await tx.stockChange.create({
+            data: {
+              stock_id: updatedStock.id,
+              change_id: addedStockChangeHistory.id,
+              quantity_change: stockQuantityChange.toFraction(),
+            },
+          });
 
           // find current product order
           const currentProductOrder = existingProductOrders.get(
@@ -813,34 +799,6 @@ export const updateCustomerOrder = async (
               },
             });
           }
-
-          const newStockQuantity = currentStockQuantity.sub(
-            newProductOrderQuantity
-          );
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
-
-          if (newStockQuantity.compare(0) < 0) {
-            throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
-          }
-          // update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
-          // create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
         }
       });
     } else {
