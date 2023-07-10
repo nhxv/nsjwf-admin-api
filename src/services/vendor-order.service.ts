@@ -147,6 +147,15 @@ export const createVendorOrder = async (
     ) {
       throw `Please don't attack us.`;
     }
+    // Validate unique unit code
+    const unitCodes = new Set();
+    for (const po of vendorOrderData.productVendorOrders) {
+      if (unitCodes.has(po.unitCode)) {
+        throw `Duplicated ${po.unitCode}.`;
+      } else {
+        unitCodes.add(po.unitCode);
+      }
+    }
     const { code, time } = generateCode();
     const productOrders = vendorOrderData.productVendorOrders.map(
       (productOrder) => ({
@@ -163,8 +172,15 @@ export const createVendorOrder = async (
     if (vendorOrderData.status === OrderStatus.COMPLETED) {
       // if vendor order is completed, update stock
       return await prisma.$transaction(async (tx) => {
+        // check for valid unit price when complete order
+        for (const po of productOrders) {
+          if (po.unit_price.comparedTo(0) < 0) {
+            throw `Price needs to be at least 0.`;
+          }
+        }
+
         // create new order
-        const newVendorOrder = await prisma.vendorOrder.create({
+        const newVendorOrder = await tx.vendorOrder.create({
           data: {
             code: code,
             vendor_name: vendorOrderData.vendorName,
@@ -242,6 +258,7 @@ export const createVendorOrder = async (
             },
           });
         }
+        return newVendorOrder;
       });
     } else {
       const newVendorOrder = await prisma.vendorOrder.create({
@@ -290,7 +307,15 @@ export const updateVendorOrder = async (
     if (vendorOrderData.code !== code) {
       throw `Please don't attack us.`;
     }
-
+    // Validate unique unit code
+    const unitCodes = new Set();
+    for (const po of vendorOrderData.productVendorOrders) {
+      if (unitCodes.has(po.unitCode)) {
+        throw `Duplicated ${po.unitCode}.`;
+      } else {
+        unitCodes.add(po.unitCode);
+      }
+    }
     const time = generateCurrentTime();
     const productOrders = vendorOrderData.productVendorOrders.map(
       (productOrder) => ({
@@ -359,31 +384,12 @@ export const updateVendorOrder = async (
       }
 
       for (const productOrder of productOrders) {
-        // upsert product vendor order
-        const updatedProductOrder = await tx.productVendorOrder.upsert({
-          where: {
-            ProductVendorOrder_key: {
-              product_name: productOrder.product_name,
-              order_code: productOrder.order_code,
-            },
-          },
-          update: {
-            quantity: productOrder.quantity,
-            unit_price: productOrder.unit_price,
-            updated_at: productOrder.updated_at,
-          },
-          create: {
-            product_name: productOrder.product_name,
-            order_code: productOrder.order_code,
-            quantity: productOrder.quantity,
-            unit_code: productOrder.unit_code,
-            unit_price: productOrder.unit_price,
-            created_at: time,
-            updated_at: time,
-          },
-        });
-
         if (isCompleted) {
+          // validate unit price when completing order
+          if (productOrder.unit_price.comparedTo(0) < 0) {
+            throw `Price needs to be at least 0.`;
+          }
+
           // 2. get current stock
           const currentStock = await tx.stock.findUniqueOrThrow({
             where: {
@@ -437,6 +443,30 @@ export const updateVendorOrder = async (
             },
           });
         }
+
+        // upsert product vendor order
+        const updatedProductOrder = await tx.productVendorOrder.upsert({
+          where: {
+            ProductVendorOrder_key: {
+              product_name: productOrder.product_name,
+              order_code: productOrder.order_code,
+            },
+          },
+          update: {
+            quantity: productOrder.quantity,
+            unit_price: productOrder.unit_price,
+            updated_at: productOrder.updated_at,
+          },
+          create: {
+            product_name: productOrder.product_name,
+            order_code: productOrder.order_code,
+            quantity: productOrder.quantity,
+            unit_code: productOrder.unit_code,
+            unit_price: productOrder.unit_price,
+            created_at: time,
+            updated_at: time,
+          },
+        });
       }
     });
   } catch (error) {
