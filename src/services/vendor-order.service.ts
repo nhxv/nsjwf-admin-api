@@ -169,9 +169,10 @@ export const createVendorOrder = async (
       })
     );
 
-    if (vendorOrderData.status === OrderStatus.COMPLETED) {
-      // if vendor order is completed, update stock
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
+      const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
+
+      if (isCompleted) {
         // check for valid unit price when complete order
         for (const po of productOrders) {
           if (po.unit_price.comparedTo(0) < 0) {
@@ -179,28 +180,12 @@ export const createVendorOrder = async (
           }
         }
 
-        // create new order
-        const newVendorOrder = await tx.vendorOrder.create({
-          data: {
-            code: code,
-            vendor_name: vendorOrderData.vendorName,
-            status: vendorOrderData.status,
-            created_at: time,
-            updated_at: time,
-            expected_at: convertLocalExpected(vendorOrderData.expectedAt),
-            is_test: vendorOrderData.isTest,
-            is_sold: true,
-            productVendorOrders: {
-              create: productOrders,
-            },
-          },
-        });
-
         // 1. create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
             created_at: time,
             reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
           },
         });
 
@@ -223,10 +208,10 @@ export const createVendorOrder = async (
             new Fraction(productOrder.quantity)
           );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const stockQuantityChange =
-            productOrderQuantity.sub(currentStockQuantity);
           const newStockQuantity =
             currentStockQuantity.add(productOrderQuantity);
+          const stockQuantityChange =
+            newStockQuantity.sub(currentStockQuantity);
 
           // 4. update stock
           const updatedStock = await tx.stock.update({
@@ -258,10 +243,10 @@ export const createVendorOrder = async (
             },
           });
         }
-        return newVendorOrder;
-      });
-    } else {
-      const newVendorOrder = await prisma.vendorOrder.create({
+      }
+
+      // create new order
+      const newVendorOrder = await tx.vendorOrder.create({
         data: {
           code: code,
           vendor_name: vendorOrderData.vendorName,
@@ -270,14 +255,14 @@ export const createVendorOrder = async (
           updated_at: time,
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
-          is_sold: false,
+          is_sold: isCompleted,
           productVendorOrders: {
             create: productOrders,
           },
         },
       });
       return newVendorOrder;
-    }
+    });
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -329,7 +314,8 @@ export const updateVendorOrder = async (
     );
     return await prisma.$transaction(async (tx) => {
       const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
-      // update vendor order table if that order IS NOT completed
+
+      // update vendor order table if that order IS NOT completed already
       let existingOrder;
       try {
         existingOrder = await tx.vendorOrder.update({
@@ -379,6 +365,7 @@ export const updateVendorOrder = async (
           data: {
             created_at: time,
             reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
           },
         });
       }
