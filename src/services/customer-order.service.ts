@@ -525,7 +525,7 @@ export const createCustomerOrder = async (
             ? customerOrderData.manualCode
             : null,
           note: customerOrderData.note,
-          payment_code: code,
+          payment_code: isCompleted ? code : undefined,
           productCustomerOrders: {
             create: productOrders,
           },
