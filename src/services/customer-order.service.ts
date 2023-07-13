@@ -525,7 +525,7 @@ export const createCustomerOrder = async (
             ? customerOrderData.manualCode
             : null,
           note: customerOrderData.note,
-          //payment_code: code,
+          payment_code: code,
           productCustomerOrders: {
             create: productOrders,
           },
@@ -593,6 +593,20 @@ export const updateCustomerOrder = async (
     return await prisma.$transaction(async (tx) => {
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
 
+      // NOTE: Temporary fix.
+      if (isCompleted) {
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: customerOrderData.isTest
+              ? PaymentStatus.CASH
+              : PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+      }
+
       // update customer order if that order IS NOT already completed
       let existingOrder;
       try {
@@ -623,7 +637,7 @@ export const updateCustomerOrder = async (
               : null,
             note: customerOrderData.note,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
-            //payment_code: isCompleted ? customerOrderData.code : undefined,
+            payment_code: isCompleted ? customerOrderData.code : undefined,
           },
         });
       } catch (e) {
@@ -659,16 +673,16 @@ export const updateCustomerOrder = async (
       // create payment & stock change history
       let addedStockChangeHistory;
       if (isCompleted) {
-        const newCustomerPayment = await tx.customerPayment.create({
-          data: {
-            code: code,
-            status: customerOrderData.isTest
-              ? PaymentStatus.CASH
-              : PaymentStatus.RECEIVABLE,
-            created_at: time,
-            updated_at: time,
-          },
-        });
+        // const newCustomerPayment = await tx.customerPayment.create({
+        //   data: {
+        //     code: code,
+        //     status: customerOrderData.isTest
+        //       ? PaymentStatus.CASH
+        //       : PaymentStatus.RECEIVABLE,
+        //     created_at: time,
+        //     updated_at: time,
+        //   },
+        // });
 
         addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
@@ -1067,7 +1081,7 @@ export const revertCustomerOrder = async (code: string) => {
         data: {
           status: OrderStatus.DELIVERED,
           is_sold: false,
-          //payment_code: null,
+          payment_code: null,
         },
       });
 
