@@ -21,6 +21,10 @@ import {
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
+import {
+  CustomerSaleRequestDto,
+  customerSaleSchema,
+} from "../dto/requests/customer-sale-request.dto";
 
 export const findDailyCustomerOrder = async () => {
   try {
@@ -104,12 +108,12 @@ export const findCustomerOrderByCode = async (code: string) => {
 };
 
 export const findCustomerSale = async (
-  code: string,
-  date: string,
-  customerName: string,
-  productName: string
+  searchObject: CustomerSaleRequestDto
 ) => {
   try {
+    const { code, date, customer, product } =
+      await customerSaleSchema.validateAsync(searchObject);
+
     // Construct dynamic query for prisma.
     // Note that there's no known way to not select an entry based on a condition on a relation
     // we'll have to manually filter out later on.
@@ -133,9 +137,9 @@ export const findCustomerSale = async (
         const { start, end } = convertLocalInterval(new Date(date));
         whereClause.set("updated_at", { gte: start, lte: end });
       }
-      if (customerName)
+      if (customer)
         whereClause.set("customer_name", {
-          contains: customerName,
+          contains: customer,
           mode: "insensitive",
         });
     }
@@ -157,7 +161,7 @@ export const findCustomerSale = async (
     });
     const customerSolds = result.filter((co) =>
       co.productCustomerOrders.some((pco) =>
-        pco.product_name.includes(productName)
+        pco.product_name.toLowerCase().includes(product.toLowerCase())
       )
     );
 
@@ -252,7 +256,6 @@ export const findCustomerSale = async (
 
     return reports;
   } catch (error) {
-    console.log(error);
     throw new createError.BadRequest(
       "Cannot find customer sale with the given data."
     );

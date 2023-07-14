@@ -95,28 +95,34 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log(req.query);
       let [code, date, customerName, productName] = ["", "", "", ""];
+      // NOTE: The query is already decoded, so special characters are already turn into special characters.
+      // Not entirely sure if there are any issues using these strings directly.
       if (Object.keys(req.query).length === 0) {
         date = "";
       } else if ("code" in req.query) {
-        code = decodeURIComponent(req.query.code as string);
+        // code = decodeURIComponent(req.query.code as string);
+        code = req.query.code as string;
       } else {
         if ("date" in req.query) {
           date = req.query.date as string;
         }
         if ("customer" in req.query) {
-          customerName = decodeURIComponent(req.query.customer as string);
+          // customerName = decodeURIComponent(req.query.customer as string);
+          customerName = req.query.customer as string;
         }
         if ("product" in req.query) {
-          productName = decodeURIComponent(req.query.product as string);
+          // productName = decodeURIComponent(req.query.product as string);
+          productName = req.query.product as string;
         }
       }
-      const response: any = await findCustomerSale(
-        code,
-        date,
-        customerName,
-        productName
-      );
+      const response: any = await findCustomerSale({
+        code: code,
+        date: date,
+        customer: customerName,
+        product: productName,
+      });
       res.send(
         response.map((order) => {
           const orderRes: CustomerSaleResponseDto = {
