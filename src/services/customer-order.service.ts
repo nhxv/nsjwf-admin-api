@@ -422,11 +422,14 @@ export const createCustomerOrder = async (
         order_code: productOrder.orderCode,
         unit_code: productOrder.unitCode,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         created_at: time,
         updated_at: time,
       })
     );
+    console.log(productOrders);
 
     return await prisma.$transaction(async (tx) => {
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
@@ -447,7 +450,8 @@ export const createCustomerOrder = async (
 
         // check for valid unit price when complete order
         for (const po of productOrders) {
-          if (po.unit_price.comparedTo(0) < 0) {
+          // !po for empty order.
+          if (!po || !po.unit_price || po.unit_price.comparedTo(0) < 0) {
             throw `Price needs to be at least 0.`;
           }
         }
@@ -589,7 +593,9 @@ export const updateCustomerOrder = async (
         order_code: customerOrderData.code,
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         updated_at: time,
       })
     );
@@ -699,7 +705,11 @@ export const updateCustomerOrder = async (
       for (const productOrder of productOrders) {
         if (isCompleted) {
           // validate unit price when completing order
-          if (productOrder.unit_price.comparedTo(0) < 0) {
+          if (
+            !productOrder ||
+            !productOrder.unit_price ||
+            productOrder.unit_price.comparedTo(0) < 0
+          ) {
             throw `Price needs to be at least 0.`;
           }
 
