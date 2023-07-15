@@ -429,7 +429,6 @@ export const createCustomerOrder = async (
         updated_at: time,
       })
     );
-    console.log(productOrders);
 
     return await prisma.$transaction(async (tx) => {
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;

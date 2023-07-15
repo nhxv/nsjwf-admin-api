@@ -95,7 +95,6 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log(req.query);
       let [code, date, customerName, productName] = ["", "", "", ""];
       // NOTE: The query is already decoded, so special characters are already turn into special characters.
       // Not entirely sure if there are any issues using these strings directly.
