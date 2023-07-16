@@ -21,6 +21,10 @@ import {
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
+import {
+  CustomerSaleRequestDto,
+  customerSaleSchema,
+} from "../dto/requests/customer-sale-request.dto";
 
 export const findDailyCustomerOrder = async () => {
   try {
@@ -104,12 +108,12 @@ export const findCustomerOrderByCode = async (code: string) => {
 };
 
 export const findCustomerSale = async (
-  code: string,
-  date: string,
-  customerName: string,
-  productName: string
+  searchObject: CustomerSaleRequestDto
 ) => {
   try {
+    const { code, date, customer, product } =
+      await customerSaleSchema.validateAsync(searchObject);
+
     // Construct dynamic query for prisma.
     // Note that there's no known way to not select an entry based on a condition on a relation
     // we'll have to manually filter out later on.
@@ -133,9 +137,9 @@ export const findCustomerSale = async (
         const { start, end } = convertLocalInterval(new Date(date));
         whereClause.set("updated_at", { gte: start, lte: end });
       }
-      if (customerName)
+      if (customer)
         whereClause.set("customer_name", {
-          contains: customerName,
+          contains: customer,
           mode: "insensitive",
         });
     }
@@ -157,7 +161,7 @@ export const findCustomerSale = async (
     });
     const customerSolds = result.filter((co) =>
       co.productCustomerOrders.some((pco) =>
-        pco.product_name.includes(productName)
+        pco.product_name.toLowerCase().includes(product.toLowerCase())
       )
     );
 
@@ -252,7 +256,6 @@ export const findCustomerSale = async (
 
     return reports;
   } catch (error) {
-    console.log(error);
     throw new createError.BadRequest(
       "Cannot find customer sale with the given data."
     );
@@ -419,66 +422,38 @@ export const createCustomerOrder = async (
         order_code: productOrder.orderCode,
         unit_code: productOrder.unitCode,
         quantity: productOrder.quantity,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         created_at: time,
         updated_at: time,
       })
     );
 
-    if (customerOrderData.status === OrderStatus.COMPLETED) {
-      return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
+      const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
+
+      if (isCompleted) {
         // create customer payment
         let newCustomerPayment;
-        if (!customerOrderData.isTest) {
-          newCustomerPayment = await tx.customerPayment.create({
-            data: {
-              code: code,
-              status: PaymentStatus.RECEIVABLE,
-              created_at: time,
-              updated_at: time,
-            },
-          });
-        } else {
-          newCustomerPayment = await tx.customerPayment.create({
-            data: {
-              code: code,
-              status: PaymentStatus.CASH,
-              created_at: time,
-              updated_at: time,
-            },
-          });
-        }
+        newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: customerOrderData.isTest
+              ? PaymentStatus.CASH
+              : PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
 
         // check for valid unit price when complete order
         for (const po of productOrders) {
-          if (po.unit_price.comparedTo(0) < 0) {
+          // !po for empty order.
+          if (!po || !po.unit_price || po.unit_price.comparedTo(0) < 0) {
             throw `Price needs to be at least 0.`;
           }
         }
-
-        // create customer order
-        const newCustomerOrder = await tx.customerOrder.create({
-          data: {
-            code: code,
-            customer_name: customerOrderData.customerName,
-            status: customerOrderData.status,
-            created_at: time,
-            updated_at: time,
-            expected_at: convertLocalExpected(customerOrderData.expectedAt),
-            is_test: customerOrderData.isTest,
-            assign_to: employee.nickname,
-            priority: 0,
-            is_sold: true,
-            manual_code: customerOrderData.manualCode
-              ? customerOrderData.manualCode
-              : null,
-            note: customerOrderData.note,
-            payment_code: code,
-            productCustomerOrders: {
-              create: productOrders,
-            },
-          },
-        });
 
         // 1. create stock change history
         const addedStockChangeHistory = await tx.stockChangeHistory.create({
@@ -537,11 +512,10 @@ export const createCustomerOrder = async (
             },
           });
         }
-        return newCustomerOrder;
-      });
-    } else {
+      }
+
       // create customer order
-      const newCustomerOrder = await prisma.customerOrder.create({
+      const newCustomerOrder = await tx.customerOrder.create({
         data: {
           code: code,
           customer_name: customerOrderData.customerName,
@@ -552,18 +526,20 @@ export const createCustomerOrder = async (
           is_test: customerOrderData.isTest,
           assign_to: employee.nickname,
           priority: 0,
-          is_sold: false,
+          is_sold: isCompleted,
           manual_code: customerOrderData.manualCode
             ? customerOrderData.manualCode
             : null,
           note: customerOrderData.note,
+          payment_code: isCompleted ? code : undefined,
           productCustomerOrders: {
             create: productOrders,
           },
         },
       });
+
       return newCustomerOrder;
-    }
+    });
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
@@ -616,146 +592,123 @@ export const updateCustomerOrder = async (
         order_code: customerOrderData.code,
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         updated_at: time,
       })
     );
-    if (customerOrderData.status === OrderStatus.COMPLETED) {
-      return await prisma.$transaction(async (tx) => {
-        // create customer payment
-        let newCustomerPayment;
-        if (!customerOrderData.isTest) {
-          newCustomerPayment = await tx.customerPayment.create({
-            data: {
-              code: code,
-              status: PaymentStatus.RECEIVABLE,
-              created_at: time,
-              updated_at: time,
-            },
-          });
-        } else {
-          newCustomerPayment = await tx.customerPayment.create({
-            data: {
-              code: code,
-              status: PaymentStatus.CASH,
-              created_at: time,
-              updated_at: time,
-            },
-          });
-        }
+    return await prisma.$transaction(async (tx) => {
+      const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
 
-        // update customer order if that order IS NOT completed
-        let existingOrder;
-        try {
-          existingOrder = await tx.customerOrder.update({
+      // NOTE: Temporary fix.
+      if (isCompleted) {
+        const newCustomerPayment = await tx.customerPayment.create({
+          data: {
+            code: code,
+            status: customerOrderData.isTest
+              ? PaymentStatus.CASH
+              : PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+      }
+
+      // update customer order if that order IS NOT already completed
+      let existingOrder;
+      try {
+        // create customer payment
+        // if (isCompleted) {
+
+        // }
+
+        existingOrder = await tx.customerOrder.update({
+          where: {
+            CustomerOrderSold_key: {
+              code: customerOrderData.code,
+              is_sold: false,
+            },
+          },
+          include: {
+            productCustomerOrders: true,
+          },
+          data: {
+            customer_name: customerOrderData.customerName,
+            status: customerOrderData.status,
+            updated_at: time,
+            is_test: customerOrderData.isTest,
+            assign_to: employee.nickname,
+            is_sold: isCompleted,
+            manual_code: customerOrderData.manualCode
+              ? customerOrderData.manualCode
+              : null,
+            note: customerOrderData.note,
+            expected_at: convertLocalExpected(customerOrderData.expectedAt),
+            payment_code: isCompleted ? customerOrderData.code : undefined,
+          },
+        });
+      } catch (e) {
+        throw `This order cannot be changed.`;
+      }
+
+      const existingProductOrders = new Map();
+
+      // delete product order not in request
+      for (const productOrder of existingOrder.productCustomerOrders) {
+        existingProductOrders.set(productOrder.unit_code, {
+          product_name: productOrder.product_name,
+          quantity: productOrder.quantity,
+          unit_code: productOrder.unit_code,
+          unit_price: productOrder.unit_price,
+          updated_at: productOrder.updated_at,
+        });
+        const found = productOrders.find(
+          (po) => po.unit_code === productOrder.unit_code
+        );
+        if (!found) {
+          const deletedProductOrder = await tx.productCustomerOrder.delete({
             where: {
-              CustomerOrderSold_key: {
-                code: customerOrderData.code,
-                is_sold: false,
+              ProductCustomerOrder_key: {
+                order_code: productOrder.order_code,
+                unit_code: productOrder.unit_code,
               },
             },
-            include: {
-              productCustomerOrders: true,
-            },
-            data: {
-              customer_name: customerOrderData.customerName,
-              status: customerOrderData.status,
-              updated_at: time,
-              is_test: customerOrderData.isTest,
-              assign_to: employee.nickname,
-              is_sold: true,
-              manual_code: customerOrderData.manualCode
-                ? customerOrderData.manualCode
-                : null,
-              note: customerOrderData.note,
-              expected_at: convertLocalExpected(customerOrderData.expectedAt),
-              payment_code: customerOrderData.code,
-            },
           });
-        } catch (e) {
-          throw `This order cannot be changed.`;
         }
+      }
 
-        // create stock change history
-        const addedStockChangeHistory = await tx.stockChangeHistory.create({
+      // create payment & stock change history
+      let addedStockChangeHistory;
+      if (isCompleted) {
+        // const newCustomerPayment = await tx.customerPayment.create({
+        //   data: {
+        //     code: code,
+        //     status: customerOrderData.isTest
+        //       ? PaymentStatus.CASH
+        //       : PaymentStatus.RECEIVABLE,
+        //     created_at: time,
+        //     updated_at: time,
+        //   },
+        // });
+
+        addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
             created_at: time,
             reason: StockChangeReason.CUSTOMER_ORDER_COMPLETED,
             order_code: code,
           },
         });
+      }
 
-        const existingProductOrders = new Map();
-
-        // delete product order not in request
-        for (const productOrder of existingOrder.productCustomerOrders) {
-          existingProductOrders.set(productOrder.unit_code, {
-            product_name: productOrder.product_name,
-            quantity: productOrder.quantity,
-            unit_code: productOrder.unit_code,
-            unit_price: productOrder.unit_price,
-            updated_at: productOrder.updated_at,
-          });
-          const found = productOrders.find(
-            (po) => po.unit_code === productOrder.unit_code
-          );
-          if (!found) {
-            const deletedProductOrder = await tx.productCustomerOrder.delete({
-              where: {
-                ProductCustomerOrder_key: {
-                  order_code: productOrder.order_code,
-                  unit_code: productOrder.unit_code,
-                },
-              },
-            });
-
-            // get current stock
-            const currentStock = await tx.stock.findUniqueOrThrow({
-              where: {
-                product_name: productOrder.product_name,
-              },
-            });
-
-            // get unit ratio
-            const unit = await tx.unit.findUniqueOrThrow({
-              where: {
-                code: productOrder.unit_code,
-              },
-            });
-            const newRatio = new Fraction(unit.ratio);
-            const productOrderQuantity = newRatio.mul(
-              new Fraction(productOrder.quantity)
-            );
-            const currentStockQuantity = new Fraction(currentStock.quantity);
-            const newStockQuantity =
-              currentStockQuantity.add(productOrderQuantity);
-            const stockQuantityChange =
-              newStockQuantity.sub(currentStockQuantity);
-
-            const updatedStock = await tx.stock.update({
-              where: {
-                product_name: productOrder.product_name,
-              },
-              data: {
-                quantity: newStockQuantity.toFraction(),
-                updated_at: time,
-              },
-            });
-
-            // create stock change
-            const addedStockChange = await tx.stockChange.create({
-              data: {
-                stock_id: updatedStock.id,
-                change_id: addedStockChangeHistory.id,
-                quantity_change: stockQuantityChange.toFraction(),
-              },
-            });
-          }
-        }
-
-        for (const productOrder of productOrders) {
+      for (const productOrder of productOrders) {
+        if (isCompleted) {
           // validate unit price when completing order
-          if (productOrder.unit_price.comparedTo(0) < 0) {
+          if (
+            !productOrder ||
+            !productOrder.unit_price ||
+            productOrder.unit_price.comparedTo(0) < 0
+          ) {
             throw `Price needs to be at least 0.`;
           }
 
@@ -777,43 +730,6 @@ export const updateCustomerOrder = async (
             new Fraction(productOrder.quantity)
           );
           const currentStockQuantity = new Fraction(currentStock.quantity);
-
-          // find current product order
-          const currentProductOrder = existingProductOrders.get(
-            productOrder.unit_code
-          );
-
-          if (!currentProductOrder) {
-            // create new product order
-            const newProductOrder = await tx.productCustomerOrder.create({
-              data: {
-                product_name: productOrder.product_name,
-                order_code: productOrder.order_code,
-                quantity: productOrder.quantity,
-                unit_code: productOrder.unit_code,
-                unit_price: productOrder.unit_price,
-                created_at: time,
-                updated_at: time,
-              },
-            });
-          } else {
-            // update product order
-            const updatedProductOrder = await tx.productCustomerOrder.update({
-              where: {
-                ProductCustomerOrder_key: {
-                  order_code: productOrder.order_code,
-                  unit_code: productOrder.unit_code,
-                },
-              },
-              data: {
-                quantity: productOrder.quantity,
-                unit_code: productOrder.unit_code,
-                unit_price: productOrder.unit_price,
-                updated_at: productOrder.updated_at,
-              },
-            });
-          }
-
           const newStockQuantity = currentStockQuantity.sub(
             newProductOrderQuantity
           );
@@ -823,6 +739,7 @@ export const updateCustomerOrder = async (
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
           }
+
           // update stock
           const updatedStock = await tx.stock.update({
             where: {
@@ -842,105 +759,44 @@ export const updateCustomerOrder = async (
             },
           });
         }
-      });
-    } else {
-      // update customer order if that order IS NOT completed
-      return await prisma.$transaction(async (tx) => {
-        let existingOrder;
-        try {
-          existingOrder = await tx.customerOrder.update({
-            where: {
-              CustomerOrderSold_key: {
-                code: customerOrderData.code,
-                is_sold: false,
-              },
+
+        // find current product order
+        const currentProductOrder = existingProductOrders.get(
+          productOrder.unit_code
+        );
+
+        if (!currentProductOrder) {
+          // create new product order
+          const newProductOrder = await tx.productCustomerOrder.create({
+            data: {
+              product_name: productOrder.product_name,
+              order_code: productOrder.order_code,
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
+              unit_price: productOrder.unit_price,
+              created_at: time,
+              updated_at: time,
             },
-            include: {
-              productCustomerOrders: true,
+          });
+        } else {
+          // update product order
+          const updatedProductOrder = await tx.productCustomerOrder.update({
+            where: {
+              ProductCustomerOrder_key: {
+                order_code: productOrder.order_code,
+                unit_code: productOrder.unit_code,
+              },
             },
             data: {
-              customer_name: customerOrderData.customerName,
-              status: customerOrderData.status,
-              updated_at: time,
-              is_test: customerOrderData.isTest,
-              assign_to: employee.nickname,
-              is_sold: false,
-              manual_code: customerOrderData.manualCode
-                ? customerOrderData.manualCode
-                : null,
-              note: customerOrderData.note,
-              expected_at: convertLocalExpected(customerOrderData.expectedAt),
+              quantity: productOrder.quantity,
+              unit_code: productOrder.unit_code,
+              unit_price: productOrder.unit_price,
+              updated_at: productOrder.updated_at,
             },
           });
-        } catch (e) {
-          throw `This order cannot be changed.`;
         }
-
-        const existingProductOrders = new Map();
-
-        // delete product order not in request
-        for (const productOrder of existingOrder.productCustomerOrders) {
-          existingProductOrders.set(productOrder.unit_code, {
-            product_name: productOrder.product_name,
-            quantity: productOrder.quantity,
-            unit_code: productOrder.unit_code,
-            unit_price: productOrder.unit_price,
-            updated_at: productOrder.updated_at,
-          });
-          const found = productOrders.find(
-            (po) => po.unit_code === productOrder.unit_code
-          );
-          if (!found) {
-            const deletedProductOrder = await tx.productCustomerOrder.delete({
-              where: {
-                ProductCustomerOrder_key: {
-                  order_code: productOrder.order_code,
-                  unit_code: productOrder.unit_code,
-                },
-              },
-            });
-          }
-        }
-
-        for (const productOrder of productOrders) {
-          // find current product order
-          const currentProductOrder = existingProductOrders.get(
-            productOrder.unit_code
-          );
-
-          if (!currentProductOrder) {
-            // create new product order
-            const newProductOrder = await tx.productCustomerOrder.create({
-              data: {
-                product_name: productOrder.product_name,
-                order_code: productOrder.order_code,
-                quantity: productOrder.quantity,
-                unit_code: productOrder.unit_code,
-                unit_price: productOrder.unit_price,
-                created_at: time,
-                updated_at: time,
-              },
-            });
-          } else {
-            // update product order
-            const updatedProductOrder = await tx.productCustomerOrder.update({
-              where: {
-                ProductCustomerOrder_key: {
-                  order_code: productOrder.order_code,
-                  unit_code: productOrder.unit_code,
-                },
-              },
-              data: {
-                quantity: productOrder.quantity,
-                unit_code: productOrder.unit_code,
-                unit_price: productOrder.unit_price,
-                updated_at: productOrder.updated_at,
-              },
-            });
-          }
-        }
-      });
-    }
+      }
+    });
   } catch (error) {
     if (typeof error === "string") {
       throw new createError.BadRequest(error);

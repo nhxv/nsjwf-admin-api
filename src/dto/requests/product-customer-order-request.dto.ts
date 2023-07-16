@@ -4,7 +4,7 @@ export interface ProductCustomerOrderRequestDto {
   productName: string;
   quantity: number;
   unitCode: string;
-  unitPrice: Prisma.Decimal;
+  unitPrice?: Prisma.Decimal;
   id?: number;
   orderCode?: string;
   createdAt?: Date;

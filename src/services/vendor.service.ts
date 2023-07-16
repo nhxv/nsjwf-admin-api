@@ -57,7 +57,7 @@ export const findVendorById = async (id: number) => {
 
 export const findVendorTendencyByName = async (name: string) => {
   try {
-    const tendency = await prisma.vendor.findUniqueOrThrow({
+    const tendency = await prisma.vendor.findUnique({
       where: {
         name: name,
       },
