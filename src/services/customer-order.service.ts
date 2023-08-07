@@ -26,6 +26,11 @@ import {
   customerSaleSchema,
 } from "../dto/requests/customer-sale-request.dto";
 
+// There are roughly 20-25 orders a day, let's take 25 as the higher value.
+// 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
+// If we somehow need further than 1 year, at that point, just go to db itself and find it.
+const MAX_ORDER_COUNT = 10000;
+
 export const findDailyCustomerOrder = async () => {
   try {
     const customerOrders = await prisma.customerOrder.findMany({
@@ -157,13 +162,15 @@ export const findCustomerSale = async (
         updated_at: "desc",
       },
       // Limit this because it's very possible to take all completed orders.
-      take: 100,
+      take: MAX_ORDER_COUNT,
     });
     const customerSolds = result.filter((co) =>
       co.productCustomerOrders.some((pco) =>
         pco.product_name.toLowerCase().includes(product.toLowerCase())
       )
     );
+    // Truncate array in a fast way.
+    customerSolds.length = Math.min(customerSolds.length, 100);
 
     // Apparently .map() won't work cuz TS is BS :)
     const reports = [];
