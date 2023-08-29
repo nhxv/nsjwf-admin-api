@@ -144,7 +144,7 @@ export const findCustomerSale = async (
       }
       if (customer)
         whereClause.set("customer_name", {
-          contains: customer,
+          equals: customer,
           mode: "insensitive",
         });
     }
