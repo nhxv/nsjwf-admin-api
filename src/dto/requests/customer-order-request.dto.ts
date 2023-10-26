@@ -29,7 +29,7 @@ export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
         .required()
         .max(255)
         .regex(GENERAL_TEXT_REGEX, { invert: true }),
-      quantity: Joi.number().integer().positive().required(),
+      quantity: Joi.number().integer().required().invalid(0),
       unitCode: Joi.string().trim().max(21).required(),
       unitPrice: Joi.string().allow(""),
       id: Joi.number().integer().positive(),
