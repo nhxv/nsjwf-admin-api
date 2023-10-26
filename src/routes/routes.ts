@@ -8,7 +8,6 @@ import vehicleController from "../controllers/vehicle.controller";
 import productStockController from "../controllers/stock.controller";
 import vendorOrderController from "../controllers/vendor-order.controller";
 import customerOrderController from "../controllers/customer-order.controller";
-// import backorderController from "../controllers/backorder.controller";
 import customerReturnController from "../controllers/customer-return.controller";
 import customerReturnRemainController from "../controllers/customer-return-remain.controller";
 import vendorReturnController from "../controllers/vendor-return.controller";
@@ -27,7 +26,6 @@ const api = Router()
   .use(productStockController)
   .use(vendorOrderController)
   .use(customerOrderController)
-  // .use(backorderController)
   .use(customerReturnController)
   .use(customerReturnRemainController)
   .use(vendorReturnController)
