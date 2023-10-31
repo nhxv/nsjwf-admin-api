@@ -30,7 +30,7 @@ model Product {
   id                           Int                           @id @default(autoincrement())
   name                         String                        @unique @db.VarChar(255)
   discontinued                 Boolean                       @default(false)
-  sell_price                   Decimal?
+  recent_cost                  Decimal?
   location_name                String?                       @db.VarChar(20)
   location                     Location?                     @relation(fields: [location_name], references: [name])
   units                        Unit[]
