@@ -1,19 +1,16 @@
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { StockChangeReason } from "../commons/enums/stock-change-reason.enum";
+import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
 import {
   StockRequestDto,
   stockSchema,
 } from "../dto/requests/stock-request.dto";
-import { handleValidationError } from "../commons/http.exception";
 
-export const findActiveStock = async () => {
+export const findStock = async () => {
   try {
     const products = await prisma.product.findMany({
-      where: {
-        discontinued: false,
-      },
       include: {
         stock: true,
         units: {

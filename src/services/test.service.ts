@@ -62,7 +62,7 @@ export const nukeOperation = async () => {
     const deletedCustomerPayment = await prisma.customerPayment.deleteMany({});
     const updatedProducts = await prisma.product.updateMany({
       data: {
-        sell_price: null,
+        recent_cost: null,
       },
     });
     return await prisma.$transaction(async (tx) => {

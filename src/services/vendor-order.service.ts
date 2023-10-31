@@ -233,13 +233,13 @@ export const createVendorOrder = async (
             },
           });
 
-          // update product sell price suggestion
-          const updatedProductSellPrice = await tx.product.update({
+          // update product recent cost reminder
+          const updatedProductRecentCost = await tx.product.update({
             where: {
               name: productOrder.product_name,
             },
             data: {
-              sell_price: productOrder.unit_price,
+              recent_cost: productOrder.unit_price,
             },
           });
         }
@@ -420,13 +420,13 @@ export const updateVendorOrder = async (
             },
           });
 
-          // update product sell price suggestion
-          const updatedProductSellPrice = await tx.product.update({
+          // update product recent cost reminder
+          const updatedProductRecentCost = await tx.product.update({
             where: {
               name: productOrder.product_name,
             },
             data: {
-              sell_price: productOrder.unit_price,
+              recent_cost: productOrder.unit_price,
             },
           });
         }
