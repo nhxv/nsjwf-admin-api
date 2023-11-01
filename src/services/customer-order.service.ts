@@ -56,6 +56,7 @@ export const findDailyCustomerOrder = async () => {
   }
 };
 
+// @deprecated
 export const findCustomerOrderByStatus = async (status: string) => {
   try {
     if (
