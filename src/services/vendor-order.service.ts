@@ -17,6 +17,23 @@ import {
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
 
+export const findDailyVendorOrder = async () => {
+  try {
+    const vendorOrders = await prisma.vendorOrder.findMany({
+      include: {
+        productVendorOrders: {
+          orderBy: {
+            product_name: "asc",
+          },
+        },
+      },
+    });
+    return vendorOrders;
+  } catch (error) {
+    throw new createError.BadRequest("Cannot find vendor order.");
+  }
+};
+
 export const findVendorOrderByStatus = async (status: string) => {
   try {
     if (!(Object.values(OrderStatus) as string[]).includes(status)) {

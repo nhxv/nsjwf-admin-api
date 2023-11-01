@@ -37,7 +37,7 @@ router.get(
   }
 );
 
-// find customer orders by status
+// @deprecated
 router.get(
   `/customer-orders/basic-list/:status`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],

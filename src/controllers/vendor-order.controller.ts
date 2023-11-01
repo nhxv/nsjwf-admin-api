@@ -1,6 +1,7 @@
 import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
 import { VendorOrderResponseDto } from "./../dto/responses/vendor-order-response.dto";
 import {
+  findDailyVendorOrder,
   findVendorOrderByStatus,
   findVendorOrderByCode,
   findVendorSale,
@@ -16,7 +17,20 @@ import {
 
 const router = Router();
 
-// find vendor order by status
+router.get(
+  `/vendor-orders/daily`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response: any = await findDailyVendorOrder();
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// @deprecated
 router.get(
   `/vendor-orders/basic-list/:status`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
