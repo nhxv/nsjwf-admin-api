@@ -6,7 +6,10 @@ import { OrderStatus } from "../commons/enums/order-status.enum";
 import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
-import { VendorSaleRequestDto, vendorSaleSchema } from "../dto/requests/vendor-sale-request.dto";
+import {
+  VendorSaleRequestDto,
+  vendorSaleSchema,
+} from "../dto/requests/vendor-sale-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
   convertLocalExpected,
@@ -68,9 +71,7 @@ export const findVendorOrderByCode = async (code: string) => {
   }
 };
 
-export const findVendorSale = async (
-  searchObject: VendorSaleRequestDto
-) => {
+export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
   try {
     const { code, date, vendor, product } =
       await vendorSaleSchema.validateAsync(searchObject);
@@ -124,7 +125,7 @@ export const findVendorSale = async (
 
     // Apparently .map() won't work cuz TS is BS :)
     const reports = [];
-    
+
     for (const sold of vendorSolds) {
       reports.push({
         is_test: sold.is_test,
@@ -146,7 +147,6 @@ export const findVendorSale = async (
     );
   }
 };
-
 
 export const createVendorOrder = async (
   vendorOrderDto: VendorOrderRequestDto
