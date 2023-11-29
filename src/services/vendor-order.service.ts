@@ -3,23 +3,38 @@ import Fraction from "fraction.js";
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { OrderStatus } from "../commons/enums/order-status.enum";
+import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
+import {
+  VendorSaleRequestDto,
+  vendorSaleSchema,
+} from "../dto/requests/vendor-sale-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
   convertLocalExpected,
   convertLocalInterval,
-  convertLocalStart,
   generateCurrentTime,
 } from "./../commons/utils/time.util";
 import {
   VendorOrderRequestDto,
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
+import { log } from "console";
+
+// There are roughly 20-25 orders a day, let's take 25 as the higher value.
+// 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
+// If we somehow need further than 1 year, at that point, just go to db itself and find it.
+const MAX_ORDER_COUNT = 10000;
 
 export const findDailyVendorOrder = async () => {
   try {
     const vendorOrders = await prisma.vendorOrder.findMany({
+      where: {
+        NOT: {
+          status: OrderStatus.COMPLETED,
+        },
+      },
       include: {
         productVendorOrders: {
           orderBy: {
@@ -31,49 +46,6 @@ export const findDailyVendorOrder = async () => {
     return vendorOrders;
   } catch (error) {
     throw new createError.BadRequest("Cannot find vendor order.");
-  }
-};
-
-export const findVendorOrderByStatus = async (status: string) => {
-  try {
-    if (!(Object.values(OrderStatus) as string[]).includes(status)) {
-      throw `Please don't attack us.`;
-    }
-    const vendorOrders = await prisma.vendorOrder.findMany({
-      where: {
-        status: status,
-        OR: [
-          {
-            expected_at: {
-              gte: convertLocalStart(),
-            },
-          },
-          {
-            NOT: {
-              status: OrderStatus.COMPLETED,
-            },
-          },
-        ],
-      },
-      include: {
-        productVendorOrders: {
-          orderBy: {
-            product_name: "asc",
-          },
-        },
-      },
-      orderBy: {
-        expected_at: "asc",
-      },
-    });
-    return vendorOrders;
-  } catch (error) {
-    if (typeof error === "string") {
-      throw new createError.BadRequest(error);
-    }
-    throw new createError.BadRequest(
-      "Cannot find vendor order with the given status."
-    );
   }
 };
 
@@ -99,53 +71,76 @@ export const findVendorOrderByCode = async (code: string) => {
   }
 };
 
-export const findVendorSale = async (vendorName: string, date: string) => {
+export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
   try {
-    const { start, end } = convertLocalInterval(new Date(date));
-    const vendorSolds = await prisma.vendorOrder.findMany({
-      where: {
-        vendor_name: {
-          contains: vendorName,
+    const { code, date, vendor, product } =
+      await vendorSaleSchema.validateAsync(searchObject);
+
+    // Construct dynamic query for prisma.
+    // Note that there's no known way to not select an entry based on a condition on a relation
+    // we'll have to manually filter out later on.
+    const whereClause = new Map();
+    whereClause.set("status", OrderStatus.COMPLETED);
+
+    if (code) {
+      whereClause.set("OR", [
+        {
+          code: code,
+        },
+      ]);
+    } else {
+      if (date) {
+        const { start, end } = convertLocalInterval(new Date(date));
+        whereClause.set("updated_at", { gte: start, lte: end });
+      }
+      if (vendor)
+        whereClause.set("vendor_name", {
+          equals: vendor,
           mode: "insensitive",
-        },
-        status: OrderStatus.COMPLETED,
-        updated_at: {
-          gte: start,
-          lte: end,
-        },
-      },
+        });
+    }
+    let result = await prisma.vendorOrder.findMany({
+      where: Object.fromEntries(whereClause),
       include: {
         productVendorOrders: {
           orderBy: {
             product_name: "asc",
           },
         },
+        vendorPayment: true,
       },
       orderBy: {
-        updated_at: "asc",
+        updated_at: "desc",
       },
+      // Limit this because it's very possible to take all completed orders.
+      take: MAX_ORDER_COUNT,
     });
-    for (let i = 0; i < vendorSolds.length; i++) {
-      const returnRemain = await prisma.vendorReturnRemain.findUnique({
-        where: {
-          order_code: vendorSolds[i].code,
-        },
-        include: {
-          productVendorReturnRemains: true,
-        },
+    const vendorSolds = result.filter((co) =>
+      co.productVendorOrders.some((pco) =>
+        pco.product_name.toLowerCase().includes(product.toLowerCase())
+      )
+    );
+    // Truncate array in a fast way.
+    vendorSolds.length = Math.min(vendorSolds.length, 100);
+
+    // Apparently .map() won't work cuz TS is BS :)
+    const reports = [];
+
+    for (const sold of vendorSolds) {
+      reports.push({
+        is_test: sold.is_test,
+        order_code: sold.code,
+        vendor_name: sold.vendor_name,
+        sale: sold.productVendorOrders.reduce(
+          (prev, curr: any) => prev + curr.quantity * curr.unit_price,
+          0
+        ),
+        date: sold.updated_at,
+        payment_status: sold.vendorPayment.status,
+        productVendorOrders: sold.productVendorOrders,
       });
-      if (
-        !returnRemain ||
-        returnRemain.productVendorReturnRemains.find(
-          (p) => !new Fraction(p.quantity).equals(0)
-        )
-      ) {
-        vendorSolds[i]["fullReturn"] = false;
-      } else {
-        vendorSolds[i]["fullReturn"] = true;
-      }
     }
-    return vendorSolds;
+    return reports;
   } catch (error) {
     throw new createError.BadRequest(
       "Cannot find vendor sale with the given data."
@@ -190,6 +185,18 @@ export const createVendorOrder = async (
       const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
 
       if (isCompleted) {
+        // create vendor payment
+        const newVendorPayment = await tx.vendorPayment.create({
+          data: {
+            code: code,
+            status: vendorOrderData.isTest
+              ? PaymentStatus.CASH
+              : PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+
         // check for valid unit price when complete order
         for (const po of productOrders) {
           if (po.unit_price.comparedTo(0) < 0) {
@@ -273,6 +280,7 @@ export const createVendorOrder = async (
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
           is_sold: isCompleted,
+          payment_code: isCompleted ? code : undefined,
           productVendorOrders: {
             create: productOrders,
           },
@@ -332,6 +340,21 @@ export const updateVendorOrder = async (
     return await prisma.$transaction(async (tx) => {
       const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
 
+      // NOTE: Temporary fix.
+      let newVendorPayment;
+      if (isCompleted) {
+        newVendorPayment = await tx.vendorPayment.create({
+          data: {
+            code: code,
+            status: vendorOrderData.isTest
+              ? PaymentStatus.CASH
+              : PaymentStatus.RECEIVABLE,
+            created_at: time,
+            updated_at: time,
+          },
+        });
+      }
+
       // update vendor order table if that order IS NOT completed already
       let existingOrder;
       try {
@@ -352,6 +375,7 @@ export const updateVendorOrder = async (
             expected_at: convertLocalExpected(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
             is_sold: isCompleted,
+            payment_code: isCompleted ? newVendorPayment.code : undefined,
           },
         });
       } catch (e) {

@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
+import { CustomerSaleResponseDto } from "../dto/responses/customer-sale-response.dto";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
@@ -7,12 +8,10 @@ import { verifyAccessToken } from "./../services/auth/token.service";
 import {
   createCustomerOrder,
   findCustomerOrderByCode,
-  findCustomerOrderByStatus,
   findCustomerSale,
   findDailyCustomerOrder,
   findEmployeeTask,
   finishTask,
-  reportCustomerSale,
   reportTask,
   revertCustomerOrder,
   startDoingTask,
@@ -20,7 +19,6 @@ import {
   updateCustomerOrder,
   updatePriority,
 } from "./../services/customer-order.service";
-import { CustomerSaleResponseDto } from "../dto/responses/customer-sale-response.dto";
 
 const router = Router();
 
@@ -31,44 +29,6 @@ router.get(
     try {
       const response: any = await findDailyCustomerOrder();
       res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// @deprecated
-router.get(
-  `/customer-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findCustomerOrderByStatus(req.params.status);
-      res.send(
-        response.map((order) => {
-          const orderRes: CustomerOrderResponseDto = {
-            customerName: order.customer_name,
-            isTest: order.is_test,
-            code: order.code,
-            status: order.status,
-            productCustomerOrders: order.productCustomerOrders.map((po) => {
-              const poRes: ProductCustomerOrderResponseDto = {
-                productName: po.product_name,
-                quantity: po.quantity,
-                unitCode: po.unit_code.split("_")[1].toLowerCase(),
-              };
-              return poRes;
-            }),
-            expectedAt: order.expected_at,
-            assignTo: order.assign_to,
-            isDoing: order.is_doing,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
-            manualCode: order.manual_code,
-          };
-          return orderRes;
-        })
-      );
     } catch (error) {
       next(error);
     }
@@ -129,7 +89,6 @@ router.get(
             isTest: order.is_test,
             orderCode: order.order_code,
             sale: order.sale,
-            refund: order.refund,
             productCustomerOrders: order.productCustomerOrders.map((po) => {
               const poRes: ProductCustomerOrderResponseDto = {
                 productName: po.product_name,
@@ -142,26 +101,12 @@ router.get(
             // For now we don't need to provide returns detail, but maybe later.
             //createdAt: order.created_at,
             updatedAt: order.date,
-            fullReturn: !!order.fullReturn,
             manualCode: order.manual_code,
             paymentStatus: order.payment_status,
           };
           return orderRes;
         })
       );
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.get(
-  `/customer-orders/sold/report`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await reportCustomerSale();
-      res.send(response);
     } catch (error) {
       next(error);
     }

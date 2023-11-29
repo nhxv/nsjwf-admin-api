@@ -56,41 +56,6 @@ export const findDailyCustomerOrder = async () => {
   }
 };
 
-// @deprecated
-export const findCustomerOrderByStatus = async (status: string) => {
-  try {
-    if (
-      !(Object.values(OrderStatus) as string[]).includes(status) ||
-      status === OrderStatus.COMPLETED
-    ) {
-      throw `Please don't hack us.`;
-    }
-    const customerOrders = await prisma.customerOrder.findMany({
-      where: {
-        status: status,
-      },
-      include: {
-        productCustomerOrders: {
-          orderBy: {
-            product_name: "asc",
-          },
-        },
-      },
-      orderBy: {
-        manual_code: "desc",
-      },
-    });
-    return customerOrders;
-  } catch (error) {
-    if (typeof error === "string") {
-      throw new createError.BadRequest(error);
-    }
-    throw new createError.BadRequest(
-      "Cannot find customer order with the given status."
-    );
-  }
-};
-
 export const findCustomerOrderByCode = async (code: string) => {
   try {
     const customerOrder = await prisma.customerOrder.findUniqueOrThrow({
@@ -185,81 +150,10 @@ export const findCustomerSale = async (
           (prev, curr: any) => prev + curr.quantity * curr.unit_price,
           0
         ),
-        refund: 0,
-        fullReturn: false,
         date: sold.updated_at,
         payment_status: sold.customerPayment.status,
         productCustomerOrders: sold.productCustomerOrders,
       });
-    }
-
-    const returns = await prisma.customerReturn.findMany({
-      // TODO: Need to change this condition to match with report query.
-      where: {
-        created_at: {
-          gte: convertLocalStart(),
-          lte: convertLocalEnd(),
-        },
-      },
-      include: {
-        productCustomerReturns: {
-          orderBy: {
-            product_name: "asc",
-          },
-        },
-      },
-      orderBy: {
-        created_at: "asc",
-      },
-    });
-
-    for (const customerReturn of returns) {
-      const matchingIndex = reports.findIndex((r) => {
-        return r.customer_name === customerReturn.customer_name;
-      });
-      if (matchingIndex !== -1) {
-        const newRefund = customerReturn.refund;
-        if (newRefund <= reports[matchingIndex].sale) {
-          reports[matchingIndex] = {
-            ...reports[matchingIndex],
-            refund: Decimal.sum(reports[matchingIndex].refund, newRefund),
-          };
-        }
-      }
-      // This else is Debug only, this can be removed or raised to frontend somehow.
-      else {
-        console.log("No matching completed order despite having returns.");
-        console.log(
-          `Can't find '${customerReturn.customer_name}' inside reports.`
-        );
-        console.log(reports);
-        // I choose not to break here cuz we'll try to pretend to user that everything is alright.
-        //break;
-      }
-    }
-
-    // Check whether the order is fully returned (can't return if there's nothing to return left)
-    // This check might be redundant since we can just throw error if, when user create a return, the qty remaining is all 0.
-    // But it's here for now!
-    for (let i = 0; i < reports.length; i++) {
-      const returnRemain = await prisma.customerReturnRemain.findUnique({
-        where: {
-          order_code: customerSolds[i].code,
-        },
-        include: {
-          productCustomerReturnRemains: true,
-        },
-      });
-      if (
-        !returnRemain ||
-        returnRemain.productCustomerReturnRemains.find(
-          (p) => !new Fraction(p.quantity).equals(0)
-        )
-      ) {
-        reports[i].fullReturn = false;
-      } else {
-        reports[i].fullReturn = true;
-      }
     }
 
     return reports;
@@ -267,98 +161,6 @@ export const findCustomerSale = async (
     throw new createError.BadRequest(
       "Cannot find customer sale with the given data."
     );
-  }
-};
-
-// DEPRECATED
-export const reportCustomerSale = async () => {
-  try {
-    // find daily solds
-    const customerSolds = await prisma.customerOrder.findMany({
-      where: {
-        status: OrderStatus.COMPLETED,
-        updated_at: {
-          gte: convertLocalStart(),
-          lte: convertLocalEnd(),
-        },
-      },
-      include: {
-        productCustomerOrders: {
-          orderBy: {
-            product_name: "asc",
-          },
-        },
-        customerPayment: true,
-      },
-      orderBy: {
-        updated_at: "asc",
-      },
-    });
-    // find daily return
-    const returns = await prisma.customerReturn.findMany({
-      where: {
-        created_at: {
-          gte: convertLocalStart(),
-          lte: convertLocalEnd(),
-        },
-      },
-      include: {
-        productCustomerReturns: {
-          orderBy: {
-            product_name: "asc",
-          },
-        },
-      },
-      orderBy: {
-        created_at: "asc",
-      },
-    });
-    const reports = [];
-    for (const sold of customerSolds) {
-      reports.push({
-        is_test: sold.is_test,
-        order_code: sold.code,
-        manual_code: sold.manual_code ? sold.manual_code : "",
-        customer_name: sold.customer_name,
-        sale: sold.productCustomerOrders.reduce(
-          (prev, curr: any) => prev + curr.quantity * curr.unit_price,
-          0
-        ),
-        refund: 0,
-        date: sold.updated_at,
-        payment_status: sold.customerPayment.status,
-        productCustomerOrders: sold.productCustomerOrders,
-      });
-    }
-    for (const customerReturn of returns) {
-      const matchingIndex = reports.findIndex(
-        (r) => r.customer_name === customerReturn.customer_name
-      );
-      if (matchingIndex !== -1) {
-        const newRefund = customerReturn.refund;
-        if (newRefund <= reports[matchingIndex].sale) {
-          reports[matchingIndex] = {
-            ...reports[matchingIndex],
-            refund: Decimal.sum(reports[matchingIndex].refund, newRefund),
-          };
-        }
-      }
-      // This else is Debug only, this can be removed or raised to frontend somehow.
-      else {
-        console.log(
-          "No matching completed order despite having returns. This is a bug."
-        );
-        console.log(
-          `Can't find '${customerReturn.customer_name}' inside reports.`
-        );
-        console.log(reports);
-        // I choose not to break here cuz we'll try to pretend to user that everything is alright.
-        //break;
-      }
-    }
-    return reports;
-  } catch (error) {
-    throw new createError.BadRequest("Cannot report.");
   }
 };
 
@@ -443,8 +245,7 @@ export const createCustomerOrder = async (
 
       if (isCompleted) {
         // create customer payment
-        let newCustomerPayment;
-        newCustomerPayment = await tx.customerPayment.create({
+        const newCustomerPayment = await tx.customerPayment.create({
           data: {
             code: code,
             status: customerOrderData.isTest
@@ -610,8 +411,9 @@ export const updateCustomerOrder = async (
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
 
       // NOTE: Temporary fix.
+      let newCustomerPayment;
       if (isCompleted) {
-        const newCustomerPayment = await tx.customerPayment.create({
+        newCustomerPayment = await tx.customerPayment.create({
           data: {
             code: code,
             status: customerOrderData.isTest
@@ -626,11 +428,6 @@ export const updateCustomerOrder = async (
       // update customer order if that order IS NOT already completed
       let existingOrder;
       try {
-        // create customer payment
-        // if (isCompleted) {
-
-        // }
-
         existingOrder = await tx.customerOrder.update({
           where: {
             CustomerOrderSold_key: {
@@ -653,7 +450,7 @@ export const updateCustomerOrder = async (
               : null,
             note: customerOrderData.note,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
-            payment_code: isCompleted ? customerOrderData.code : undefined,
+            payment_code: isCompleted ? newCustomerPayment.code : undefined,
           },
         });
       } catch (e) {
@@ -686,20 +483,9 @@ export const updateCustomerOrder = async (
         }
       }
 
-      // create payment & stock change history
+      // stock change history
       let addedStockChangeHistory;
       if (isCompleted) {
-        // const newCustomerPayment = await tx.customerPayment.create({
-        //   data: {
-        //     code: code,
-        //     status: customerOrderData.isTest
-        //       ? PaymentStatus.CASH
-        //       : PaymentStatus.RECEIVABLE,
-        //     created_at: time,
-        //     updated_at: time,
-        //   },
-        // });
-
         addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
             created_at: time,

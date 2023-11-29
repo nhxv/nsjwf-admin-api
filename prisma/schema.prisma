@@ -161,6 +161,8 @@ model VendorOrder {
   expected_at         DateTime
   is_test             Boolean              @default(false)
   is_sold             Boolean              @default(false)
+  payment_code        String?              @unique @db.VarChar(20)
+  vendorPayment       VendorPayment?       @relation(fields: [payment_code], references: [code])
   productVendorOrders ProductVendorOrder[]
   vendorReturns       VendorReturn[]
   vendorReturnRemain  VendorReturnRemain?
@@ -428,8 +430,19 @@ model CustomerPayment {
   customerOrder CustomerOrder?
 }
 
+model VendorPayment {
+  id            Int           @unique @default(autoincrement())
+  code          String        @unique @db.VarChar(20)
+  status        String        @db.VarChar(32)
+  paymentStatus PaymentStatus @relation(fields: [status], references: [name], onDelete: Cascade)
+  created_at    DateTime
+  updated_at    DateTime
+  vendorOrder   VendorOrder?
+}
+
 model PaymentStatus {
   id               Int               @unique @default(autoincrement())
   name             String            @unique @db.VarChar(32)
   customerPayments CustomerPayment[]
+  vendorPayments   VendorPayment[]
 }
