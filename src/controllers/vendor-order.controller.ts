@@ -1,19 +1,18 @@
-import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
-import { VendorOrderResponseDto } from "./../dto/responses/vendor-order-response.dto";
-import {
-  findDailyVendorOrder,
-  findVendorOrderByStatus,
-  findVendorOrderByCode,
-  findVendorSale,
-} from "./../services/vendor-order.service";
-import { verifyAccessToken } from "./../services/auth/token.service";
 import { NextFunction, Request, Response, Router } from "express";
-import { hasAnyRole } from "../services/auth/authorization.service";
 import { Role } from "../commons/enums/role.enum";
+import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createVendorOrder,
   updateVendorOrder,
 } from "../services/vendor-order.service";
+import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
+import { VendorSaleResponseDto } from "./../dto/responses/vendor-sale-response.dto";
+import { verifyAccessToken } from "./../services/auth/token.service";
+import {
+  findDailyVendorOrder,
+  findVendorOrderByCode,
+  findVendorSale,
+} from "./../services/vendor-order.service";
 
 const router = Router();
 
@@ -24,41 +23,6 @@ router.get(
     try {
       const response: any = await findDailyVendorOrder();
       res.send(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// @deprecated
-router.get(
-  `/vendor-orders/basic-list/:status`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findVendorOrderByStatus(req.params.status);
-      res.send(
-        response.map((order) => {
-          const vendorOrderRes: VendorOrderResponseDto = {
-            vendorName: order.vendor_name,
-            isTest: order.is_test,
-            code: order.code,
-            status: order.status,
-            productVendorOrders: order.productVendorOrders.map((po) => {
-              const poRes: ProductVendorOrderResponseDto = {
-                productName: po.product_name,
-                quantity: po.quantity,
-                unitCode: po.unit_code.split("_")[1].toLowerCase(),
-                unitPrice: po.unit_price,
-              };
-              return poRes;
-            }),
-            expectedAt: order.expected_at,
-            createdAt: order.created_at,
-          };
-          return vendorOrderRes;
-        })
-      );
     } catch (error) {
       next(error);
     }
@@ -85,17 +49,40 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response: any = await findVendorSale(
-        decodeURIComponent(req.query.keyword as string),
-        req.query.date as string
-      );
+      let [code, date, vendorName, productName] = ["", "", "", ""];
+      // NOTE: The query is already decoded, so special characters are already turn into special characters.
+      // Not entirely sure if there are any issues using these strings directly.
+      if (Object.keys(req.query).length === 0) {
+        date = "";
+      } else if ("code" in req.query) {
+        // code = decodeURIComponent(req.query.code as string);
+        code = req.query.code as string;
+      } else {
+        if ("date" in req.query) {
+          date = req.query.date as string;
+        }
+        if ("vendor" in req.query) {
+          // vendorName = decodeURIComponent(req.query.vendor as string);
+          vendorName = req.query.vendor as string;
+        }
+        if ("product" in req.query) {
+          // productName = decodeURIComponent(req.query.product as string);
+          productName = req.query.product as string;
+        }
+      }
+      const response: any = await findVendorSale({
+        code: code,
+        date: date,
+        vendor: vendorName,
+        product: productName,
+      });
       res.send(
         response.map((order) => {
-          const vendorOrderRes: VendorOrderResponseDto = {
+          const orderRes: VendorSaleResponseDto = {
             vendorName: order.vendor_name,
             isTest: order.is_test,
-            code: order.code,
-            status: order.status,
+            orderCode: order.order_code,
+            sale: order.sale,
             productVendorOrders: order.productVendorOrders.map((po) => {
               const poRes: ProductVendorOrderResponseDto = {
                 productName: po.product_name,
@@ -105,12 +92,12 @@ router.get(
               };
               return poRes;
             }),
-            expectedAt: order.expected_at,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
-            fullReturn: !!order.fullReturn,
+            // For now we don't need to provide returns detail, but maybe later.
+            //createdAt: order.created_at,
+            updatedAt: order.date,
+            paymentStatus: order.payment_status,
           };
-          return vendorOrderRes;
+          return orderRes;
         })
       );
     } catch (error) {
