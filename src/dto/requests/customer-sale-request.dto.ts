@@ -3,7 +3,8 @@ import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
 export interface CustomerSaleRequestDto {
   code?: string;
-  date?: string;
+  start_date?: string;
+  end_date?: string;
   customer?: string;
   product?: string;
 }
@@ -14,7 +15,12 @@ export const customerSaleSchema = Joi.object<CustomerSaleRequestDto>({
     .regex(GENERAL_TEXT_REGEX, { invert: true })
     .optional()
     .allow(""),
-  date: Joi.string()
+  start_date: Joi.string()
+    .max(255)
+    .regex(GENERAL_TEXT_REGEX, { invert: true })
+    .optional()
+    .allow(""),
+  end_date: Joi.string()
     .max(255)
     .regex(GENERAL_TEXT_REGEX, { invert: true })
     .optional()
