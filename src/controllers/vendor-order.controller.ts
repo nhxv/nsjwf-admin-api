@@ -49,17 +49,27 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let [code, date, vendorName, productName] = ["", "", "", ""];
+      let [code, start_date, end_date, vendorName, productName] = [
+        "",
+        "",
+        "",
+        "",
+        "",
+      ];
       // NOTE: The query is already decoded, so special characters are already turn into special characters.
       // Not entirely sure if there are any issues using these strings directly.
       if (Object.keys(req.query).length === 0) {
-        date = "";
+        start_date = "";
+        end_date = "";
       } else if ("code" in req.query) {
         // code = decodeURIComponent(req.query.code as string);
         code = req.query.code as string;
       } else {
-        if ("date" in req.query) {
-          date = req.query.date as string;
+        if ("start_date" in req.query) {
+          start_date = req.query.start_date as string;
+        }
+        if ("end_date" in req.query) {
+          end_date = req.query.end_date as string;
         }
         if ("vendor" in req.query) {
           // vendorName = decodeURIComponent(req.query.vendor as string);
@@ -72,7 +82,8 @@ router.get(
       }
       const response: any = await findVendorSale({
         code: code,
-        date: date,
+        start_date: start_date,
+        end_date: end_date,
         vendor: vendorName,
         product: productName,
       });
