@@ -12,15 +12,16 @@ import {
 } from "../dto/requests/vendor-sale-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
+  convertLocalEnd,
   convertLocalExpected,
   convertLocalInterval,
+  convertLocalStart,
   generateCurrentTime,
 } from "./../commons/utils/time.util";
 import {
   VendorOrderRequestDto,
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
-import { log } from "console";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -73,7 +74,7 @@ export const findVendorOrderByCode = async (code: string) => {
 
 export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
   try {
-    const { code, date, vendor, product } =
+    const { code, start_date, end_date, vendor, product } =
       await vendorSaleSchema.validateAsync(searchObject);
 
     // Construct dynamic query for prisma.
@@ -89,10 +90,25 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
         },
       ]);
     } else {
-      if (date) {
+      if (start_date && end_date) {
+        const { start: start, end: _e } = convertLocalInterval(
+          new Date(start_date)
+        );
+        const { start: _s, end: end } = convertLocalInterval(
+          new Date(end_date)
+        );
+        whereClause.set("updated_at", { gte: start, lte: end });
+      } else if (start_date || end_date) {
+        const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
         whereClause.set("updated_at", { gte: start, lte: end });
+      } else {
+        whereClause.set("updated_at", {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),
+        });
       }
+
       if (vendor)
         whereClause.set("vendor_name", {
           equals: vendor,

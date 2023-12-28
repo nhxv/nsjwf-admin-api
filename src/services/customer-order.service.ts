@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
@@ -82,7 +81,7 @@ export const findCustomerSale = async (
   searchObject: CustomerSaleRequestDto
 ) => {
   try {
-    const { code, date, customer, product } =
+    const { code, start_date, end_date, customer, product } =
       await customerSaleSchema.validateAsync(searchObject);
 
     // Construct dynamic query for prisma.
@@ -104,10 +103,25 @@ export const findCustomerSale = async (
         },
       ]);
     } else {
-      if (date) {
+      if (start_date && end_date) {
+        const { start: start, end: _e } = convertLocalInterval(
+          new Date(start_date)
+        );
+        const { start: _s, end: end } = convertLocalInterval(
+          new Date(end_date)
+        );
+        whereClause.set("updated_at", { gte: start, lte: end });
+      } else if (start_date || end_date) {
+        const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
         whereClause.set("updated_at", { gte: start, lte: end });
+      } else {
+        whereClause.set("updated_at", {
+          gte: convertLocalStart(),
+          lte: convertLocalEnd(),
+        });
       }
+
       if (customer)
         whereClause.set("customer_name", {
           equals: customer,
