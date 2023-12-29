@@ -115,11 +115,6 @@ export const findCustomerSale = async (
         const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
         whereClause.set("updated_at", { gte: start, lte: end });
-      } else {
-        whereClause.set("updated_at", {
-          gte: convertLocalStart(),
-          lte: convertLocalEnd(),
-        });
       }
 
       if (customer)
