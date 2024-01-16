@@ -1,20 +1,18 @@
 import { Router } from "express";
-import testController from "../controllers/test.controller";
-import authController from "../controllers/auth.controller";
-import productController from "../controllers/product.controller";
-import customerController from "../controllers/customer.controller";
-import vendorController from "../controllers/vendor.controller";
-import vehicleController from "../controllers/vehicle.controller";
-import productStockController from "../controllers/stock.controller";
-import vendorOrderController from "../controllers/vendor-order.controller";
-import customerOrderController from "../controllers/customer-order.controller";
-import customerReturnController from "../controllers/customer-return.controller";
-import customerReturnRemainController from "../controllers/customer-return-remain.controller";
-import vendorReturnController from "../controllers/vendor-return.controller";
-import vendorReturnRemainController from "../controllers/vendor-return-remain.controller";
 import accountController from "../controllers/account.controller";
-import unitController from "../controllers/unit.controller";
+import authController from "../controllers/auth.controller";
+import customerOrderController from "../controllers/customer-order.controller";
 import customerPaymentController from "../controllers/customer-payment.controller";
+import customerController from "../controllers/customer.controller";
+import productController from "../controllers/product.controller";
+import productStockController from "../controllers/stock.controller";
+import testController from "../controllers/test.controller";
+import unitController from "../controllers/unit.controller";
+import vehicleController from "../controllers/vehicle.controller";
+import vendorOrderController from "../controllers/vendor-order.controller";
+import vendorReturnRemainController from "../controllers/vendor-return-remain.controller";
+import vendorReturnController from "../controllers/vendor-return.controller";
+import vendorController from "../controllers/vendor.controller";
 
 const api = Router()
   .use(testController)
@@ -26,8 +24,6 @@ const api = Router()
   .use(productStockController)
   .use(vendorOrderController)
   .use(customerOrderController)
-  .use(customerReturnController)
-  .use(customerReturnRemainController)
   .use(vendorReturnController)
   .use(vendorReturnRemainController)
   .use(accountController)
