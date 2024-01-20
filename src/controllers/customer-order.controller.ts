@@ -109,9 +109,8 @@ router.get(
               };
               return poRes;
             }),
-            // For now we don't need to provide returns detail, but maybe later.
-            //createdAt: order.created_at,
-            updatedAt: order.date,
+            invoiceDate: order.expected_at,
+            completedAt: order.updated_at,
             manualCode: order.manual_code,
             paymentStatus: order.payment_status,
           };

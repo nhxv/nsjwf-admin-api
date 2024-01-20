@@ -6,8 +6,8 @@ export interface CustomerSaleResponseDto {
   orderCode: string;
   sale: string;
   productCustomerOrders: ProductCustomerOrderResponseDto[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  invoiceDate?: Date; // The date on the physical invoice, not when created on the app.
+  completedAt?: Date;
   manualCode?: string;
   paymentStatus?: string;
   id?: number;
