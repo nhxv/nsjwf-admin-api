@@ -134,7 +134,7 @@ export const findCustomerSale = async (
         customerPayment: true,
       },
       orderBy: {
-        expected_at: "desc",
+        updated_at: "desc",
       },
       // Limit this because it's very possible to take all completed orders.
       take: MAX_ORDER_COUNT,
