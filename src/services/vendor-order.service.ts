@@ -233,7 +233,8 @@ export const createVendorOrder = async (
 
           // check for valid unit price when complete order
           for (const po of productOrders) {
-            if (po.unit_price.comparedTo(0) < 0) {
+            // !po for empty order.
+            if (!po || !po.unit_price || po.unit_price.comparedTo(0) < 0) {
               throw `Price needs to be at least 0.`;
             }
           }
@@ -450,7 +451,11 @@ export const updateVendorOrder = async (
       for (const productOrder of productOrders) {
         if (isInvoiceReceived) {
           // validate unit price when completing order
-          if (productOrder.unit_price.comparedTo(0) < 0) {
+          if (
+            !productOrder ||
+            !productOrder.unit_price ||
+            productOrder.unit_price.comparedTo(0) < 0
+          ) {
             throw `Price needs to be at least 0.`;
           }
 
