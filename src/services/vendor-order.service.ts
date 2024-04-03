@@ -241,14 +241,17 @@ export const createVendorOrder = async (
           }
         }
 
-        // 1. create stock change history
-        const addedStockChangeHistory = await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
-            order_code: code,
-          },
-        });
+        // Add stock change if delivered.
+        let addedStockChangeHistory = null;
+        if (isItemArrived || isInvoiceReceived) {
+          addedStockChangeHistory = await tx.stockChangeHistory.create({
+            data: {
+              created_at: time,
+              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+              order_code: code,
+            },
+          });
+        }
 
         for (const productOrder of productOrders) {
           // 2. get current stock
@@ -273,26 +276,31 @@ export const createVendorOrder = async (
             currentStockQuantity.add(productOrderQuantity);
           const stockQuantityChange =
             newStockQuantity.sub(currentStockQuantity);
-
-          // 4. update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
-
-          // 5. create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
+          
+          if (isItemArrived || isInvoiceReceived) {
+            // 4. update stock
+            const updatedStock = await tx.stock.update({
+              where: {
+                product_name: productOrder.product_name,
+              },
+              data: {
+                quantity: newStockQuantity.toFraction(),
+                updated_at: time,
+              },
+            });
+  
+            // 5. create stock change
+            const addedStockChange = await tx.stockChange.create({
+              data: {
+                stock_id: updatedStock.id,
+                // addedStockChangeHistory shouldn't be null
+                // cuz of isItemArrived || isInvoiceReceived check
+                // that set addedStockChangeHistory to db.
+                change_id: addedStockChangeHistory?.id,
+                quantity_change: stockQuantityChange.toFraction(),
+              },
+            });
+          }
 
           // update product recent cost reminder
           const updatedProductRecentCost = await tx.product.update({
@@ -441,14 +449,17 @@ export const updateVendorOrder = async (
         }
       }
 
-      // 1. create stock change history only if order is completed
-      const addedStockChangeHistory = await tx.stockChangeHistory.create({
-        data: {
-          created_at: time,
-          reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
-          order_code: code,
-        },
-      });
+      // Add stock change if delivered.
+      let addedStockChangeHistory = null;
+      if (isItemArrived || isInvoiceReceived) {
+        addedStockChangeHistory = await tx.stockChangeHistory.create({
+          data: {
+            created_at: time,
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
+          },
+        });
+      }
 
       for (const productOrder of productOrders) {
         if (isInvoiceReceived) {
@@ -493,25 +504,31 @@ export const updateVendorOrder = async (
         const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
         const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
-        // 4. update stock
-        const updatedStock = await tx.stock.update({
-          where: {
-            product_name: productOrder.product_name,
-          },
-          data: {
-            quantity: newStockQuantity.toFraction(),
-            updated_at: time,
-          },
-        });
-
-        // 5. create stock change
-        const addedStockChange = await tx.stockChange.create({
-          data: {
-            stock_id: updatedStock.id,
-            change_id: addedStockChangeHistory.id,
-            quantity_change: stockQuantityChange.toFraction(),
-          },
-        });
+        // 1. create stock change history only if order is completed
+        if (isItemArrived || isInvoiceReceived) {
+          // 4. update stock
+          const updatedStock = await tx.stock.update({
+            where: {
+              product_name: productOrder.product_name,
+            },
+            data: {
+              quantity: newStockQuantity.toFraction(),
+              updated_at: time,
+            },
+          });
+  
+          // 5. create stock change
+          const addedStockChange = await tx.stockChange.create({
+            data: {
+              stock_id: updatedStock.id,
+              // addedStockChangeHistory shouldn't be null
+              // cuz of isItemArrived || isInvoiceReceived check
+              // that set addedStockChangeHistory to db.
+              change_id: addedStockChangeHistory?.id,
+              quantity_change: stockQuantityChange.toFraction(),
+            },
+          });
+        }
 
         // upsert product vendor order
         const updatedProductOrder = await tx.productVendorOrder.upsert({
