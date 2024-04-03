@@ -179,7 +179,7 @@ model ProductVendorOrder {
   quantity     Int
   unit_code    String      @db.VarChar(21)
   unit         Unit        @relation(fields: [unit_code], references: [code], onDelete: Cascade)
-  unit_price   Decimal
+  unit_price   Decimal?
   created_at   DateTime
   updated_at   DateTime
 
