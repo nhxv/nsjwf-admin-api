@@ -22,6 +22,7 @@ import {
   VendorOrderRequestDto,
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -325,6 +326,7 @@ export const createVendorOrder = async (
       return newVendorOrder;
     });
   } catch (error) {
+    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
@@ -547,5 +549,98 @@ export const updateVendorOrder = async (
     throw new createError.BadRequest(
       "Cannot update vendor order with the given data."
     );
+  }
+};
+
+export const revertVendorOrder = async (code: string) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // NOTE: Legacy code, may remove due to vendorReturn has no meaning.
+      const isReturned = await prisma.vendorReturn.findFirst({
+        where: {
+          order_code: code,
+        },
+      });
+      if (isReturned) {
+        throw "Can't revert order because it has at least one return.";
+      }
+      // revert payment if possible; DELIVERED vo doesn't have payment.
+      try {
+        const deletedVendorPayment = await prisma.vendorPayment.delete({
+          where: {
+            code: code,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          // Intentionally skip.
+        } else {
+          throw error;
+        }
+      }
+
+      // revert vendor order
+      const updatedVendorOrder = await prisma.vendorOrder.update({
+        where: {
+          code: code,
+        },
+        data: {
+          status: OrderStatus.SHIPPING,
+          is_sold: false,
+          payment_code: null,
+        },
+      });
+
+      // revert stock
+      const stockChangeHistory = await tx.stockChangeHistory.findUniqueOrThrow({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+        include: {
+          stockChanges: true,
+        },
+      });
+
+      for (const stockChange of stockChangeHistory.stockChanges) {
+        const stock = await tx.stock.findUniqueOrThrow({
+          where: {
+            id: stockChange.stock_id,
+          },
+        });
+        const currentStockQuantity = new Fraction(stock.quantity);
+        const stockQuantityChange = new Fraction(stockChange.quantity_change);
+        const revertedStockQuantity =
+          currentStockQuantity.sub(stockQuantityChange);
+        const updatedStock = await tx.stock.update({
+          where: {
+            id: stockChange.stock_id,
+          },
+          data: {
+            quantity: revertedStockQuantity.toFraction(),
+          },
+        });
+      }
+
+      const deletedStockChangeHistory = await tx.stockChangeHistory.delete({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+      });
+    });
+  } catch (error) {
+    console.log(error);
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot revert vendor order.");
   }
 };
