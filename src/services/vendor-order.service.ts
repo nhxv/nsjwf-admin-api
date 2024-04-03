@@ -516,7 +516,7 @@ export const updateVendorOrder = async (
               updated_at: time,
             },
           });
-  
+
           // 5. create stock change
           const addedStockChange = await tx.stockChange.create({
             data: {
@@ -634,6 +634,10 @@ export const revertVendorOrder = async (code: string) => {
         const stockQuantityChange = new Fraction(stockChange.quantity_change);
         const revertedStockQuantity =
           currentStockQuantity.sub(stockQuantityChange);
+        if (revertedStockQuantity.compare(0) < 0) {
+          throw `Unable to revert due to negative stock for ${stock.product_name}.`;
+        }
+
         const updatedStock = await tx.stock.update({
           where: {
             id: stockChange.stock_id,
