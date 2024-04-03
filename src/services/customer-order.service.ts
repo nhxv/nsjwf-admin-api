@@ -874,7 +874,7 @@ export const finishTask = async (code: string) => {
 export const revertCustomerOrder = async (code: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
-      const isReturned = await prisma.customerReturn.findFirst({
+      const isReturned = await tx.customerReturn.findFirst({
         where: {
           order_code: code,
         },
@@ -883,14 +883,14 @@ export const revertCustomerOrder = async (code: string) => {
         throw "Can't revert order because it has at least one return.";
       }
       // revert payment
-      const deletedCustomerPayment = await prisma.customerPayment.delete({
+      const deletedCustomerPayment = await tx.customerPayment.delete({
         where: {
           code: code,
         },
       });
 
       // revert customer order
-      const updatedCustomerOrder = await prisma.customerOrder.update({
+      const updatedCustomerOrder = await tx.customerOrder.update({
         where: {
           code: code,
         },

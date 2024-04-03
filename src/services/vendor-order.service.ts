@@ -276,7 +276,7 @@ export const createVendorOrder = async (
             currentStockQuantity.add(productOrderQuantity);
           const stockQuantityChange =
             newStockQuantity.sub(currentStockQuantity);
-          
+
           if (isItemArrived || isInvoiceReceived) {
             // 4. update stock
             const updatedStock = await tx.stock.update({
@@ -288,7 +288,7 @@ export const createVendorOrder = async (
                 updated_at: time,
               },
             });
-  
+
             // 5. create stock change
             const addedStockChange = await tx.stockChange.create({
               data: {
@@ -573,7 +573,7 @@ export const revertVendorOrder = async (code: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
       // NOTE: Legacy code, may remove due to vendorReturn has no meaning.
-      const isReturned = await prisma.vendorReturn.findFirst({
+      const isReturned = await tx.vendorReturn.findFirst({
         where: {
           order_code: code,
         },
@@ -583,7 +583,7 @@ export const revertVendorOrder = async (code: string) => {
       }
       // revert payment if possible; DELIVERED vo doesn't have payment.
       try {
-        const deletedVendorPayment = await prisma.vendorPayment.delete({
+        const deletedVendorPayment = await tx.vendorPayment.delete({
           where: {
             code: code,
           },
@@ -600,7 +600,7 @@ export const revertVendorOrder = async (code: string) => {
       }
 
       // revert vendor order
-      const updatedVendorOrder = await prisma.vendorOrder.update({
+      const updatedVendorOrder = await tx.vendorOrder.update({
         where: {
           code: code,
         },
