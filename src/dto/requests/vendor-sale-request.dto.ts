@@ -11,7 +11,7 @@ export interface VendorSaleRequestDto {
 
 export const vendorSaleSchema = Joi.object<VendorSaleRequestDto>({
   code: Joi.string()
-    .max(6)
+    .max(50)
     .regex(GENERAL_TEXT_REGEX, { invert: true })
     .optional()
     .allow(""),

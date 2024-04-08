@@ -22,6 +22,7 @@ import {
   VendorOrderRequestDto,
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -33,7 +34,14 @@ export const findDailyVendorOrder = async () => {
     const vendorOrders = await prisma.vendorOrder.findMany({
       where: {
         NOT: {
-          status: OrderStatus.COMPLETED,
+          OR: [
+            {
+              status: OrderStatus.DELIVERED,
+            },
+            {
+              status: OrderStatus.COMPLETED,
+            },
+          ],
         },
       },
       include: {
@@ -81,7 +89,14 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
     // Note that there's no known way to not select an entry based on a condition on a relation
     // we'll have to manually filter out later on.
     const whereClause = new Map();
-    whereClause.set("status", OrderStatus.COMPLETED);
+    whereClause.set("OR", [
+      {
+        status: OrderStatus.COMPLETED,
+      },
+      {
+        status: OrderStatus.DELIVERED,
+      },
+    ]);
 
     if (code) {
       whereClause.set("OR", [
@@ -147,12 +162,13 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
           0
         ),
         date: sold.updated_at,
-        payment_status: sold.vendorPayment.status,
+        payment_status: sold.vendorPayment?.status, // Delivered VO doesn't have payment.
         productVendorOrders: sold.productVendorOrders,
       });
     }
     return reports;
   } catch (error) {
+    console.log(error);
     throw new createError.BadRequest(
       "Cannot find vendor sale with the given data."
     );
@@ -186,43 +202,56 @@ export const createVendorOrder = async (
         order_code: productOrder.orderCode,
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         created_at: time,
         updated_at: time,
       })
     );
 
     return await prisma.$transaction(async (tx) => {
-      const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
+      const isItemArrived = vendorOrderData.status === OrderStatus.DELIVERED;
+      const isInvoiceReceived =
+        vendorOrderData.status === OrderStatus.COMPLETED;
 
-      if (isCompleted) {
-        // create vendor payment
-        const newVendorPayment = await tx.vendorPayment.create({
-          data: {
-            code: code,
-            status: vendorOrderData.isTest
-              ? PaymentStatus.CASH
-              : PaymentStatus.RECEIVABLE,
-            created_at: time,
-            updated_at: time,
-          },
-        });
+      // Not possible for both of these to be true,
+      // so no need to check if the stock is already changed.
+      let newVendorPayment;
+      if (isItemArrived || isInvoiceReceived) {
+        if (isInvoiceReceived) {
+          // create vendor payment
+          newVendorPayment = await tx.vendorPayment.create({
+            data: {
+              code: code,
+              status: vendorOrderData.isTest
+                ? PaymentStatus.CASH
+                : PaymentStatus.RECEIVABLE,
+              created_at: time,
+              updated_at: time,
+            },
+          });
 
-        // check for valid unit price when complete order
-        for (const po of productOrders) {
-          if (po.unit_price.comparedTo(0) < 0) {
-            throw `Price needs to be at least 0.`;
+          // check for valid unit price when complete order
+          for (const po of productOrders) {
+            // !po for empty order.
+            if (!po || !po.unit_price || po.unit_price.comparedTo(0) < 0) {
+              throw `Price needs to be at least 0.`;
+            }
           }
         }
 
-        // 1. create stock change history
-        const addedStockChangeHistory = await tx.stockChangeHistory.create({
-          data: {
-            created_at: time,
-            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
-            order_code: code,
-          },
-        });
+        // Add stock change if delivered.
+        let addedStockChangeHistory = null;
+        if (isItemArrived || isInvoiceReceived) {
+          addedStockChangeHistory = await tx.stockChangeHistory.create({
+            data: {
+              created_at: time,
+              reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+              order_code: code,
+            },
+          });
+        }
 
         for (const productOrder of productOrders) {
           // 2. get current stock
@@ -248,25 +277,30 @@ export const createVendorOrder = async (
           const stockQuantityChange =
             newStockQuantity.sub(currentStockQuantity);
 
-          // 4. update stock
-          const updatedStock = await tx.stock.update({
-            where: {
-              product_name: productOrder.product_name,
-            },
-            data: {
-              quantity: newStockQuantity.toFraction(),
-              updated_at: time,
-            },
-          });
+          if (isItemArrived || isInvoiceReceived) {
+            // 4. update stock
+            const updatedStock = await tx.stock.update({
+              where: {
+                product_name: productOrder.product_name,
+              },
+              data: {
+                quantity: newStockQuantity.toFraction(),
+                updated_at: time,
+              },
+            });
 
-          // 5. create stock change
-          const addedStockChange = await tx.stockChange.create({
-            data: {
-              stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
-              quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
+            // 5. create stock change
+            const addedStockChange = await tx.stockChange.create({
+              data: {
+                stock_id: updatedStock.id,
+                // addedStockChangeHistory shouldn't be null
+                // cuz of isItemArrived || isInvoiceReceived check
+                // that set addedStockChangeHistory to db.
+                change_id: addedStockChangeHistory?.id,
+                quantity_change: stockQuantityChange.toFraction(),
+              },
+            });
+          }
 
           // update product recent cost reminder
           const updatedProductRecentCost = await tx.product.update({
@@ -290,8 +324,8 @@ export const createVendorOrder = async (
           updated_at: time,
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
-          is_sold: isCompleted,
-          payment_code: isCompleted ? code : undefined,
+          is_sold: isItemArrived || isInvoiceReceived,
+          payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
           productVendorOrders: {
             create: productOrders,
           },
@@ -300,6 +334,7 @@ export const createVendorOrder = async (
       return newVendorOrder;
     });
   } catch (error) {
+    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
@@ -343,17 +378,21 @@ export const updateVendorOrder = async (
         product_name: productOrder.productName,
         quantity: productOrder.quantity,
         unit_code: productOrder.unitCode,
-        unit_price: new Prisma.Decimal(productOrder.unitPrice.toFixed(2)),
+        unit_price: !productOrder.unitPrice
+          ? null
+          : new Prisma.Decimal(productOrder.unitPrice),
         order_code: vendorOrderData.code,
         updated_at: time,
       })
     );
     return await prisma.$transaction(async (tx) => {
-      const isCompleted = vendorOrderData.status === OrderStatus.COMPLETED;
+      const isItemArrived = vendorOrderData.status === OrderStatus.DELIVERED;
+      const isInvoiceReceived =
+        vendorOrderData.status === OrderStatus.COMPLETED;
 
       // NOTE: Temporary fix.
       let newVendorPayment;
-      if (isCompleted) {
+      if (isInvoiceReceived) {
         newVendorPayment = await tx.vendorPayment.create({
           data: {
             code: code,
@@ -385,8 +424,8 @@ export const updateVendorOrder = async (
             updated_at: time,
             expected_at: convertLocalExpected(vendorOrderData.expectedAt),
             is_test: vendorOrderData.isTest,
-            is_sold: isCompleted,
-            payment_code: isCompleted ? newVendorPayment.code : undefined,
+            is_sold: isItemArrived || isInvoiceReceived,
+            payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
           },
         });
       } catch (e) {
@@ -410,9 +449,9 @@ export const updateVendorOrder = async (
         }
       }
 
-      let addedStockChangeHistory;
-      if (isCompleted) {
-        // 1. create stock change history only if order is completed
+      // Add stock change if delivered.
+      let addedStockChangeHistory = null;
+      if (isItemArrived || isInvoiceReceived) {
         addedStockChangeHistory = await tx.stockChangeHistory.create({
           data: {
             created_at: time,
@@ -423,35 +462,50 @@ export const updateVendorOrder = async (
       }
 
       for (const productOrder of productOrders) {
-        if (isCompleted) {
+        if (isInvoiceReceived) {
           // validate unit price when completing order
-          if (productOrder.unit_price.comparedTo(0) < 0) {
+          if (
+            !productOrder ||
+            !productOrder.unit_price ||
+            productOrder.unit_price.comparedTo(0) < 0
+          ) {
             throw `Price needs to be at least 0.`;
           }
 
-          // 2. get current stock
-          const currentStock = await tx.stock.findUniqueOrThrow({
+          // update product recent cost reminder
+          const updatedProductRecentCost = await tx.product.update({
             where: {
-              product_name: productOrder.product_name,
+              name: productOrder.product_name,
+            },
+            data: {
+              recent_cost: productOrder.unit_price,
             },
           });
+        }
 
-          // 3. get unit ratio
-          const unit = await tx.unit.findUniqueOrThrow({
-            where: {
-              code: productOrder.unit_code,
-            },
-          });
-          const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(
-            new Fraction(productOrder.quantity)
-          );
-          const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity =
-            currentStockQuantity.add(productOrderQuantity);
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
+        // 2. get current stock
+        const currentStock = await tx.stock.findUniqueOrThrow({
+          where: {
+            product_name: productOrder.product_name,
+          },
+        });
 
+        // 3. get unit ratio
+        const unit = await tx.unit.findUniqueOrThrow({
+          where: {
+            code: productOrder.unit_code,
+          },
+        });
+        const newRatio = new Fraction(unit.ratio);
+        const productOrderQuantity = newRatio.mul(
+          new Fraction(productOrder.quantity)
+        );
+        const currentStockQuantity = new Fraction(currentStock.quantity);
+        const newStockQuantity = currentStockQuantity.add(productOrderQuantity);
+        const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
+
+        // 1. create stock change history only if order is completed
+        if (isItemArrived || isInvoiceReceived) {
           // 4. update stock
           const updatedStock = await tx.stock.update({
             where: {
@@ -467,18 +521,11 @@ export const updateVendorOrder = async (
           const addedStockChange = await tx.stockChange.create({
             data: {
               stock_id: updatedStock.id,
-              change_id: addedStockChangeHistory.id,
+              // addedStockChangeHistory shouldn't be null
+              // cuz of isItemArrived || isInvoiceReceived check
+              // that set addedStockChangeHistory to db.
+              change_id: addedStockChangeHistory?.id,
               quantity_change: stockQuantityChange.toFraction(),
-            },
-          });
-
-          // update product recent cost reminder
-          const updatedProductRecentCost = await tx.product.update({
-            where: {
-              name: productOrder.product_name,
-            },
-            data: {
-              recent_cost: productOrder.unit_price,
             },
           });
         }
@@ -509,6 +556,7 @@ export const updateVendorOrder = async (
       }
     });
   } catch (error) {
+    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
@@ -518,5 +566,102 @@ export const updateVendorOrder = async (
     throw new createError.BadRequest(
       "Cannot update vendor order with the given data."
     );
+  }
+};
+
+export const revertVendorOrder = async (code: string) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // NOTE: Legacy code, may remove due to vendorReturn has no meaning.
+      const isReturned = await tx.vendorReturn.findFirst({
+        where: {
+          order_code: code,
+        },
+      });
+      if (isReturned) {
+        throw "Can't revert order because it has at least one return.";
+      }
+      // revert payment if possible; DELIVERED vo doesn't have payment.
+      try {
+        const deletedVendorPayment = await tx.vendorPayment.delete({
+          where: {
+            code: code,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          // Intentionally skip.
+        } else {
+          throw error;
+        }
+      }
+
+      // revert vendor order
+      const updatedVendorOrder = await tx.vendorOrder.update({
+        where: {
+          code: code,
+        },
+        data: {
+          status: OrderStatus.SHIPPING,
+          is_sold: false,
+          payment_code: null,
+        },
+      });
+
+      // revert stock
+      const stockChangeHistory = await tx.stockChangeHistory.findUniqueOrThrow({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+        include: {
+          stockChanges: true,
+        },
+      });
+
+      for (const stockChange of stockChangeHistory.stockChanges) {
+        const stock = await tx.stock.findUniqueOrThrow({
+          where: {
+            id: stockChange.stock_id,
+          },
+        });
+        const currentStockQuantity = new Fraction(stock.quantity);
+        const stockQuantityChange = new Fraction(stockChange.quantity_change);
+        const revertedStockQuantity =
+          currentStockQuantity.sub(stockQuantityChange);
+        if (revertedStockQuantity.compare(0) < 0) {
+          throw `Unable to revert due to negative stock for ${stock.product_name}.`;
+        }
+
+        const updatedStock = await tx.stock.update({
+          where: {
+            id: stockChange.stock_id,
+          },
+          data: {
+            quantity: revertedStockQuantity.toFraction(),
+          },
+        });
+      }
+
+      const deletedStockChangeHistory = await tx.stockChangeHistory.delete({
+        where: {
+          OrderStockChangeHistory_key: {
+            reason: StockChangeReason.VENDOR_ORDER_COMPLETED,
+            order_code: code,
+          },
+        },
+      });
+    });
+  } catch (error) {
+    console.log(error);
+    if (typeof error === "string") {
+      throw new createError.BadRequest(error);
+    }
+    throw new createError.BadRequest("Cannot revert vendor order.");
   }
 };

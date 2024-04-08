@@ -3,6 +3,7 @@ import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
   createVendorOrder,
+  revertVendorOrder,
   updateVendorOrder,
 } from "../services/vendor-order.service";
 import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
@@ -138,6 +139,20 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await updateVendorOrder(req.params.code, req.body);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// revert vendor order by code
+router.put(
+  `/vendor-orders/revert/:code`,
+  [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const response = await revertVendorOrder(req.params.code);
       res.send(response);
     } catch (error) {
       next(error);
