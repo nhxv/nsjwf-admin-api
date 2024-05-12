@@ -1,6 +1,6 @@
 import { ProductCustomerOrderResponseDto } from "./product-customer-order-response.dto";
 
-export interface CustomerSaleResponseDto {
+export interface CustomerSaleInvoiceResponseDto {
   customerName: string;
   isTest: boolean;
   orderCode: string;
@@ -11,4 +11,9 @@ export interface CustomerSaleResponseDto {
   manualCode?: string;
   paymentStatus?: string;
   id?: number;
+}
+
+export interface CustomerSaleResponseDto {
+  summary: Object;
+  sales: CustomerSaleInvoiceResponseDto[];
 }

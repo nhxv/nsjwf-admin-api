@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
-import { CustomerSaleResponseDto } from "../dto/responses/customer-sale-response.dto";
+import {
+  CustomerSaleInvoiceResponseDto,
+  CustomerSaleResponseDto,
+} from "../dto/responses/customer-sale-response.dto";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
@@ -93,9 +96,29 @@ router.get(
         customer: customerName,
         product: productName,
       });
-      res.send(
-        response.map((order) => {
-          const orderRes: CustomerSaleResponseDto = {
+
+      let boxCount = 0;
+      if (productName) {
+        boxCount = response.reduce((prev: number, order) => {
+          for (const product of order.productCustomerOrders) {
+            if (
+              product.product_name
+                .toLowerCase()
+                .includes(productName.toLowerCase()) &&
+              product.unit_code.split("_")[1].toLowerCase() == "box" // NOTE: Hard code this thing.
+            ) {
+              return prev + product.quantity;
+            }
+          }
+          return prev;
+        }, 0);
+      }
+      res.send({
+        summary: {
+          boxCount: boxCount,
+        },
+        sales: response.map((order) => {
+          const orderRes: CustomerSaleInvoiceResponseDto = {
             customerName: order.customer_name,
             isTest: order.is_test,
             orderCode: order.order_code,
@@ -115,8 +138,8 @@ router.get(
             paymentStatus: order.payment_status,
           };
           return orderRes;
-        })
-      );
+        }),
+      } as CustomerSaleResponseDto);
     } catch (error) {
       next(error);
     }
