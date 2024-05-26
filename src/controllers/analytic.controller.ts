@@ -10,7 +10,7 @@ import {
 const router = Router();
 
 router.get(
-  "/analytic/customer-buy-power",
+  "/analytic/analyze-customer-sale",
   [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -28,10 +28,7 @@ router.get(
         end_date: end_date,
         product: product,
       });
-      res.send({
-        columns: ["Customer", "Box Count"],
-        entries: result,
-      });
+      res.send(Object.values(result));
     } catch (error) {
       next(error);
     }
@@ -54,7 +51,7 @@ router.get(
 );
 
 router.get(
-  "/analytic/product-count",
+  "/analytic/analyze-product-sale",
   [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -67,10 +64,7 @@ router.get(
         end_date: end_date,
       });
 
-      res.send({
-        columns: ["Product", "Box count"],
-        entries: result,
-      });
+      res.send(Object.values(result));
     } catch (error) {
       next(error);
     }
