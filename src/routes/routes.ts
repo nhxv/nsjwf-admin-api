@@ -14,8 +14,11 @@ import vendorReturnRemainController from "../controllers/vendor-return-remain.co
 import vendorReturnController from "../controllers/vendor-return.controller";
 import vendorController from "../controllers/vendor.controller";
 
+import analyticController from "../controllers/analytic.controller";
+
 const api = Router()
   .use(testController)
+  .use(analyticController)
   .use(authController)
   .use(productController)
   .use(customerController)
