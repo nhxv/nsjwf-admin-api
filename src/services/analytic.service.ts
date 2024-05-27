@@ -112,8 +112,8 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
           ret[pco.product_name] = [pco.product_name, 0];
         }
 
-        const [_, unit] = pco.unit_code.split("_");
-        if (unit === "BOX") {
+        const unit = pco.unit_code.split("_")[1];
+        if (unit === "BOX" && pco.quantity > 0) {
           ret[pco.product_name][1] += pco.quantity;
         }
       }
