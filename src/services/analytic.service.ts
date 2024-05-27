@@ -46,7 +46,7 @@ export const rankCustomersByProduct = async (
         },
       },
     });
-    
+
     const ordersWithProduct = result.filter(
       (co) => co.productCustomerOrders.length !== 0
     );
