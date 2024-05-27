@@ -57,9 +57,11 @@ export const rankCustomersByProduct = async (
         ret[co.customer_name] = [co.customer_name, 0];
       }
 
-      const [_, unit] = co.productCustomerOrders[0].unit_code.split("_");
-      if (unit === "BOX") {
-        ret[co.customer_name][1] += co.productCustomerOrders[0].quantity;
+      for (const productOrder of co.productCustomerOrders) {
+        const unit = productOrder.unit_code.split("_")[1];
+        if (unit === "BOX" && productOrder.quantity > 0) {
+          ret[co.customer_name][1] += productOrder.quantity;
+        }
       }
     }
 
