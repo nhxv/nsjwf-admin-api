@@ -38,7 +38,7 @@ export const rankCustomersByProduct = async (
           },
           where: {
             product_name: {
-              contains: product,
+              startsWith: product,
               mode: "insensitive",
             },
             quantity: {
