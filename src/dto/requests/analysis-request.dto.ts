@@ -1,12 +1,12 @@
 import Joi from "joi";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
-interface IAnalyticDto {
+interface IAnalysisDto {
   start_date: string;
   end_date: string;
 }
 
-export interface CustomerProductRankingDto extends IAnalyticDto {
+export interface CustomerProductRankingDto extends IAnalysisDto {
   product?: string;
 }
 
@@ -27,7 +27,7 @@ export const customerProductRankingSchema =
       .allow(""),
   });
 
-export interface ProductRankingDto extends IAnalyticDto {}
+export interface ProductRankingDto extends IAnalysisDto {}
 
 export const productRankingSchema = Joi.object<ProductRankingDto>({
   start_date: Joi.string()
