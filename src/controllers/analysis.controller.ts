@@ -5,12 +5,12 @@ import { Role } from "../commons/enums/role.enum";
 import {
   rankCustomersByProduct,
   rankProductsByCount,
-} from "../services/analytic.service";
+} from "../services/analysis.service";
 
 const router = Router();
 
 router.get(
-  "/analytic/analyze-customer-sale",
+  "/analysis/analyze-customer-sale",
   [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -28,7 +28,7 @@ router.get(
         end_date: end_date,
         product: product,
       });
-      res.send(Object.values(result));
+      res.send(result);
     } catch (error) {
       next(error);
     }
@@ -36,7 +36,7 @@ router.get(
 );
 
 router.get(
-  "/analytic/customer-margin",
+  "/analysis/customer-margin",
   [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     const mockResp = {
@@ -51,7 +51,7 @@ router.get(
 );
 
 router.get(
-  "/analytic/analyze-product-sale",
+  "/analysis/analyze-product-sale",
   [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {

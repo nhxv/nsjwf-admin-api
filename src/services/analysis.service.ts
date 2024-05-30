@@ -6,7 +6,8 @@ import {
   ProductRankingDto,
   customerProductRankingSchema,
   productRankingSchema,
-} from "../dto/requests/analytic-request.dto";
+} from "../dto/requests/analysis-request.dto";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export const rankCustomersByProduct = async (
   searchObject: CustomerProductRankingDto
@@ -19,7 +20,7 @@ export const rankCustomersByProduct = async (
       new Date(start_date)
     );
     const { start: _s, end: end } = convertLocalInterval(new Date(end_date));
-    const result = await prisma.customerOrder.findMany({
+    const orders = await prisma.customerOrder.findMany({
       where: {
         status: OrderStatus.COMPLETED,
         expected_at: {
@@ -33,12 +34,19 @@ export const rankCustomersByProduct = async (
           select: {
             quantity: true,
             unit_code: true,
+            unit_price: true,
           },
           where: {
             product_name: {
-              startsWith: product,
+              contains: product,
               mode: "insensitive",
             },
+            quantity: {
+              gt: 0,
+            },
+            unit_price: {
+              gt: 0,
+            }
           },
           orderBy: {
             product_name: "asc",
@@ -47,25 +55,36 @@ export const rankCustomersByProduct = async (
       },
     });
 
-    const ordersWithProduct = result.filter(
+    const ordersWithProduct = orders.filter(
       (co) => co.productCustomerOrders.length !== 0
     );
 
-    let ret = {};
+    let customerSales = {};
     for (const co of ordersWithProduct) {
-      if (!ret.hasOwnProperty(co.customer_name)) {
-        ret[co.customer_name] = [co.customer_name, 0];
+      if (!customerSales.hasOwnProperty(co.customer_name)) {
+        customerSales[co.customer_name] = {boxCount: 0, price: 0};
       }
 
       for (const productOrder of co.productCustomerOrders) {
         const unit = productOrder.unit_code.split("_")[1];
-        if (unit === "BOX" && productOrder.quantity > 0) {
-          ret[co.customer_name][1] += productOrder.quantity;
+        if (unit === "BOX") {
+          customerSales[co.customer_name].boxCount += productOrder.quantity;
+          customerSales[co.customer_name].price += productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
-
-    return ret;
+    // format result -- there might be a fancy one-liner way of doing this
+    const result = [];
+    for (const customer in customerSales) {
+      if (customerSales[customer].boxCount > 0) {
+        result.push({
+          customerName: customer, 
+          boxCount: customerSales[customer].boxCount,
+          avgPrice: (customerSales[customer].price / customerSales[customer].boxCount).toFixed(2),
+        });
+      }
+    }
+    return result;
   } catch (error) {
     console.log(error);
     throw new createError.BadRequest("Bad inputs.");
