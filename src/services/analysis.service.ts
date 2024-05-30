@@ -46,7 +46,7 @@ export const rankCustomersByProduct = async (
             },
             unit_price: {
               gt: 0,
-            }
+            },
           },
           orderBy: {
             product_name: "asc",
@@ -62,14 +62,15 @@ export const rankCustomersByProduct = async (
     let customerSales = {};
     for (const co of ordersWithProduct) {
       if (!customerSales.hasOwnProperty(co.customer_name)) {
-        customerSales[co.customer_name] = {boxCount: 0, price: 0};
+        customerSales[co.customer_name] = { boxCount: 0, price: 0 };
       }
 
       for (const productOrder of co.productCustomerOrders) {
         const unit = productOrder.unit_code.split("_")[1];
         if (unit === "BOX") {
           customerSales[co.customer_name].boxCount += productOrder.quantity;
-          customerSales[co.customer_name].price += productOrder.unit_price.toNumber() * productOrder.quantity;
+          customerSales[co.customer_name].price +=
+            productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
@@ -78,9 +79,11 @@ export const rankCustomersByProduct = async (
     for (const customer in customerSales) {
       if (customerSales[customer].boxCount > 0) {
         result.push({
-          customerName: customer, 
+          customerName: customer,
           boxCount: customerSales[customer].boxCount,
-          avgPrice: (customerSales[customer].price / customerSales[customer].boxCount).toFixed(2),
+          avgPrice: (
+            customerSales[customer].price / customerSales[customer].boxCount
+          ).toFixed(2),
         });
       }
     }
