@@ -7,7 +7,6 @@ import {
   customerProductRankingSchema,
   productRankingSchema,
 } from "../dto/requests/analysis-request.dto";
-import { Decimal } from "@prisma/client/runtime/library";
 
 export const rankCustomersByProduct = async (
   searchObject: CustomerProductRankingDto
@@ -62,18 +61,19 @@ export const rankCustomersByProduct = async (
     let customerSales = {};
     for (const co of ordersWithProduct) {
       if (!customerSales.hasOwnProperty(co.customer_name)) {
-        customerSales[co.customer_name] = { boxCount: 0, price: 0 };
+        customerSales[co.customer_name] = { boxCount: 0, avgPrice: 0 };
       }
 
       for (const productOrder of co.productCustomerOrders) {
         const unit = productOrder.unit_code.split("_")[1];
         if (unit === "BOX") {
           customerSales[co.customer_name].boxCount += productOrder.quantity;
-          customerSales[co.customer_name].price +=
+          customerSales[co.customer_name].avgPrice +=
             productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
+
     // format result -- there might be a fancy one-liner way of doing this
     const result = [];
     for (const customer in customerSales) {
@@ -82,7 +82,7 @@ export const rankCustomersByProduct = async (
           customerName: customer,
           boxCount: customerSales[customer].boxCount,
           avgPrice: (
-            customerSales[customer].price / customerSales[customer].boxCount
+            customerSales[customer].avgPrice / customerSales[customer].boxCount
           ).toFixed(2),
         });
       }
@@ -105,7 +105,7 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
     );
     const { start: _s, end: end } = convertLocalInterval(new Date(end_date));
 
-    const result = await prisma.customerOrder.findMany({
+    const orders = await prisma.customerOrder.findMany({
       where: {
         status: OrderStatus.COMPLETED,
         expected_at: {
@@ -119,6 +119,15 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
             product_name: true,
             quantity: true,
             unit_code: true,
+            unit_price: true,
+          },
+          where: {
+            quantity: {
+              gt: 0,
+            },
+            unit_price: {
+              gt: 0,
+            },
           },
           orderBy: {
             product_name: "asc",
@@ -127,21 +136,40 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
       },
     });
 
-    let ret = {};
-    for (const co of result) {
-      for (const pco of co.productCustomerOrders) {
-        if (!ret.hasOwnProperty(pco.product_name)) {
-          ret[pco.product_name] = [pco.product_name, 0];
+    let productSales = {};
+    for (const co of orders) {
+      for (const productOrder of co.productCustomerOrders) {
+        if (!productSales.hasOwnProperty(productOrder.product_name)) {
+          productSales[productOrder.product_name] = {
+            boxCount: 0,
+            avgPrice: 0,
+          };
         }
 
-        const unit = pco.unit_code.split("_")[1];
-        if (unit === "BOX" && pco.quantity > 0) {
-          ret[pco.product_name][1] += pco.quantity;
+        const unit = productOrder.unit_code.split("_")[1];
+        if (unit === "BOX") {
+          productSales[productOrder.product_name].boxCount +=
+            productOrder.quantity;
+          productSales[productOrder.product_name].avgPrice +=
+            productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
 
-    return ret;
+    // format analysis result
+    const result = [];
+    for (const product in productSales) {
+      if (productSales[product].boxCount > 0) {
+        result.push({
+          productName: product,
+          boxCount: productSales[product].boxCount,
+          avgPrice: (
+            productSales[product].avgPrice / productSales[product].boxCount
+          ).toFixed(2),
+        });
+      }
+    }
+    return result;
   } catch (error) {
     throw new createError.BadRequest("Bad inputs.");
   }

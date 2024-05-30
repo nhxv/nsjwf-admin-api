@@ -63,8 +63,7 @@ router.get(
         start_date: start_date,
         end_date: end_date,
       });
-
-      res.send(Object.values(result));
+      res.send(result);
     } catch (error) {
       next(error);
     }
