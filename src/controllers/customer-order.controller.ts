@@ -97,22 +97,21 @@ router.get(
         product: productName,
       });
 
-      let boxCount = 0;
-      if (productName) {
-        boxCount = response.reduce((prev: number, order) => {
-          for (const product of order.productCustomerOrders) {
-            if (
-              product.product_name
-                .toLowerCase()
-                .includes(productName.toLowerCase()) &&
-              product.unit_code.split("_")[1].toLowerCase() == "box" // NOTE: Hard code this thing.
-            ) {
-              return prev + product.quantity;
-            }
+      const boxCount = response.reduce((prev: number, order) => {
+        let curr = prev;
+        for (const product of order.productCustomerOrders) {
+          if (
+            product.product_name
+              .toLowerCase()
+              .includes(productName.toLowerCase()) &&
+            product.unit_code.split("_")[1].toLowerCase() == "box" // NOTE: Hard code this thing.
+          ) {
+            curr += product.quantity;
           }
-          return prev;
-        }, 0);
-      }
+        }
+        return curr;
+      }, 0);
+
       res.send({
         summary: {
           boxCount: boxCount,
