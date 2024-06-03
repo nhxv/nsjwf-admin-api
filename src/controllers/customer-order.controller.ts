@@ -104,12 +104,19 @@ router.get(
             product.product_name
               .toLowerCase()
               .includes(productName.toLowerCase()) &&
-            product.unit_code.split("_")[1].toLowerCase() == "box" // NOTE: Hard code this thing.
+            product.unit_code.split("_")[1].toLowerCase() === "box" // NOTE: Hard code this thing.
           ) {
             curr += product.quantity;
+          } else if (
+            productName === "" &&
+            product.product_name.toLowerCase().includes("bean sprout") &&
+            product.unit_code.split("_")[1] === "BOX"
+          ) {
+            // special customers
+            curr += product.quantity * 0.5;
           }
         }
-        return curr;
+        return curr.toFixed(2);
       }, 0);
 
       res.send({

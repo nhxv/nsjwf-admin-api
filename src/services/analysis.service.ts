@@ -40,12 +40,6 @@ export const rankCustomersByProduct = async (
               startsWith: product,
               mode: "insensitive",
             },
-            quantity: {
-              gt: 0,
-            },
-            unit_price: {
-              gt: 0,
-            },
           },
           orderBy: {
             product_name: "asc",
@@ -120,14 +114,6 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
             quantity: true,
             unit_code: true,
             unit_price: true,
-          },
-          where: {
-            quantity: {
-              gt: 0,
-            },
-            unit_price: {
-              gt: 0,
-            },
           },
           orderBy: {
             product_name: "asc",
