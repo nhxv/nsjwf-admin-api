@@ -116,7 +116,7 @@ router.get(
             curr += product.quantity * 0.5;
           }
         }
-        return curr.toFixed(2);
+        return curr;
       }, 0);
 
       res.send({
