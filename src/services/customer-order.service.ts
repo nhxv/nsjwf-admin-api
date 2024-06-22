@@ -81,7 +81,7 @@ export const findCustomerSale = async (
   searchObject: CustomerSaleRequestDto
 ) => {
   try {
-    const { code, start_date, end_date, customer, product } =
+    const { code, start_date, end_date, customer, product, date_type } =
       await customerSaleSchema.validateAsync(searchObject);
 
     // Construct dynamic query for prisma.
@@ -103,6 +103,11 @@ export const findCustomerSale = async (
         },
       ]);
     } else {
+      let date_col = "expected_at";
+      if (date_type && date_type === "updated_at") {
+        date_col = "updated_at";
+      }
+
       if (start_date && end_date) {
         const { start: start, end: _e } = convertLocalInterval(
           new Date(start_date)
@@ -110,18 +115,19 @@ export const findCustomerSale = async (
         const { start: _s, end: end } = convertLocalInterval(
           new Date(end_date)
         );
-        whereClause.set("expected_at", { gte: start, lte: end });
+        whereClause.set(date_col, { gte: start, lte: end });
       } else if (start_date || end_date) {
         const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
-        whereClause.set("expected_at", { gte: start, lte: end });
+        whereClause.set(date_col, { gte: start, lte: end });
       }
 
-      if (customer)
+      if (customer) {
         whereClause.set("customer_name", {
           equals: customer,
           mode: "insensitive",
         });
+      }
     }
     let result = await prisma.customerOrder.findMany({
       where: Object.fromEntries(whereClause),

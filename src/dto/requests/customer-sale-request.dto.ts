@@ -7,6 +7,7 @@ export interface CustomerSaleRequestDto {
   end_date?: string;
   customer?: string;
   product?: string;
+  date_type?: string;
 }
 
 export const customerSaleSchema = Joi.object<CustomerSaleRequestDto>({
@@ -35,4 +36,8 @@ export const customerSaleSchema = Joi.object<CustomerSaleRequestDto>({
     .regex(GENERAL_TEXT_REGEX, { invert: true })
     .optional()
     .allow(""),
+  date_type: Joi.string()
+    .max(16)
+    .optional()
+    .allow("", "expected_at", "updated_at"),
 });

@@ -22,6 +22,7 @@ import {
   updateCustomerOrder,
   updatePriority,
 } from "./../services/customer-order.service";
+import { date } from "joi";
 
 const router = Router();
 
@@ -58,7 +59,8 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let [code, start_date, end_date, customerName, productName] = [
+      let [code, start_date, end_date, customerName, productName, dateType] = [
+        "",
         "",
         "",
         "",
@@ -88,6 +90,9 @@ router.get(
           // productName = decodeURIComponent(req.query.product as string);
           productName = req.query.product as string;
         }
+        if ("date_type" in req.query) {
+          dateType = req.query.date_type as string;
+        }
       }
       const response: any = await findCustomerSale({
         code: code,
@@ -95,6 +100,7 @@ router.get(
         end_date: end_date,
         customer: customerName,
         product: productName,
+        date_type: dateType,
       });
 
       const boxCount = response.reduce((prev: number, order) => {
