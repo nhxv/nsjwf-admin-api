@@ -1,0 +1,12 @@
+name: dev-deployment
+run-name: ${{ github.actor }} is cooking
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Something something"
