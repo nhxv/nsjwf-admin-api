@@ -1,5 +1,5 @@
 name: dev-deployment
-run-name: ${{ github.actor }} is cooking
+run-name: ${{ github.actor }} triggered this workflow.
 on:
   push:
     branches:
@@ -9,4 +9,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Something something"
+      # - run: echo "Something something"
+      - uses: appleboy/ssh-action
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PKEY }}
+          script: |
+            whoami
+            pwd
+            cd storage/backend
+            git pull origin dev
