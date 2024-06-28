@@ -31,13 +31,6 @@ router.get(
 );
 
 router.get(
-  `/test/ping`,
-  async (req: Request, res: Response, next: NextFunction) => {
-    res.send("Pong, wait, stronger, PONG!");
-  }
-);
-
-router.get(
   `/test/roles/admin`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
