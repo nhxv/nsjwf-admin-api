@@ -33,7 +33,7 @@ router.get(
 router.get(
   `/test/ping`,
   async (req: Request, res: Response, next: NextFunction) => {
-    res.send("Pong!");
+    res.send("Pong!!");
   }
 );
 
