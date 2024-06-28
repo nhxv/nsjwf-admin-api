@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+  workflow-dispatch:
 
 jobs:
   build:
@@ -16,7 +17,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.PKEY }}
           script: |
-            whoami
-            pwd
-            cd storage/backend
+            cd ~/.ssh
+            ls
+            cd ~/storage/backend
             git pull origin dev
