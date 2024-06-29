@@ -1,0 +1,23 @@
+name: prod_deployment
+run-name: ${{ github.actor }} triggered ${{ github.action }} workflow.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # ssh-action@v1.0.3
+      - uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.PKEY }}
+          script: |
+            cd ~/storage/backend
+            git pull
+            git switch main
+            systemctl --user restart nsjwf
