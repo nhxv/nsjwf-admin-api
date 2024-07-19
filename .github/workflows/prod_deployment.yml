@@ -20,6 +20,6 @@ jobs:
             cd ~/storage/backend
             git switch main
             git fetch origin
-            git diff --quiet main origin/main -- prisma/migrations || npm run prisma:deploy
             git merge
+            npm run prisma:deploy
             systemctl --user restart nsjwf
