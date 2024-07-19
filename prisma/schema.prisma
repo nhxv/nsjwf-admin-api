@@ -91,7 +91,7 @@ model Unit {
   code                        String                        @unique @db.VarChar(21) // productId (10) + underscore (1) + unitName (10)
   product_name                String                        @db.VarChar(255)
   product                     Product                       @relation(fields: [product_name], references: [name], onDelete: Cascade)
-  ratio                       String                        @db.VarChar(4)
+  ratio                       String                        @db.VarChar(6)
   discontinued                Boolean
   productVendorOrder          ProductVendorOrder[]
   productCustomerOrder        ProductCustomerOrder[]

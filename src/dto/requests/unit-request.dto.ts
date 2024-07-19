@@ -13,6 +13,6 @@ export const unitSchema = Joi.object<UnitRequestDto>({
     .required()
     .max(10)
     .regex(GENERAL_TEXT_REGEX, { invert: true }),
-  ratio: Joi.string().trim().max(4).regex(FRACTION_REGEX),
+  ratio: Joi.string().trim().max(6).regex(FRACTION_REGEX),
   discontinued: Joi.boolean().required(),
 });

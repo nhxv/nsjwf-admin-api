@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Unit" ALTER COLUMN "ratio" SET DATA TYPE VARCHAR(6);
