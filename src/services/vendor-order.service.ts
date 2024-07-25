@@ -23,6 +23,8 @@ import {
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import fsPromise from "fs/promises";
+import path from "node:path";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -314,6 +316,14 @@ export const createVendorOrder = async (
         }
       }
 
+      let attachmentPath = null;
+      if (vendorOrderData.attachment) {
+        attachmentPath = path.join(
+          process.env.FILE_STORAGE,
+          vendorOrderData.attachment.filename
+        );
+      }
+
       // create new order
       const newVendorOrder = await tx.vendorOrder.create({
         data: {
@@ -325,12 +335,18 @@ export const createVendorOrder = async (
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
           is_sold: isItemArrived || isInvoiceReceived,
+          attachment: attachmentPath,
           payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
           productVendorOrders: {
             create: productOrders,
           },
         },
       });
+
+      await fsPromise.rename(
+        path.join(vendorOrderData.attachment.path),
+        path.resolve(attachmentPath)
+      );
       return newVendorOrder;
     });
   } catch (error) {

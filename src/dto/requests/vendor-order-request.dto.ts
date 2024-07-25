@@ -3,6 +3,30 @@ import { ProductVendorOrderRequestDto } from "./product-vendor-order-request.dto
 import { OrderStatus } from "../../commons/enums/order-status.enum";
 import { GENERAL_TEXT_REGEX } from "../../commons/constant";
 
+interface MulterFileDto {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer?: any;
+}
+
+const attachmentSchema = Joi.object<MulterFileDto>({
+  fieldname: Joi.string().required().max(512),
+  originalname: Joi.string().max(512),
+  encoding: Joi.string(),
+  mimetype: Joi.string(),
+  size: Joi.number(),
+  destination: Joi.string(),
+  filename: Joi.string(),
+  path: Joi.string(),
+  buffer: Joi.any(),
+});
+
 export interface VendorOrderRequestDto {
   vendorName: string;
   productVendorOrders: ProductVendorOrderRequestDto[];
@@ -13,6 +37,7 @@ export interface VendorOrderRequestDto {
   status?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  attachment?: MulterFileDto;
 }
 
 export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
@@ -49,4 +74,5 @@ export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
     .regex(GENERAL_TEXT_REGEX, { invert: true }),
   createdAt: Joi.date(),
   updatedAt: Joi.date(),
+  attachment: attachmentSchema,
 });

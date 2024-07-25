@@ -14,6 +14,7 @@ import {
   findVendorOrderByCode,
   findVendorSale,
 } from "./../services/vendor-order.service";
+import { imageReceiver } from "../commons/file";
 
 const router = Router();
 
@@ -122,8 +123,10 @@ router.get(
 router.post(
   `/vendor-orders`,
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  imageReceiver.single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      req.body.attachment = req.file;
       const response = await createVendorOrder(req.body);
       res.send(response);
     } catch (error) {

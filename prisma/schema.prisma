@@ -162,6 +162,7 @@ model VendorOrder {
   is_test             Boolean              @default(false)
   is_sold             Boolean              @default(false)
   payment_code        String?              @unique @db.VarChar(20)
+  attachment          String?              @unique
   vendorPayment       VendorPayment?       @relation(fields: [payment_code], references: [code])
   productVendorOrders ProductVendorOrder[]
   vendorReturns       VendorReturn[]
