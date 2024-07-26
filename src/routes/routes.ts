@@ -13,6 +13,7 @@ import vendorOrderController from "../controllers/vendor-order.controller";
 import vendorReturnRemainController from "../controllers/vendor-return-remain.controller";
 import vendorReturnController from "../controllers/vendor-return.controller";
 import vendorController from "../controllers/vendor.controller";
+import imageController from "../controllers/image.controller";
 
 import analysisController from "../controllers/analysis.controller";
 
@@ -21,6 +22,7 @@ const api = Router()
   .use(analysisController)
   .use(authController)
   .use(productController)
+  .use(imageController)
   .use(customerController)
   .use(vendorController)
   .use(vehicleController)

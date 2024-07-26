@@ -74,6 +74,9 @@ export const findVendorOrderByCode = async (code: string) => {
         },
       },
     });
+    if (vendorOrder.attachment) {
+      vendorOrder.attachment = `/images/vendor-orders/${vendorOrder.code}`;
+    }
     return vendorOrder;
   } catch (error) {
     throw new createError.BadRequest(

@@ -25,7 +25,7 @@ const attachmentSchema = Joi.object<MulterFileDto>({
   filename: Joi.string(),
   path: Joi.string(),
   buffer: Joi.any(),
-});
+}).optional();
 
 export interface VendorOrderRequestDto {
   vendorName: string;
