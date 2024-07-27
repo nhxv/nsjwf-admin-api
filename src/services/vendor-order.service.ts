@@ -321,10 +321,16 @@ export const createVendorOrder = async (
 
       let attachmentPath = null;
       if (vendorOrderData.attachment) {
-        attachmentPath = path.join(
-          process.env.FILE_STORAGE,
-          vendorOrderData.attachment.filename
-        );
+        const vendor = await tx.vendor.findUniqueOrThrow({
+          select: {
+            id: true,
+          },
+          where: {
+            name: vendorOrderData.vendorName,
+          },
+        });
+
+        attachmentPath = path.join(process.env.FILE_STORAGE, `${vendor.id}`, `${code}`);
       }
 
       // create new order
@@ -346,10 +352,15 @@ export const createVendorOrder = async (
         },
       });
 
-      await fsPromise.rename(
-        path.join(vendorOrderData.attachment.path),
-        path.resolve(attachmentPath)
-      );
+      try {
+        await fsPromise.rename(
+          path.join(vendorOrderData.attachment.path),
+          path.resolve(attachmentPath)
+        );
+      }
+      catch {
+        throw "Unable to save file. Remove attachment and try again.";
+      }
       return newVendorOrder;
     });
   } catch (error) {
@@ -426,6 +437,24 @@ export const updateVendorOrder = async (
 
       // update vendor order table if that order IS NOT completed already
       let existingOrder;
+      let attachmentPath = null;
+
+      /**
+       * The attachment changing content by itself doesn't matter. The flow is just gonna be
+       * that we're deleting the old attachment and create the new attachment. It is
+       * other stuffs that matters a bit more.
+       * 
+       * To find the existence of an old attachment, we need to query the VO once.
+       * 
+       * Some cases on attachments:
+       * 1. The attachment is added. Detect this with vo.attachment=null.
+       * Solution: Just create a new one and update attachment.
+       * 2. The attachment is removed. Detect this with vendorOrderData.attachment=null.
+       * Solution: Update the attachment column to null and delete the old one.
+       * 3. The vendor name changed. Detect this with compare(vendorOrderData.vendorName, vo.vendor_name)
+       * Solution: Remove the old attachment (vo.attachment). Create a new one at vendorOrderData.attachment.
+       */
+      
       try {
         existingOrder = await tx.vendorOrder.update({
           where: {
