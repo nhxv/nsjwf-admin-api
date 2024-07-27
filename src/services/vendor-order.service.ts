@@ -330,7 +330,11 @@ export const createVendorOrder = async (
           },
         });
 
-        attachmentPath = path.join(process.env.FILE_STORAGE, `${vendor.id}`, `${code}`);
+        attachmentPath = path.join(
+          process.env.FILE_STORAGE,
+          `${vendor.id}`,
+          `${code}`
+        );
       }
 
       // create new order
@@ -357,8 +361,7 @@ export const createVendorOrder = async (
           path.join(vendorOrderData.attachment.path),
           path.resolve(attachmentPath)
         );
-      }
-      catch {
+      } catch {
         throw "Unable to save file. Remove attachment and try again.";
       }
       return newVendorOrder;
@@ -443,9 +446,9 @@ export const updateVendorOrder = async (
        * The attachment changing content by itself doesn't matter. The flow is just gonna be
        * that we're deleting the old attachment and create the new attachment. It is
        * other stuffs that matters a bit more.
-       * 
+       *
        * To find the existence of an old attachment, we need to query the VO once.
-       * 
+       *
        * Some cases on attachments:
        * 1. The attachment is added. Detect this with vo.attachment=null.
        * Solution: Just create a new one and update attachment.
@@ -454,7 +457,7 @@ export const updateVendorOrder = async (
        * 3. The vendor name changed. Detect this with compare(vendorOrderData.vendorName, vo.vendor_name)
        * Solution: Remove the old attachment (vo.attachment). Create a new one at vendorOrderData.attachment.
        */
-      
+
       try {
         existingOrder = await tx.vendorOrder.update({
           where: {
