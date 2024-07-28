@@ -330,11 +330,16 @@ export const createVendorOrder = async (
           },
         });
 
-        attachmentPath = path.join(
-          process.env.FILE_STORAGE,
-          `${vendor.id}`,
-          `${code}`
-        );
+        try {
+          attachmentPath = path.join(
+            process.env.FILE_STORAGE,
+            `${vendor.id}`,
+            `${code}`
+          );
+        } catch (err) {
+          console.log(err);
+          throw "Unable to construct file path. Contact server admin.";
+        }
       }
 
       // create new order
@@ -356,13 +361,16 @@ export const createVendorOrder = async (
         },
       });
 
-      try {
-        await fsPromise.rename(
-          path.join(vendorOrderData.attachment.path),
-          path.resolve(attachmentPath)
-        );
-      } catch {
-        throw "Unable to save file. Remove attachment and try again.";
+      if (attachmentPath !== null) {
+        try {
+          await fsPromise.rename(
+            path.join(vendorOrderData.attachment.path),
+            path.resolve(attachmentPath)
+          );
+        } catch (error) {
+          console.log(error);
+          throw "Unable to save file. Remove attachment and try again.";
+        }
       }
       return newVendorOrder;
     });
@@ -438,50 +446,108 @@ export const updateVendorOrder = async (
         });
       }
 
-      // update vendor order table if that order IS NOT completed already
       let existingOrder;
       let attachmentPath = null;
 
-      /**
-       * The attachment changing content by itself doesn't matter. The flow is just gonna be
-       * that we're deleting the old attachment and create the new attachment. It is
-       * other stuffs that matters a bit more.
-       *
-       * To find the existence of an old attachment, we need to query the VO once.
-       *
-       * Some cases on attachments:
-       * 1. The attachment is added. Detect this with vo.attachment=null.
-       * Solution: Just create a new one and update attachment.
-       * 2. The attachment is removed. Detect this with vendorOrderData.attachment=null.
-       * Solution: Update the attachment column to null and delete the old one.
-       * 3. The vendor name changed. Detect this with compare(vendorOrderData.vendorName, vo.vendor_name)
-       * Solution: Remove the old attachment (vo.attachment). Create a new one at vendorOrderData.attachment.
-       */
-
       try {
-        existingOrder = await tx.vendorOrder.update({
+        existingOrder = await tx.vendorOrder.findUniqueOrThrow({
           where: {
             VendorOrderSold_key: {
               code: vendorOrderData.code,
               is_sold: false,
             },
           },
-          include: {
-            productVendorOrders: true,
-          },
-          data: {
-            vendor_name: vendorOrderData.vendorName,
-            status: vendorOrderData.status,
-            updated_at: time,
-            expected_at: convertLocalExpected(vendorOrderData.expectedAt),
-            is_test: vendorOrderData.isTest,
-            is_sold: isItemArrived || isInvoiceReceived,
-            payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
+          select: {
+            vendor_name: true,
+            attachment: true,
+            vendor: {
+              select: {
+                id: true,
+              },
+            },
           },
         });
-      } catch (e) {
-        throw `This order cannot be changed.`;
+      } catch {
+        throw "This order cannot be changed.";
       }
+
+      if (vendorOrderData.attachment) {
+        // Rename /tmp/file to uploads/vendorID/code
+        // If there's already uploads/vendorID/code then it gets overwritten, no need to delete.
+        // This is not the case if vendorID is different so we need to handle that.
+        let vendorID: string = "" + existingOrder.vendor.id;
+        if (vendorOrderData.vendorName !== existingOrder.vendor_name) {
+          const vendor = await tx.vendor.findUniqueOrThrow({
+            where: {
+              name: vendorOrderData.vendorName,
+            },
+            select: {
+              id: true,
+            },
+          });
+          vendorID = "" + vendor.id;
+
+          try {
+            const removePath = path.resolve(existingOrder.attachment);
+            await fsPromise.rm(removePath, { force: true });
+          } catch (error) {
+            console.log(error);
+            throw "Unable to remove previous attachment.";
+          }
+        }
+
+        try {
+          attachmentPath = path.join(
+            process.env.FILE_STORAGE,
+            vendorID,
+            vendorOrderData.code
+          );
+        } catch (error) {
+          console.log(error);
+          throw "Unable to construct file path. Contact server admin.";
+        }
+
+        await fsPromise.rename(
+          vendorOrderData.attachment.path,
+          path.resolve(attachmentPath)
+        );
+      } else if (existingOrder.attachment) {
+        attachmentPath = null;
+        try {
+          await fsPromise.rm(path.resolve(existingOrder.attachment), {
+            force: true, // Silent exception if path doesn't exist.
+          });
+        } catch {
+          // Mostly due to it being opened or lack of permission or ill-formed resolve.
+          // Although I'm pretty sure if the file is being opened,
+          // it'll be deleted once it's closed and so no exceptions
+          // will be thrown.
+          throw "Unable to remove attachment.";
+        }
+      }
+
+      // update vendor order table if that order IS NOT completed already
+      existingOrder = await tx.vendorOrder.update({
+        where: {
+          VendorOrderSold_key: {
+            code: vendorOrderData.code,
+            is_sold: false,
+          },
+        },
+        include: {
+          productVendorOrders: true,
+        },
+        data: {
+          vendor_name: vendorOrderData.vendorName,
+          status: vendorOrderData.status,
+          updated_at: time,
+          expected_at: convertLocalExpected(vendorOrderData.expectedAt),
+          is_test: vendorOrderData.isTest,
+          is_sold: isItemArrived || isInvoiceReceived,
+          payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
+          attachment: attachmentPath,
+        },
+      });
 
       // delete product order not found in request
       for (const productOrder of existingOrder.productVendorOrders) {
