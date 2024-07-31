@@ -8,6 +8,7 @@ const router = Router();
 
 router.get(
   `/images/vendor-orders/:code`,
+  [verifyAccessToken, hasAnyRole([Role.ADMIN, Role.MASTER])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const attachmentPath = await fetchImageFromVendorOrder(req.params.code);
