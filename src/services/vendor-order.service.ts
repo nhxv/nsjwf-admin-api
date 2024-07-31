@@ -507,10 +507,15 @@ export const updateVendorOrder = async (
           throw "Unable to construct file path. Contact server admin.";
         }
 
-        await fsPromise.rename(
-          vendorOrderData.attachment.path,
-          path.resolve(attachmentPath)
-        );
+        try {
+          await fsPromise.rename(
+            vendorOrderData.attachment.path,
+            path.resolve(attachmentPath)
+          );
+        } catch (error) {
+          console.log(error);
+          throw "Unable to save attachment.";
+        }
       } else if (existingOrder.attachment) {
         attachmentPath = null;
         try {
