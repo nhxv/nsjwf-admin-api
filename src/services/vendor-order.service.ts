@@ -369,6 +369,7 @@ export const createVendorOrder = async (
           );
         } catch (error) {
           console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
           throw "Unable to save file. Remove attachment and try again.";
         }
       }
@@ -491,6 +492,9 @@ export const updateVendorOrder = async (
             await fsPromise.rm(removePath, { force: true });
           } catch (error) {
             console.log(error);
+            await fsPromise.rm(vendorOrderData.attachment.path, {
+              force: true,
+            });
             throw "Unable to remove previous attachment.";
           }
         }
@@ -503,6 +507,7 @@ export const updateVendorOrder = async (
           );
         } catch (error) {
           console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
           throw "Unable to construct file path. Contact server admin.";
         }
 
@@ -513,6 +518,7 @@ export const updateVendorOrder = async (
           );
         } catch (error) {
           console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
           throw "Unable to save attachment.";
         }
       } else if (existingOrder.attachment) {
