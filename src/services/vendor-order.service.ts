@@ -334,10 +334,10 @@ export const createVendorOrder = async (
           attachmentPath = path.join(
             process.env.FILE_STORAGE,
             `${vendor.id}`,
-            `${code}`
+            code
           );
-        } catch (err) {
-          console.log(err);
+        } catch (error) {
+          console.log(error);
           throw "Unable to construct file path. Contact server admin.";
         }
       }
@@ -364,7 +364,7 @@ export const createVendorOrder = async (
       if (attachmentPath !== null) {
         try {
           await fsPromise.rename(
-            path.join(vendorOrderData.attachment.path),
+            vendorOrderData.attachment.path,
             path.resolve(attachmentPath)
           );
         } catch (error) {
@@ -375,7 +375,6 @@ export const createVendorOrder = async (
       return newVendorOrder;
     });
   } catch (error) {
-    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
@@ -678,7 +677,6 @@ export const updateVendorOrder = async (
       }
     });
   } catch (error) {
-    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }

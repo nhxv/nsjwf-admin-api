@@ -1,6 +1,8 @@
 import multer from "multer";
 
 const imageStorage = multer.diskStorage({
+  // Destination is intentionally ignored so it saves to OS-designated temp folder.
+  // On Linux it is /tmp
   filename: (req, file, callback) => {
     callback(null, file.originalname);
   },
