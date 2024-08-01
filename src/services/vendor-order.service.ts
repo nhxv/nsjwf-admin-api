@@ -23,6 +23,8 @@ import {
   vendorOrderSchema,
 } from "./../dto/requests/vendor-order-request.dto";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import fsPromise from "fs/promises";
+import path from "node:path";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -72,6 +74,9 @@ export const findVendorOrderByCode = async (code: string) => {
         },
       },
     });
+    if (vendorOrder.attachment) {
+      vendorOrder.attachment = `/images/vendor-orders/${vendorOrder.code}`;
+    }
     return vendorOrder;
   } catch (error) {
     throw new createError.BadRequest(
@@ -112,11 +117,11 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
         const { start: _s, end: end } = convertLocalInterval(
           new Date(end_date)
         );
-        whereClause.set("updated_at", { gte: start, lte: end });
+        whereClause.set("expected_at", { gte: start, lte: end });
       } else if (start_date || end_date) {
         const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
-        whereClause.set("updated_at", { gte: start, lte: end });
+        whereClause.set("expected_at", { gte: start, lte: end });
       }
 
       if (vendor)
@@ -314,6 +319,29 @@ export const createVendorOrder = async (
         }
       }
 
+      let attachmentPath = null;
+      if (vendorOrderData.attachment) {
+        const vendor = await tx.vendor.findUniqueOrThrow({
+          select: {
+            id: true,
+          },
+          where: {
+            name: vendorOrderData.vendorName,
+          },
+        });
+
+        try {
+          attachmentPath = path.join(
+            process.env.FILE_STORAGE,
+            `${vendor.id}`,
+            code
+          );
+        } catch (error) {
+          console.log(error);
+          throw "Unable to construct file path. Contact server admin.";
+        }
+      }
+
       // create new order
       const newVendorOrder = await tx.vendorOrder.create({
         data: {
@@ -325,16 +353,29 @@ export const createVendorOrder = async (
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
           is_sold: isItemArrived || isInvoiceReceived,
+          attachment: attachmentPath,
           payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
           productVendorOrders: {
             create: productOrders,
           },
         },
       });
+
+      if (attachmentPath !== null) {
+        try {
+          await fsPromise.rename(
+            vendorOrderData.attachment.path,
+            path.resolve(attachmentPath)
+          );
+        } catch (error) {
+          console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
+          throw "Unable to save file. Remove attachment and try again.";
+        }
+      }
       return newVendorOrder;
     });
   } catch (error) {
-    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
@@ -405,32 +446,118 @@ export const updateVendorOrder = async (
         });
       }
 
-      // update vendor order table if that order IS NOT completed already
       let existingOrder;
+      let attachmentPath = null;
+
       try {
-        existingOrder = await tx.vendorOrder.update({
+        existingOrder = await tx.vendorOrder.findUniqueOrThrow({
           where: {
             VendorOrderSold_key: {
               code: vendorOrderData.code,
               is_sold: false,
             },
           },
-          include: {
-            productVendorOrders: true,
-          },
-          data: {
-            vendor_name: vendorOrderData.vendorName,
-            status: vendorOrderData.status,
-            updated_at: time,
-            expected_at: convertLocalExpected(vendorOrderData.expectedAt),
-            is_test: vendorOrderData.isTest,
-            is_sold: isItemArrived || isInvoiceReceived,
-            payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
+          select: {
+            vendor_name: true,
+            attachment: true,
+            vendor: {
+              select: {
+                id: true,
+              },
+            },
           },
         });
-      } catch (e) {
-        throw `This order cannot be changed.`;
+      } catch {
+        throw "This order cannot be changed.";
       }
+
+      if (vendorOrderData.attachment) {
+        // Rename /tmp/file to uploads/vendorID/code
+        // If there's already uploads/vendorID/code then it gets overwritten, no need to delete.
+        // This is not the case if vendorID is different so we need to handle that.
+        let vendorID: string = "" + existingOrder.vendor.id;
+        if (vendorOrderData.vendorName !== existingOrder.vendor_name) {
+          const vendor = await tx.vendor.findUniqueOrThrow({
+            where: {
+              name: vendorOrderData.vendorName,
+            },
+            select: {
+              id: true,
+            },
+          });
+          vendorID = "" + vendor.id;
+
+          try {
+            const removePath = path.resolve(existingOrder.attachment);
+            await fsPromise.rm(removePath, { force: true });
+          } catch (error) {
+            console.log(error);
+            await fsPromise.rm(vendorOrderData.attachment.path, {
+              force: true,
+            });
+            throw "Unable to remove previous attachment.";
+          }
+        }
+
+        try {
+          attachmentPath = path.join(
+            process.env.FILE_STORAGE,
+            vendorID,
+            vendorOrderData.code
+          );
+        } catch (error) {
+          console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
+          throw "Unable to construct file path. Contact server admin.";
+        }
+
+        try {
+          await fsPromise.rename(
+            vendorOrderData.attachment.path,
+            path.resolve(attachmentPath)
+          );
+        } catch (error) {
+          console.log(error);
+          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
+          throw "Unable to save attachment.";
+        }
+      } else if (existingOrder.attachment) {
+        attachmentPath = null;
+        try {
+          await fsPromise.rm(path.resolve(existingOrder.attachment), {
+            force: true, // Silent exception if path doesn't exist.
+          });
+        } catch {
+          // Mostly due to it being opened or lack of permission or ill-formed resolve.
+          // Although I'm pretty sure if the file is being opened,
+          // it'll be deleted once it's closed and so no exceptions
+          // will be thrown.
+          throw "Unable to remove attachment.";
+        }
+      }
+
+      // update vendor order table if that order IS NOT completed already
+      existingOrder = await tx.vendorOrder.update({
+        where: {
+          VendorOrderSold_key: {
+            code: vendorOrderData.code,
+            is_sold: false,
+          },
+        },
+        include: {
+          productVendorOrders: true,
+        },
+        data: {
+          vendor_name: vendorOrderData.vendorName,
+          status: vendorOrderData.status,
+          updated_at: time,
+          expected_at: convertLocalExpected(vendorOrderData.expectedAt),
+          is_test: vendorOrderData.isTest,
+          is_sold: isItemArrived || isInvoiceReceived,
+          payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
+          attachment: attachmentPath,
+        },
+      });
 
       // delete product order not found in request
       for (const productOrder of existingOrder.productVendorOrders) {
@@ -556,7 +683,6 @@ export const updateVendorOrder = async (
       }
     });
   } catch (error) {
-    console.log(error);
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
