@@ -117,11 +117,11 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
         const { start: _s, end: end } = convertLocalInterval(
           new Date(end_date)
         );
-        whereClause.set("updated_at", { gte: start, lte: end });
+        whereClause.set("expected_at", { gte: start, lte: end });
       } else if (start_date || end_date) {
         const date = start_date ? start_date : end_date;
         const { start, end } = convertLocalInterval(new Date(date));
-        whereClause.set("updated_at", { gte: start, lte: end });
+        whereClause.set("expected_at", { gte: start, lte: end });
       }
 
       if (vendor)
