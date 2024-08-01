@@ -5,6 +5,8 @@ import {
   VendorRequestDto,
   vendorSchema,
 } from "../dto/requests/vendor-request.dto";
+import fsPromise from "node:fs/promises";
+import path from "node:path";
 
 export const findAllVendors = async () => {
   try {
@@ -102,6 +104,18 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
         },
       },
     });
+
+    try {
+      const vendorPath = path.join(process.env.FILE_STORAGE, `${newVendor.id}`);
+      await fsPromise.mkdir(path.resolve(vendorPath));
+    } catch (error) {
+      console.log(error);
+      // I decide to not throw exception here
+      // because the file storage itself is partially optional.
+      // If there's no attachment, normal stuff should work as expected.
+      // If attachment is used, createVO and updateVO already have their own exception handlers.
+    }
+
     return newVendor;
   } catch (error) {
     if (error.details?.length > 0) {
