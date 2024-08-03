@@ -12,10 +12,8 @@ import {
 } from "../dto/requests/vendor-sale-request.dto";
 import { StockChangeReason } from "./../commons/enums/stock-change-reason.enum";
 import {
-  convertLocalEnd,
   convertLocalExpected,
   convertLocalInterval,
-  convertLocalStart,
   generateCurrentTime,
 } from "./../commons/utils/time.util";
 import {
@@ -191,29 +189,36 @@ export const createVendorOrder = async (
     ) {
       throw `Please don't attack us.`;
     }
+    const { code, time } = generateCode();
+
     // Validate unique unit code
     const unitCodes = new Set();
-    for (const po of vendorOrderData.productVendorOrders) {
-      if (unitCodes.has(po.unitCode)) {
-        throw `Duplicated ${po.unitCode}.`;
-      } else {
-        unitCodes.add(po.unitCode);
+
+    let productOrders = [];
+    // if not array => return undefined => false
+    // if is array => return array length. If length = 0 => false
+    if (vendorOrderData.productVendorOrders?.length) {
+      for (const po of vendorOrderData.productVendorOrders) {
+        if (unitCodes.has(po.unitCode)) {
+          throw `Duplicated ${po.unitCode}.`;
+        } else {
+          unitCodes.add(po.unitCode);
+        }
       }
+      productOrders = vendorOrderData.productVendorOrders.map(
+        (productOrder) => ({
+          product_name: productOrder.productName,
+          order_code: productOrder.orderCode,
+          quantity: productOrder.quantity,
+          unit_code: productOrder.unitCode,
+          unit_price: !productOrder.unitPrice
+            ? null
+            : new Prisma.Decimal(productOrder.unitPrice),
+          created_at: time,
+          updated_at: time,
+        })
+      );
     }
-    const { code, time } = generateCode();
-    const productOrders = vendorOrderData.productVendorOrders.map(
-      (productOrder) => ({
-        product_name: productOrder.productName,
-        order_code: productOrder.orderCode,
-        quantity: productOrder.quantity,
-        unit_code: productOrder.unitCode,
-        unit_price: !productOrder.unitPrice
-          ? null
-          : new Prisma.Decimal(productOrder.unitPrice),
-        created_at: time,
-        updated_at: time,
-      })
-    );
 
     return await prisma.$transaction(async (tx) => {
       const isItemArrived = vendorOrderData.status === OrderStatus.DELIVERED;
@@ -369,6 +374,7 @@ export const createVendorOrder = async (
           );
         } catch (error) {
           console.log(error);
+          console.log(attachmentPath);
           await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
           throw "Unable to save file. Remove attachment and try again.";
         }
@@ -379,6 +385,7 @@ export const createVendorOrder = async (
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
+    console.log(error);
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
@@ -405,32 +412,41 @@ export const updateVendorOrder = async (
       throw `Please don't attack us.`;
     }
     // Validate unique unit code
-    const unitCodes = new Set();
-    for (const po of vendorOrderData.productVendorOrders) {
-      if (unitCodes.has(po.unitCode)) {
-        throw `Duplicated ${po.unitCode}.`;
-      } else {
-        unitCodes.add(po.unitCode);
-      }
-    }
     const time = generateCurrentTime();
-    const productOrders = vendorOrderData.productVendorOrders.map(
-      (productOrder) => ({
-        product_name: productOrder.productName,
-        quantity: productOrder.quantity,
-        unit_code: productOrder.unitCode,
-        unit_price: !productOrder.unitPrice
-          ? null
-          : new Prisma.Decimal(productOrder.unitPrice),
-        order_code: vendorOrderData.code,
-        updated_at: time,
-      })
-    );
-    return await prisma.$transaction(async (tx) => {
-      const isItemArrived = vendorOrderData.status === OrderStatus.DELIVERED;
-      const isInvoiceReceived =
-        vendorOrderData.status === OrderStatus.COMPLETED;
+    let productOrders = [];
+    if (vendorOrderData.productVendorOrders?.length) {
+      const unitCodes = new Set();
+      for (const po of vendorOrderData.productVendorOrders) {
+        if (unitCodes.has(po.unitCode)) {
+          throw `Duplicated ${po.unitCode}.`;
+        } else {
+          unitCodes.add(po.unitCode);
+        }
+      }
+      productOrders = vendorOrderData.productVendorOrders.map(
+        (productOrder) => ({
+          product_name: productOrder.productName,
+          quantity: productOrder.quantity,
+          unit_code: productOrder.unitCode,
+          unit_price: !productOrder.unitPrice
+            ? null
+            : new Prisma.Decimal(productOrder.unitPrice),
+          order_code: vendorOrderData.code,
+          updated_at: time,
+        })
+      );
+    }
 
+    const isItemArrived = vendorOrderData.status === OrderStatus.DELIVERED;
+    const isInvoiceReceived = vendorOrderData.status === OrderStatus.COMPLETED;
+
+    // Get this out of the way asap to avoid messing with attachments.
+    // And to avoid spaghetti.
+    if (productOrders.length === 0 && (isInvoiceReceived || isItemArrived)) {
+      throw "At least one product is required.";
+    }
+
+    return await prisma.$transaction(async (tx) => {
       // NOTE: Temporary fix.
       let newVendorPayment;
       if (isInvoiceReceived) {
@@ -686,6 +702,7 @@ export const updateVendorOrder = async (
     if (typeof error === "string") {
       throw new createError.BadRequest(error);
     }
+    console.log(error);
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
