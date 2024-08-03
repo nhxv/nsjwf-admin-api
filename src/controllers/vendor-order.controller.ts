@@ -142,7 +142,6 @@ router.put(
   imageReceiver.single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log(req.file);
       req.body.attachment = req.file;
       const response = await updateVendorOrder(req.params.code, req.body);
       res.send(response);
