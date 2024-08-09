@@ -24,10 +24,10 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import fsPromise from "fs/promises";
 import path from "node:path";
 
-// There are roughly 20-25 orders a day, let's take 25 as the higher value.
-// 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
+// There are roughly 50 orders a week.
+// 50 (order/week) * 52 (week/yr) = 2500. Round to 3000 just in case.
 // If we somehow need further than 1 year, at that point, just go to db itself and find it.
-const MAX_ORDER_COUNT = 10000;
+const MAX_ORDER_COUNT = 3000;
 
 export const findDailyVendorOrder = async () => {
   try {
@@ -50,6 +50,9 @@ export const findDailyVendorOrder = async () => {
             product_name: "asc",
           },
         },
+      },
+      orderBy: {
+        code: "desc",
       },
     });
     return vendorOrders;
