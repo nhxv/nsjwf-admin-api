@@ -53,7 +53,7 @@ export const findDailyVendorOrder = async () => {
       },
       orderBy: {
         code: "desc",
-      }
+      },
     });
     return vendorOrders;
   } catch (error) {
