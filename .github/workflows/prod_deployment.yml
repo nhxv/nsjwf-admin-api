@@ -19,9 +19,10 @@ jobs:
           script: |
             cd ~/storage/backend
             git switch main && git branch previous-deploy
-            git fetch origin/main
+            git fetch origin main
             git branch new-deploy && git switch new-deploy
             git merge --ff-only origin/main
             python3 deploy.py
-            git branch -d previous-deploy new-deploy
+            git switch main
+            git branch -d new-deploy && git branch -d previous-deploy
             systemctl --user restart nsjwf
