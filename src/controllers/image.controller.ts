@@ -13,7 +13,22 @@ router.get(
     try {
       const attachmentPath = await fetchImageFromVendorOrder(req.params.code);
       if (attachmentPath) {
-        res.sendFile(attachmentPath);
+        interface SysError extends Error {
+          errno: number;
+          code: string;
+          syscall: string;
+          path?: string;
+          status: number;
+        }
+        res.sendFile(attachmentPath, (error: SysError) => {
+          if (error) {
+            if (error?.code === "ENOENT") {
+              console.log(`Attachment ${error?.path} doesn't exist.`);
+            } else {
+              console.log(error);
+            }
+          }
+        });
       } else {
         res.status(404).send();
       }

@@ -18,8 +18,10 @@ jobs:
           key: ${{ secrets.PKEY }}
           script: |
             cd ~/storage/backend
-            git switch main
-            git fetch origin
-            git merge
-            npm run prisma:deploy && npm run prisma:generate
+            git switch main && git branch previous-deploy
+            git fetch origin/main
+            git branch new-deploy && git switch new-deploy
+            git merge --ff-only origin/main
+            python3 deploy.py
+            git branch -d previous-deploy new-deploy
             systemctl --user restart nsjwf
