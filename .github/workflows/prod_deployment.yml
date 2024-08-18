@@ -16,6 +16,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.PKEY }}
+          script_stop: true
           script: |
             cd ~/storage/backend
             git switch main && git branch previous-deploy
