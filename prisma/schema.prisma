@@ -157,6 +157,7 @@ model VendorOrder {
   status              String               @db.VarChar(32)
   orderStatus         OrderStatus          @relation(fields: [status], references: [name])
   created_at          DateTime
+  manual_code         String?              @unique @db.VarChar(12)
   updated_at          DateTime
   expected_at         DateTime
   is_test             Boolean              @default(false)

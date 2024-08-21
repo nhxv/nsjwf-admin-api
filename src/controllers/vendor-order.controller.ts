@@ -95,6 +95,7 @@ router.get(
             vendorName: order.vendor_name,
             isTest: order.is_test,
             orderCode: order.order_code,
+            manualCode: order.manual_code,
             sale: order.sale,
             productVendorOrders: order.productVendorOrders.map((po) => {
               const poRes: ProductVendorOrderResponseDto = {

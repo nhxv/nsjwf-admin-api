@@ -109,6 +109,12 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
         {
           code: code,
         },
+        // This might be useful to check for continuity of the code.
+        {
+          manual_code: {
+            contains: code,
+          },
+        },
       ]);
     } else {
       if (start_date && end_date) {
@@ -162,6 +168,7 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
       reports.push({
         is_test: sold.is_test,
         order_code: sold.code,
+        manual_code: sold.manual_code,
         vendor_name: sold.vendor_name,
         sale: sold.productVendorOrders.reduce(
           (prev, curr: any) => prev + curr.quantity * curr.unit_price,
@@ -354,6 +361,7 @@ export const createVendorOrder = async (
       const newVendorOrder = await tx.vendorOrder.create({
         data: {
           code: code,
+          manual_code: vendorOrderData.manualCode,
           vendor_name: vendorOrderData.vendorName,
           status: vendorOrderData.status,
           created_at: time,
@@ -573,6 +581,7 @@ export const updateVendorOrder = async (
           expected_at: convertLocalExpected(vendorOrderData.expectedAt),
           is_test: vendorOrderData.isTest,
           is_sold: isItemArrived || isInvoiceReceived,
+          manual_code: vendorOrderData.manualCode,
           payment_code: isInvoiceReceived ? newVendorPayment.code : undefined,
           attachment: attachmentPath,
         },
