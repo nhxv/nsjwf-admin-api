@@ -22,7 +22,6 @@ import {
   updateCustomerOrder,
   updatePriority,
 } from "./../services/customer-order.service";
-import { date } from "joi";
 
 const router = Router();
 

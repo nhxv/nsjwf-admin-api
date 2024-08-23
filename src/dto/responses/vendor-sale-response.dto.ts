@@ -4,6 +4,7 @@ export interface VendorSaleResponseDto {
   vendorName: string;
   isTest: boolean;
   orderCode: string;
+  manualCode?: string;
   sale: string;
   productVendorOrders: ProductVendorOrderResponseDto[];
   createdAt?: Date;

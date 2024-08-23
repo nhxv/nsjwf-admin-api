@@ -49,6 +49,7 @@ export interface VendorOrderRequestDto {
   expectedAt: Date;
   id?: number;
   code?: string;
+  manualCode?: string;
   status?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -68,6 +69,7 @@ export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive(),
   code: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
+  manualCode: Joi.string().max(12).regex(GENERAL_TEXT_REGEX, { invert: true }),
   status: Joi.string()
     .max(32)
     .valid(...Object.values(OrderStatus))
