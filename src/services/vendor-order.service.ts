@@ -174,7 +174,7 @@ export const findVendorSale = async (searchObject: VendorSaleRequestDto) => {
           (prev, curr: any) => prev + curr.quantity * curr.unit_price,
           0
         ),
-        date: sold.updated_at,
+        expected_at: sold.expected_at,
         payment_status: sold.vendorPayment?.status, // Delivered VO doesn't have payment.
         productVendorOrders: sold.productVendorOrders,
       });

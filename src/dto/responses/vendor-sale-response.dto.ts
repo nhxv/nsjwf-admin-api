@@ -7,8 +7,8 @@ export interface VendorSaleResponseDto {
   manualCode?: string;
   sale: string;
   productVendorOrders: ProductVendorOrderResponseDto[];
-  createdAt?: Date;
   updatedAt?: Date;
+  expectedAt?: Date;
   paymentStatus?: string;
   id?: number;
 }

@@ -108,7 +108,7 @@ router.get(
             }),
             // For now we don't need to provide returns detail, but maybe later.
             //createdAt: order.created_at,
-            updatedAt: order.date,
+            expectedAt: order.expected_at,
             paymentStatus: order.payment_status,
           };
           return orderRes;
