@@ -4,8 +4,16 @@ Built with Typescript, ExpressJS, Prisma, PostgreSQL
 
 ## Requirements
 
-    NodeJS 18+
-    PostgreSQL 15+
+Either:
+
+- NodeJS 18+
+- PostgreSQL 15+
+
+Or:
+
+- Docker and Docker Compose
+
+If you have NodeJS and PostgreSQL, it is not necessary to get Docker and vice versa.
 
 ## Local setup
 
@@ -21,6 +29,7 @@ Create .env file:
     ACCESS_TOKEN_SECRET={your_secret}
     ACCESS_TOKEN_EXPIRE=86400s
     PORT={your_port_number}
+    FILE_STORAGE="/path/to/folder"
 
 (Optional) Enable SQL logging in prisma-client.ts:
 
@@ -32,7 +41,7 @@ Run dev server:
 
 Dev server will automatically restart when detecting changes to source code.
 
-## Migration
+### Migration
 
 After modify prisma/schema.prisma, run:
 
@@ -49,6 +58,61 @@ Review SQL scripts, modify if needed, then run:
 After applying sql scripts, run:
 
     npm run prisma:generate
+
+## Docker
+
+For `FILE_STORAGE` in `.env`, use `"../uploads"`. For `PORT` in `.env`, use `8000`. For `DATABASE_URL` in `.env`, it is based on these values defined in `compose.yml`:
+
+```yml
+postgresql:
+  container_name: "pg16" # Container hostname
+  ports:
+    # Port 5432 basically
+    - "9000:5432"
+  environment:
+    POSTGRES_USER: "mike"
+    POSTGRES_PASSWORD: "1234"
+    POSTGRES_DB: "mydb"
+# So the corresponding URL for the above params is "postgresql://mike:1234@pg16:5432/mydb?schema=public"
+```
+
+If these values are modified, make sure to adjust `DATABASE_URL` in `.env` and `PG_CONTAINER_HOSTNAME` in `docker-entry.sh`.
+
+### `docker-entry.sh` and `wait-for-it.sh`
+
+You shouldn't execute these files manually. Docker will handle them.
+
+### Set up
+
+_Depending on how you installed Docker Compose, you may need to replace `docker compose` with `docker-compose` in below commands._
+
+Create two storage volumes named `pgdb` and `uploads`.
+
+```sh
+docker volume create nsjwf-pg
+docker volume create nsjwf-uploads
+```
+
+Start the services. After this, two images `postgres:<version>` and `nsjwf-backend` should be created (you can check using command `docker images`).
+
+```sh
+docker compose up --watch --force-recreate
+```
+
+Check for existing containers:
+
+```sh
+docker container ls -a
+# Remove stopped containers
+docker container prune
+```
+
+Nuke database and/or scanned uploads:
+
+```sh
+docker volume rm pgdb
+docker volume rm uploads
+```
 
 ## Deployment
 
