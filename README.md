@@ -287,7 +287,7 @@ WantedBy=default.target
 
 ```sh
 # On your local computer
-ssh-keypair -t ed25519 -C "some comment"
+ssh-keygen -t ed25519 -C "some comment"
 # Copy the content of .pub file to clipboard
 ssh bitnami@ip.address
 su nsjwfbackend
