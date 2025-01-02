@@ -110,8 +110,8 @@ docker container prune
 Nuke database and/or scanned uploads:
 
 ```sh
-docker volume rm pgdb
-docker volume rm uploads
+docker volume rm nsjwf-pg
+docker volume rm nsjwf-uploads
 ```
 
 ## Deployment
