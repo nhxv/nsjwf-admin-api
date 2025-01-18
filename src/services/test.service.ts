@@ -30,15 +30,11 @@ export const nukeConfigure = async () => {
 
 export const nukeOperation = async () => {
   try {
-    const deletedBackorder = await prisma.backorder.deleteMany({});
     const deletedCustomerOrder = await prisma.customerOrder.deleteMany({});
     const deletedCustomerReturn = await prisma.customerReturn.deleteMany({});
     const deletedCustomerReturnRemain =
       await prisma.customerReturnRemain.deleteMany({});
     const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany(
-      {}
-    );
-    const deletedProductBackorder = await prisma.productBackorder.deleteMany(
       {}
     );
     const deletedProductCustomerOrder =
@@ -51,14 +47,7 @@ export const nukeOperation = async () => {
       await prisma.stockChangeHistory.deleteMany({});
     const deletedProductVendorOrder =
       await prisma.productVendorOrder.deleteMany({});
-    const deletedProductVendorReturn =
-      await prisma.productVendorReturn.deleteMany({});
-    const deletedProductVendorReturnRemain =
-      await prisma.productVendorReturnRemain.deleteMany({});
     const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
-    const deletedVendorReturn = await prisma.vendorReturn.deleteMany({});
-    const deletedVendorReturnRemain =
-      await prisma.vendorReturnRemain.deleteMany({});
     const deletedCustomerPayment = await prisma.customerPayment.deleteMany({});
     const deletedVendorPayment = await prisma.vendorPayment.deleteMany({});
     const updatedProducts = await prisma.product.updateMany({

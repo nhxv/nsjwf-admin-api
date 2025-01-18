@@ -10,8 +10,6 @@ import testController from "../controllers/test.controller";
 import unitController from "../controllers/unit.controller";
 import vehicleController from "../controllers/vehicle.controller";
 import vendorOrderController from "../controllers/vendor-order.controller";
-import vendorReturnRemainController from "../controllers/vendor-return-remain.controller";
-import vendorReturnController from "../controllers/vendor-return.controller";
 import vendorController from "../controllers/vendor.controller";
 import imageController from "../controllers/image.controller";
 
@@ -29,8 +27,6 @@ const api = Router()
   .use(productStockController)
   .use(vendorOrderController)
   .use(customerOrderController)
-  .use(vendorReturnController)
-  .use(vendorReturnRemainController)
   .use(accountController)
   .use(unitController)
   .use(customerPaymentController);

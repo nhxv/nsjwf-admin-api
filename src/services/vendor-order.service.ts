@@ -733,15 +733,6 @@ export const updateVendorOrder = async (
 export const revertVendorOrder = async (code: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
-      // NOTE: Legacy code, may remove due to vendorReturn has no meaning.
-      const isReturned = await tx.vendorReturn.findFirst({
-        where: {
-          order_code: code,
-        },
-      });
-      if (isReturned) {
-        throw "Can't revert order because it has at least one return.";
-      }
       // revert payment if possible; DELIVERED vo doesn't have payment.
       try {
         const deletedVendorPayment = await tx.vendorPayment.delete({
