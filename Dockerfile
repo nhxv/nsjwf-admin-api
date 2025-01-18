@@ -1,4 +1,4 @@
-FROM node:23-slim AS base
+FROM node:22-slim AS base
 # Required for Prisma
 RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /usr/local/app/
@@ -6,7 +6,7 @@ RUN mkdir uploads backend
 RUN chown node:node uploads/ backend/
 
 ### Dev
-FROM node:23 AS deps
+FROM node:22 AS deps
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -31,7 +31,7 @@ CMD npm run prisma:apply && npm run dev
 
 
 ### Prod
-FROM node:23 AS deps-prod
+FROM node:22 AS deps-prod
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -39,7 +39,7 @@ COPY --chown=node package.json package-lock.json ./
 RUN npm pkg delete scripts.prepare && npm i --omit=dev
 
 # Build to JS
-FROM node:23 AS build-prod
+FROM node:22 AS build-prod
 USER node
 WORKDIR /usr/local/app/backend
 # Need tsc to compile to js
@@ -62,4 +62,4 @@ COPY --chown=node .env ./
 COPY --chown=node scripts ./scripts/
 EXPOSE 8000
 ENTRYPOINT [ "bash", "scripts/docker-entry.sh" ]
-CMD npm run prisma:apply && npm run prisma:generate && npm run start
+CMD npm run prisma:apply && npm run prisma:generate && node dist/src/index.js
