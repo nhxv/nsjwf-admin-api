@@ -6,8 +6,8 @@ Built with Typescript, ExpressJS, Prisma, PostgreSQL
 
 Either:
 
-- NodeJS 18+
-- PostgreSQL 15+
+- NodeJS 22+
+- PostgreSQL 16+
 
 Or:
 
@@ -86,7 +86,7 @@ You shouldn't execute these files manually. Docker will handle them.
 
 _Depending on how you installed Docker Compose, you may need to replace `docker compose` with `docker-compose` in below commands._
 
-Create two storage volumes named `pgdb` and `uploads`.
+Create two storage volumes named `nsjwf-pg` and `nsjwf-uploads`.
 
 ```sh
 docker volume create nsjwf-pg
