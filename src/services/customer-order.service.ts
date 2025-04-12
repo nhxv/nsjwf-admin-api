@@ -43,6 +43,13 @@ export const findDailyCustomerOrder = async () => {
           orderBy: {
             product_name: "asc",
           },
+          include: {
+            product: {
+              select: {
+                location_name: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
@@ -65,6 +72,13 @@ export const findCustomerOrderByCode = async (code: string) => {
         productCustomerOrders: {
           orderBy: {
             product_name: "asc",
+          },
+          include: {
+            product: {
+              select: {
+                location_name: true,
+              },
+            },
           },
         },
       },
