@@ -19,9 +19,12 @@ services:
       - db-data:/var/lib/postgresql/data
 
   backend:
+    init: true
     build:
       context: .
       target: dev # if use "prod", don't use --watch flag when using docker compose up
+      # Fix docker fails to reach debian.org
+      network: host # https://stackoverflow.com/a/66714888
     ports:
       # HostPort:ContainerPort
       - "8000:8000"
@@ -29,13 +32,17 @@ services:
       - uploads:/usr/local/app/uploads
     develop:
       watch:
-        - action: sync
+        # sync alone doesn't seem to work, probably ts-node-dev issue
+        - action: sync+restart
           path: ./src
           target: /usr/local/app/backend/src
           ignore:
             - node_modules/
         - action: rebuild
           path: package.json
+        - action: sync+restart
+          path: .env
+          target: /usr/local/app/backend/.env
 
 volumes:
   db-data:
