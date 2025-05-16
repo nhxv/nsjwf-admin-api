@@ -757,7 +757,7 @@ export const revertVendorOrder = async (code: string) => {
           code: code,
         },
         data: {
-          status: OrderStatus.SHIPPING,
+          status: OrderStatus.CHECKING,
           is_sold: false,
           payment_code: null,
         },
