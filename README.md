@@ -31,6 +31,8 @@ Create .env file:
     PORT={your_port_number}
     FILE_STORAGE="/path/to/folder"
 
+It is crucial to keep the directory at `FILE_STORAGE` and all of its contents on the _same_ partition.
+
 (Optional) Enable SQL logging in prisma-client.ts:
 
     const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});
@@ -59,7 +61,7 @@ After applying sql scripts, run:
 
     npm run prisma:generate
 
-## Docker
+## Docker setup
 
 For `FILE_STORAGE` in `.env`, use `"../uploads"`. For `PORT` in `.env`, use `8000`. For `DATABASE_URL` in `.env`, it is based on these values defined in `compose.yml`:
 

@@ -379,13 +379,10 @@ export const createVendorOrder = async (
 
       if (attachmentPath !== null) {
         try {
-          // It's possible for upload dir to be on another partition
-          // and rename() won't work if that's the case.
-          await fsPromise.copyFile(
+          await fsPromise.rename(
             vendorOrderData.attachment.path,
             path.resolve(attachmentPath)
           );
-          await fsPromise.unlink(vendorOrderData.attachment.path);
         } catch (error) {
           console.log(error);
           console.log(attachmentPath);
@@ -542,13 +539,10 @@ export const updateVendorOrder = async (
         }
 
         try {
-          // It's possible for upload dir to be on another partition
-          // and rename() won't work if that's the case.
-          await fsPromise.copyFile(
+          await fsPromise.rename(
             vendorOrderData.attachment.path,
             path.resolve(attachmentPath)
           );
-          await fsPromise.unlink(vendorOrderData.attachment.path);
         } catch (error) {
           console.log(error);
           await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
