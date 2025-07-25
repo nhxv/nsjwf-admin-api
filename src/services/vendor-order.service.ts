@@ -23,6 +23,14 @@ import {
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import fsPromise from "fs/promises";
 import path from "node:path";
+import {
+  createPartFromUri,
+  createUserContent,
+  GoogleGenAI,
+} from "@google/genai";
+import { findActiveVendors } from "./vendor.service";
+import { findActiveProducts, findAllProducts } from "./product.service";
+import { closestMatch } from "../commons/utils/string.util";
 
 // There are roughly 50 orders a week.
 // 50 (order/week) * 52 (week/yr) = 2500. Round to 3000 just in case.
@@ -809,5 +817,192 @@ export const revertVendorOrder = async (code: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot revert vendor order.");
+  }
+};
+
+export const autofillVendorOrder = async (image: Express.Multer.File) => {
+  try {
+    const attachmentPath = path.resolve(image.path);
+
+    const API_KEY = process.env.GEMINI_KEY;
+    const PROMPT =
+      'This is a vendor receipt. Give me vendor name (trim to less than 3 words), receipt number, product names, quantity, date received. Organize these info into JSON with no Markdown. Follow this format: {"vendor_name": "string", "receipt_number": "string", "date_received": "mm/dd/yyyy", "products": [{"name": "string", "quantity": "string"}]}. If fail to or if products contain more than 10 items, respond with "Unable to extract info"';
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+    const file = await ai.files.upload({
+      file: attachmentPath,
+      config: { mimeType: "image/jpeg" },
+    });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite-preview-06-17",
+      contents: createUserContent([
+        createPartFromUri(file.uri, file.mimeType),
+        PROMPT,
+      ]),
+    });
+
+    // throw "AHHHHH";
+
+    const candidates = response.candidates;
+    let test3 = null;
+    if (candidates?.length) {
+      const content = candidates[0].content;
+      if (content?.parts?.length) {
+        const resp = content.parts[0].text;
+        if (resp === "Unable to extract info") {
+          throw response;
+        }
+        test3 = JSON.parse(resp);
+      } else {
+        throw response;
+      }
+    } else {
+      throw response;
+    }
+
+    const testobj = test3;
+    console.log("LLM response: ", testobj);
+
+    const vendors = await findActiveVendors();
+    let products = await findAllProducts();
+
+    let bestVendorGuess = vendors[0];
+    let brandGuess = "";
+    const targetVendorName = testobj.vendor_name.toLowerCase();
+    const vendorMatches = closestMatch(targetVendorName, vendors, (vendor) =>
+      vendor.name.toLowerCase()
+    );
+
+    console.log("Preliminary match: ", vendorMatches);
+
+    // Custom rules.
+    if (vendorMatches.length > 1) {
+      if (
+        targetVendorName.includes("field fresh") ||
+        targetVendorName.includes("hollano") ||
+        targetVendorName.includes("freshkist")
+      ) {
+        bestVendorGuess = vendorMatches.filter((v) =>
+          v.name.toLowerCase().includes("holland")
+        )[0];
+        if (targetVendorName.includes("freshkist")) {
+          brandGuess = "fk";
+        } else {
+          brandGuess = "field fresh";
+        }
+      } else if (targetVendorName.includes("beast express")) {
+        bestVendorGuess = vendorMatches.filter((v) =>
+          v.name.toLowerCase().includes("interfresh")
+        )[0];
+        brandGuess = "los pinos";
+      } else if (targetVendorName.includes("s & w")) {
+        bestVendorGuess = vendorMatches.filter((v) =>
+          v.name.toLowerCase().includes("redwood")
+        )[0];
+      } else {
+        bestVendorGuess = vendorMatches[0];
+        brandGuess = bestVendorGuess.name;
+      }
+    } else {
+      bestVendorGuess = vendorMatches[0];
+      brandGuess = bestVendorGuess.name;
+    }
+
+    console.log("Best vendor guess: ", bestVendorGuess);
+
+    if (bestVendorGuess.name.includes("Gaia")) {
+      const productPallet = products.find((p) =>
+        p.name.includes("Transportation")
+      );
+      const quantity = testobj.products.reduce(
+        (total, val) => total + +val.quantity,
+        0
+      );
+      if (productPallet) {
+        return {
+          vendor_name: bestVendorGuess.name,
+          products: [
+            {
+              name: productPallet.name,
+              quantity: quantity,
+              unit_code: `${productPallet.id}_BOX`,
+            },
+          ],
+          date_received: new Date(testobj.date_received),
+          manualCode: testobj.receipt_number,
+        };
+      }
+    }
+
+    const productMatches = [];
+    for (const product of testobj.products) {
+      const target = product.name.toLowerCase();
+      console.log("Evaluating: ", target);
+
+      // 1. Fuzzy match the product only; no brand or type whatsoever.
+      const targetFirstFewWords = target.split(" ", 3).join(" ");
+      let matches = closestMatch(targetFirstFewWords, products, (p) => {
+        const splits = p.name.split(" ", 3);
+        return splits.map((word) => word.toLowerCase()).join(" ");
+      });
+
+      // 2. Start matching brand name.
+      const productWithVendor = `${targetFirstFewWords} ${brandGuess.toLowerCase()}`;
+      const brandMatches = closestMatch(productWithVendor, matches, (p) =>
+        p.name.toLowerCase()
+      );
+
+      if (brandMatches.length > 1) {
+        // 3. Give priority for strings that has the vendor's name in its name.
+        let first = 0;
+        for (let i = 0; i < brandMatches.length; ++i) {
+          if (
+            brandMatches[i].name
+              .toLowerCase()
+              .includes(brandGuess.toLowerCase())
+          ) {
+            let temp = brandMatches[first];
+            brandMatches[first] = brandMatches[i];
+            brandMatches[i] = temp;
+            ++first;
+          }
+        }
+
+        // 4. Custom rules
+        // TODO: to be implemented
+      }
+
+      productMatches.push(brandMatches[0]);
+      // brandMatches are references so we can soft compare with !=
+      products = products.filter((p) => p != brandMatches[0]);
+    }
+
+    const bestProductGuesses = [];
+    for (let i = 0; i < testobj.products.length; ++i) {
+      bestProductGuesses.push({
+        name: productMatches[i].name,
+        quantity: +testobj.products[i].quantity,
+        unit_code: `${productMatches[i].id}_BOX`,
+      });
+    }
+
+    const autofillGuess = {
+      vendor_name: bestVendorGuess.name,
+      products: bestProductGuesses,
+      date_received: new Date(testobj.date_received),
+      manualCode: testobj.receipt_number,
+    };
+
+    // Cleanup
+    await ai.files.delete({
+      name: file.name,
+    });
+    await fsPromise.rm(attachmentPath, { force: true });
+
+    return autofillGuess;
+  } catch (error) {
+    console.error(error);
+    throw createError.BadRequest("Unable to extract info");
   }
 };

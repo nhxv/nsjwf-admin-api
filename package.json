@@ -23,6 +23,7 @@
   "author": "nhxv",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^1.10.0",
     "@prisma/client": "^5.20.0",
     "@types/multer": "^1.4.12",
     "bcryptjs": "^2.4.3",
