@@ -172,7 +172,7 @@ router.post(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   imageReceiver.single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
-    // Verify image size; make sure it is 768 pixels or smaller on both sides.
+    // TODO: Verify image size; make sure it is 768 pixels or smaller on both sides.
     try {
       req.body.attachment = req.file;
       const response = await autofillVendorOrder(req.body.attachment);

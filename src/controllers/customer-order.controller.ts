@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
+import createError from "http-errors";
 import {
   CustomerSaleInvoiceResponseDto,
   CustomerSaleResponseDto,
@@ -15,6 +16,7 @@ import {
   findDailyCustomerOrder,
   findEmployeeTask,
   finishTask,
+  patchCustomerOrderStatus,
   reportTask,
   revertCustomerOrder,
   startDoingTask,
@@ -310,6 +312,36 @@ router.put(
       res.send(response);
     } catch (error) {
       next(error);
+    }
+  }
+);
+
+router.patch(
+  `/customer-orders/status/`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Make sure it has code and status attr
+      const code = req.query.code;
+      const statusString = req.query.status;
+
+      if (
+        !code ||
+        !statusString ||
+        typeof code !== "string" ||
+        typeof statusString !== "string"
+      ) {
+        throw "Missing required parameters.";
+      }
+
+      const response = await patchCustomerOrderStatus(code, statusString);
+      res.send(response);
+    } catch (error) {
+      if (typeof error === "string") {
+        next(new createError.BadRequest(error));
+      } else {
+        next(error);
+      }
     }
   }
 );
