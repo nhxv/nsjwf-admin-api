@@ -506,68 +506,67 @@ export const updateVendorOrder = async (
         throw "This order cannot be changed.";
       }
 
-      if (vendorOrderData.attachment) {
-        // Rename /tmp/file to uploads/vendorID/code
-        // If there's already uploads/vendorID/code then it gets overwritten, no need to delete.
-        // This is not the case if vendorID is different so we need to handle that.
-        let vendorID: string = "" + existingOrder.vendor.id;
-        if (vendorOrderData.vendorName !== existingOrder.vendor_name) {
-          const vendor = await tx.vendor.findUniqueOrThrow({
-            where: {
-              name: vendorOrderData.vendorName,
-            },
-            select: {
-              id: true,
-            },
-          });
-          vendorID = "" + vendor.id;
-
-          try {
-            const removePath = path.resolve(existingOrder.attachment);
-            await fsPromise.rm(removePath, { force: true });
-          } catch (error) {
-            console.log(error);
-            await fsPromise.rm(vendorOrderData.attachment.path, {
-              force: true,
-            });
-            throw "Unable to remove previous attachment.";
+      if (existingOrder.attachment || vendorOrderData.attachment) {
+        let vendorID = "" + existingOrder.vendor.id;
+        try {
+          let deleteOld = !!existingOrder.attachment;
+          let diffVendor = false;
+          if (
+            existingOrder.attachment &&
+            vendorOrderData.vendorName !== existingOrder.vendor_name
+          ) {
+            diffVendor = true;
           }
-        }
 
-        try {
-          attachmentPath = path.join(
-            process.env.FILE_STORAGE,
-            vendorID,
-            vendorOrderData.code
-          );
-        } catch (error) {
-          console.log(error);
-          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
-          throw "Unable to construct file path. Contact server admin.";
-        }
+          if (deleteOld) {
+            try {
+              const removePath = path.resolve(existingOrder.attachment);
+              await fsPromise.rm(removePath, { force: true });
+              attachmentPath = null;
+            } catch (error) {
+              console.log(error);
+              throw "Unable to remove previous attachment.";
+            }
+          }
 
-        try {
-          await fsPromise.rename(
-            vendorOrderData.attachment.path,
-            path.resolve(attachmentPath)
-          );
+          // If just delete old attachment then don't query.
+          if (diffVendor && vendorOrderData.attachment) {
+            const newVendor = await tx.vendor.findUniqueOrThrow({
+              where: {
+                name: vendorOrderData.vendorName,
+              },
+              select: {
+                id: true,
+              },
+            });
+            vendorID = "" + newVendor.id;
+          }
+
+          if (vendorOrderData.attachment) {
+            try {
+              attachmentPath = path.join(
+                process.env.FILE_STORAGE,
+                vendorID,
+                vendorOrderData.code
+              );
+            } catch (error) {
+              console.log(error);
+              throw "Unable to construct file path. Contact server admin.";
+            }
+
+            try {
+              await fsPromise.rename(
+                vendorOrderData.attachment.path,
+                path.resolve(attachmentPath)
+              );
+            } catch (error) {
+              console.log(error);
+              throw "Unable to save attachment.";
+            }
+          }
         } catch (error) {
-          console.log(error);
           await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
-          throw "Unable to save attachment.";
-        }
-      } else if (existingOrder.attachment) {
-        attachmentPath = null;
-        try {
-          await fsPromise.rm(path.resolve(existingOrder.attachment), {
-            force: true, // Silent exception if path doesn't exist.
-          });
-        } catch {
-          // Mostly due to it being opened or lack of permission or ill-formed resolve.
-          // Although I'm pretty sure if the file is being opened,
-          // it'll be deleted once it's closed and so no exceptions
-          // will be thrown.
-          throw "Unable to remove attachment.";
+          throw error;
         }
       }
 
