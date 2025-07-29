@@ -44,8 +44,10 @@ export function closestMatch<T>(
   const vars = array.map((s) => distance(target, transformer(s)));
   const min = Math.min(...vars);
   const found: T[] = [];
+  console.log("Target: ", target);
   for (let i = 0; i < vars.length; ++i) {
     if (vars[i] === min) {
+      console.log("Distance %s: %d", transformer(array[i]), vars[i]);
       found.push(array[i]);
     }
   }

@@ -971,10 +971,16 @@ export const revertCustomerOrder = async (code: string) => {
   }
 };
 
-export const patchCustomerOrderStatus = async (
-  code: string,
-  statusStr: string
-) => {
+export const patchCustomerOrderStatus = async (code, statusStr) => {
+  if (
+    !code ||
+    !statusStr ||
+    typeof code !== "string" ||
+    typeof statusStr !== "string"
+  ) {
+    throw "Missing required parameters.";
+  }
+
   const status = toOrderStatus(statusStr);
   if (!status) {
     throw "Unknown status.";

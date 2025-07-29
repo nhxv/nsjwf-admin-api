@@ -321,19 +321,8 @@ router.patch(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Make sure it has code and status attr
       const code = req.query.code;
       const statusString = req.query.status;
-
-      if (
-        !code ||
-        !statusString ||
-        typeof code !== "string" ||
-        typeof statusString !== "string"
-      ) {
-        throw "Missing required parameters.";
-      }
-
       const response = await patchCustomerOrderStatus(code, statusString);
       res.send(response);
     } catch (error) {
