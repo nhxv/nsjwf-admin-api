@@ -29,7 +29,7 @@ import {
   GoogleGenAI,
 } from "@google/genai";
 import { findActiveVendors } from "./vendor.service";
-import { findActiveProducts, findAllProducts } from "./product.service";
+import { findAllProducts } from "./product.service";
 import { closestMatch } from "../commons/utils/string.util";
 
 // There are roughly 50 orders a week.
@@ -825,7 +825,7 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
 
     const API_KEY = process.env.GEMINI_KEY;
     const PROMPT =
-      'This is a vendor receipt. Give me vendor name (trim to less than 3 words), receipt number, product names, quantity, date received. Organize these info into JSON with no Markdown. Follow this format: {"vendor_name": "string", "receipt_number": "string", "date_received": "mm/dd/yyyy", "products": [{"name": "string", "quantity": "string"}]}. If fail to or if products contain more than 10 items, respond with "Unable to extract info"';
+      'This is a vendor receipt. Each product line contain only one product and one quantity. Give me vendor name (trim to less than 3 words), receipt number, product names, quantity, date received. Organize these info into JSON with no Markdown. Follow this format: {"vendor_name": "string", "receipt_number": "string", "date_received": "mm/dd/yyyy", "products": [{"name": "string", "quantity": "string"}]}. If fail to or if products contain more than 10 items, respond with "Unable to extract info"';
     const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     const file = await ai.files.upload({
@@ -876,36 +876,40 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
     console.log("Preliminary match: ", vendorMatches);
 
     // Custom rules.
-    if (vendorMatches.length > 1) {
-      if (
-        targetVendorName.includes("field fresh") ||
-        targetVendorName.includes("hollano") ||
-        targetVendorName.includes("freshkist")
-      ) {
-        bestVendorGuess = vendorMatches.filter((v) =>
-          v.name.toLowerCase().includes("holland")
-        )[0];
-        if (targetVendorName.includes("freshkist")) {
-          brandGuess = "fk";
-        } else {
-          brandGuess = "field fresh";
-        }
-      } else if (targetVendorName.includes("beast express")) {
-        bestVendorGuess = vendorMatches.filter((v) =>
-          v.name.toLowerCase().includes("interfresh")
-        )[0];
-        brandGuess = "los pinos";
-      } else if (targetVendorName.includes("s & w")) {
-        bestVendorGuess = vendorMatches.filter((v) =>
-          v.name.toLowerCase().includes("redwood")
-        )[0];
+    let customVendorGuess = null;
+    if (
+      targetVendorName.includes("field fresh") ||
+      targetVendorName.includes("hollano") ||
+      targetVendorName.includes("freshkist") ||
+      targetVendorName.includes("beachside") ||
+      targetVendorName.includes("amaral")
+    ) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("holland")
+      )[0];
+      if (targetVendorName.includes("freshkist")) {
+        brandGuess = "fk";
+      } else if (targetVendorName.includes("beachside")) {
+        brandGuess = "beachside";
       } else {
-        bestVendorGuess = vendorMatches[0];
-        brandGuess = bestVendorGuess.name;
+        brandGuess = "field fresh";
       }
+    } else if (targetVendorName.includes("beast express")) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("interfresh")
+      )[0];
+      brandGuess = "los pinos";
+    } else if (targetVendorName.includes("s & w")) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("redwood")
+      )[0];
     } else {
-      bestVendorGuess = vendorMatches[0];
+      customVendorGuess = vendorMatches[0];
       brandGuess = bestVendorGuess.name;
+    }
+
+    if (customVendorGuess) {
+      bestVendorGuess = customVendorGuess;
     }
 
     console.log("Best vendor guess: ", bestVendorGuess);
