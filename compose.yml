@@ -20,6 +20,7 @@ services:
 
   backend:
     init: true
+    container_name: "node_backend"
     build:
       context: .
       target: dev # if use "prod", don't use --watch flag when using docker compose up

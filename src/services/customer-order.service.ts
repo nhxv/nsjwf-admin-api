@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
-import { OrderStatus } from "../commons/enums/order-status.enum";
+import { OrderStatus, toOrderStatus } from "../commons/enums/order-status.enum";
 import { PaymentStatus } from "../commons/enums/payment-status.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCode } from "../commons/utils/code.util";
@@ -969,4 +969,64 @@ export const revertCustomerOrder = async (code: string) => {
     }
     throw new createError.BadRequest("Cannot revert customer order.");
   }
+};
+
+export const patchCustomerOrderStatus = async (code, statusStr) => {
+  if (
+    !code ||
+    !statusStr ||
+    typeof code !== "string" ||
+    typeof statusStr !== "string"
+  ) {
+    throw "Missing required parameters.";
+  }
+
+  const status = toOrderStatus(statusStr);
+  if (!status) {
+    throw "Unknown status.";
+  }
+
+  if (status === OrderStatus.COMPLETED) {
+    throw "Unable to change status.";
+  }
+
+  const customerOrder = await prisma.customerOrder.findUnique({
+    where: {
+      code: code,
+    },
+    select: {
+      status: true,
+    },
+  });
+
+  if (!customerOrder) {
+    throw "Order not found.";
+  }
+
+  if (customerOrder.status === OrderStatus.COMPLETED) {
+    throw "COMPLETED order can't be changed. Use Revert instead.";
+  }
+
+  return await prisma.customerOrder.update({
+    where: {
+      code: code,
+    },
+    data: {
+      status: status,
+    },
+    include: {
+      productCustomerOrders: {
+        orderBy: {
+          product_name: "asc",
+        },
+        include: {
+          product: {
+            select: {
+              location_name: true,
+            },
+          },
+        },
+      },
+    },
+  });
 };

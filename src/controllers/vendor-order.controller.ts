@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import {
+  autofillVendorOrder,
   createVendorOrder,
   revertVendorOrder,
   updateVendorOrder,
@@ -159,6 +160,26 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const response = await revertVendorOrder(req.params.code);
+      res.send(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  `/vendor-orders/autofill`,
+  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
+  imageReceiver.single("attachment"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    // TODO: Verify image size; make sure it is 768 pixels or smaller on both sides.
+    try {
+      req.body.attachment = req.file;
+      const response = await autofillVendorOrder(req.body.attachment);
+      console.log(response);
+
+      // Expected response:
+      // {vendor_name, manualCode, products: Array[{ name, quantity, unit_code }], date_received: string}
       res.send(response);
     } catch (error) {
       next(error);

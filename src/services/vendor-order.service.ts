@@ -23,6 +23,14 @@ import {
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import fsPromise from "fs/promises";
 import path from "node:path";
+import {
+  createPartFromUri,
+  createUserContent,
+  GoogleGenAI,
+} from "@google/genai";
+import { findActiveVendors } from "./vendor.service";
+import { findAllProducts } from "./product.service";
+import { closestMatch } from "../commons/utils/string.util";
 
 // There are roughly 50 orders a week.
 // 50 (order/week) * 52 (week/yr) = 2500. Round to 3000 just in case.
@@ -379,13 +387,10 @@ export const createVendorOrder = async (
 
       if (attachmentPath !== null) {
         try {
-          // It's possible for upload dir to be on another partition
-          // and rename() won't work if that's the case.
-          await fsPromise.copyFile(
+          await fsPromise.rename(
             vendorOrderData.attachment.path,
             path.resolve(attachmentPath)
           );
-          await fsPromise.unlink(vendorOrderData.attachment.path);
         } catch (error) {
           console.log(error);
           console.log(attachmentPath);
@@ -501,71 +506,67 @@ export const updateVendorOrder = async (
         throw "This order cannot be changed.";
       }
 
-      if (vendorOrderData.attachment) {
-        // Rename /tmp/file to uploads/vendorID/code
-        // If there's already uploads/vendorID/code then it gets overwritten, no need to delete.
-        // This is not the case if vendorID is different so we need to handle that.
-        let vendorID: string = "" + existingOrder.vendor.id;
-        if (vendorOrderData.vendorName !== existingOrder.vendor_name) {
-          const vendor = await tx.vendor.findUniqueOrThrow({
-            where: {
-              name: vendorOrderData.vendorName,
-            },
-            select: {
-              id: true,
-            },
-          });
-          vendorID = "" + vendor.id;
-
-          try {
-            const removePath = path.resolve(existingOrder.attachment);
-            await fsPromise.rm(removePath, { force: true });
-          } catch (error) {
-            console.log(error);
-            await fsPromise.rm(vendorOrderData.attachment.path, {
-              force: true,
-            });
-            throw "Unable to remove previous attachment.";
+      if (existingOrder.attachment || vendorOrderData.attachment) {
+        let vendorID = "" + existingOrder.vendor.id;
+        try {
+          let deleteOld = !!existingOrder.attachment;
+          let diffVendor = false;
+          if (
+            existingOrder.attachment &&
+            vendorOrderData.vendorName !== existingOrder.vendor_name
+          ) {
+            diffVendor = true;
           }
-        }
 
-        try {
-          attachmentPath = path.join(
-            process.env.FILE_STORAGE,
-            vendorID,
-            vendorOrderData.code
-          );
-        } catch (error) {
-          console.log(error);
-          await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
-          throw "Unable to construct file path. Contact server admin.";
-        }
+          if (deleteOld) {
+            try {
+              const removePath = path.resolve(existingOrder.attachment);
+              await fsPromise.rm(removePath, { force: true });
+              attachmentPath = null;
+            } catch (error) {
+              console.log(error);
+              throw "Unable to remove previous attachment.";
+            }
+          }
 
-        try {
-          // It's possible for upload dir to be on another partition
-          // and rename() won't work if that's the case.
-          await fsPromise.copyFile(
-            vendorOrderData.attachment.path,
-            path.resolve(attachmentPath)
-          );
-          await fsPromise.unlink(vendorOrderData.attachment.path);
+          // If just delete old attachment then don't query.
+          if (diffVendor && vendorOrderData.attachment) {
+            const newVendor = await tx.vendor.findUniqueOrThrow({
+              where: {
+                name: vendorOrderData.vendorName,
+              },
+              select: {
+                id: true,
+              },
+            });
+            vendorID = "" + newVendor.id;
+          }
+
+          if (vendorOrderData.attachment) {
+            try {
+              attachmentPath = path.join(
+                process.env.FILE_STORAGE,
+                vendorID,
+                vendorOrderData.code
+              );
+            } catch (error) {
+              console.log(error);
+              throw "Unable to construct file path. Contact server admin.";
+            }
+
+            try {
+              await fsPromise.rename(
+                vendorOrderData.attachment.path,
+                path.resolve(attachmentPath)
+              );
+            } catch (error) {
+              console.log(error);
+              throw "Unable to save attachment.";
+            }
+          }
         } catch (error) {
-          console.log(error);
           await fsPromise.rm(vendorOrderData.attachment.path, { force: true });
-          throw "Unable to save attachment.";
-        }
-      } else if (existingOrder.attachment) {
-        attachmentPath = null;
-        try {
-          await fsPromise.rm(path.resolve(existingOrder.attachment), {
-            force: true, // Silent exception if path doesn't exist.
-          });
-        } catch {
-          // Mostly due to it being opened or lack of permission or ill-formed resolve.
-          // Although I'm pretty sure if the file is being opened,
-          // it'll be deleted once it's closed and so no exceptions
-          // will be thrown.
-          throw "Unable to remove attachment.";
+          throw error;
         }
       }
 
@@ -815,5 +816,196 @@ export const revertVendorOrder = async (code: string) => {
       throw new createError.BadRequest(error);
     }
     throw new createError.BadRequest("Cannot revert vendor order.");
+  }
+};
+
+export const autofillVendorOrder = async (image: Express.Multer.File) => {
+  const API_KEY = process.env.GEMINI_KEY;
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const attachmentPath = path.resolve(image.path);
+  try {
+    const PROMPT =
+      'This is a vendor receipt. Each product line contain only one product and one quantity. Give me vendor name (trim to less than 3 words), receipt number, product names, quantity, date received. Organize these info into JSON with no Markdown. Follow this format: {"vendor_name": "string", "receipt_number": "string", "date_received": "mm/dd/yyyy", "products": [{"name": "string", "quantity": "string"}]}. If fail to or if products contain more than 10 items, respond with "Unable to extract info"';
+
+    const file = await ai.files.upload({
+      file: attachmentPath,
+      config: { mimeType: "image/jpeg" },
+    });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite-preview-06-17",
+      contents: createUserContent([
+        createPartFromUri(file.uri, file.mimeType),
+        PROMPT,
+      ]),
+    });
+
+    // throw "AHHHHH";
+
+    const candidates = response.candidates;
+    let test3 = null;
+    if (candidates?.length) {
+      const content = candidates[0].content;
+      if (content?.parts?.length) {
+        const resp = content.parts[0].text;
+        if (resp === "Unable to extract info") {
+          throw response;
+        }
+        test3 = JSON.parse(resp);
+      } else {
+        throw response;
+      }
+    } else {
+      throw response;
+    }
+
+    const testobj = test3;
+    console.log("LLM response: ", testobj);
+
+    const vendors = await findActiveVendors();
+    let products = await findAllProducts();
+
+    let bestVendorGuess = vendors[0];
+    let brandGuess = "";
+    const targetVendorName = testobj.vendor_name.toLowerCase();
+    const vendorMatches = closestMatch(targetVendorName, vendors, (vendor) =>
+      vendor.name.toLowerCase()
+    );
+
+    console.log("Preliminary match: ", vendorMatches);
+
+    // Custom rules.
+    let customVendorGuess = null;
+    if (
+      targetVendorName.includes("field fresh") ||
+      targetVendorName.includes("hollano") ||
+      targetVendorName.includes("freshkist") ||
+      targetVendorName.includes("beachside") ||
+      targetVendorName.includes("amaral")
+    ) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("holland")
+      )[0];
+      if (targetVendorName.includes("freshkist")) {
+        brandGuess = "fk";
+      } else if (targetVendorName.includes("beachside")) {
+        brandGuess = "beachside";
+      } else {
+        brandGuess = "field fresh";
+      }
+    } else if (targetVendorName.includes("beast express")) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("interfresh")
+      )[0];
+      brandGuess = "los pinos";
+    } else if (targetVendorName.includes("s & w")) {
+      customVendorGuess = vendorMatches.filter((v) =>
+        v.name.toLowerCase().includes("redwood")
+      )[0];
+    } else {
+      customVendorGuess = vendorMatches[0];
+      brandGuess = bestVendorGuess.name;
+    }
+
+    if (customVendorGuess) {
+      bestVendorGuess = customVendorGuess;
+    }
+
+    console.log("Best vendor guess: ", bestVendorGuess);
+
+    if (bestVendorGuess.name.includes("Gaia")) {
+      const productPallet = products.find((p) =>
+        p.name.includes("Transportation")
+      );
+      const quantity = testobj.products.reduce(
+        (total, val) => total + +val.quantity,
+        0
+      );
+      if (productPallet) {
+        return {
+          vendor_name: bestVendorGuess.name,
+          products: [
+            {
+              name: productPallet.name,
+              quantity: quantity,
+              unit_code: `${productPallet.id}_BOX`,
+            },
+          ],
+          date_received: new Date(testobj.date_received),
+          manualCode: testobj.receipt_number,
+        };
+      }
+    }
+
+    const productMatches = [];
+    for (const product of testobj.products) {
+      const target = product.name.toLowerCase();
+      console.log("Evaluating: ", target);
+
+      // 1. Fuzzy match the product only; no brand or type whatsoever.
+      const targetFirstFewWords = target.split(" ", 3).join(" ");
+      let matches = closestMatch(targetFirstFewWords, products, (p) => {
+        const splits = p.name.split(" ", 3);
+        return splits.map((word) => word.toLowerCase()).join(" ");
+      });
+
+      // 2. Start matching brand name.
+      const productWithVendor = `${targetFirstFewWords} ${brandGuess.toLowerCase()}`;
+      const brandMatches = closestMatch(productWithVendor, matches, (p) =>
+        p.name.toLowerCase()
+      );
+
+      if (brandMatches.length > 1) {
+        // 3. Give priority for strings that has the vendor's name in its name.
+        let first = 0;
+        for (let i = 0; i < brandMatches.length; ++i) {
+          if (
+            brandMatches[i].name
+              .toLowerCase()
+              .includes(brandGuess.toLowerCase())
+          ) {
+            let temp = brandMatches[first];
+            brandMatches[first] = brandMatches[i];
+            brandMatches[i] = temp;
+            ++first;
+          }
+        }
+
+        // 4. Custom rules
+        // TODO: to be implemented
+      }
+
+      productMatches.push(brandMatches[0]);
+      // brandMatches are references so we can soft compare with !=
+      products = products.filter((p) => p != brandMatches[0]);
+    }
+
+    const bestProductGuesses = [];
+    for (let i = 0; i < testobj.products.length; ++i) {
+      bestProductGuesses.push({
+        name: productMatches[i].name,
+        quantity: +testobj.products[i].quantity,
+        unit_code: `${productMatches[i].id}_BOX`,
+      });
+    }
+
+    const autofillGuess = {
+      vendor_name: bestVendorGuess.name,
+      products: bestProductGuesses,
+      date_received: new Date(testobj.date_received),
+      manualCode: testobj.receipt_number,
+    };
+
+    // Cleanup
+    await ai.files.delete({
+      name: file.name,
+    });
+
+    return autofillGuess;
+  } catch (error) {
+    console.error(error);
+    throw createError.BadRequest("Unable to extract info");
+  } finally {
+    await fsPromise.rm(attachmentPath, { force: true });
   }
 };
