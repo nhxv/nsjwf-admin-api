@@ -820,13 +820,12 @@ export const revertVendorOrder = async (code: string) => {
 };
 
 export const autofillVendorOrder = async (image: Express.Multer.File) => {
+  const API_KEY = process.env.GEMINI_KEY;
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const attachmentPath = path.resolve(image.path);
   try {
-    const attachmentPath = path.resolve(image.path);
-
-    const API_KEY = process.env.GEMINI_KEY;
     const PROMPT =
       'This is a vendor receipt. Each product line contain only one product and one quantity. Give me vendor name (trim to less than 3 words), receipt number, product names, quantity, date received. Organize these info into JSON with no Markdown. Follow this format: {"vendor_name": "string", "receipt_number": "string", "date_received": "mm/dd/yyyy", "products": [{"name": "string", "quantity": "string"}]}. If fail to or if products contain more than 10 items, respond with "Unable to extract info"';
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     const file = await ai.files.upload({
       file: attachmentPath,
@@ -1001,11 +1000,12 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
     await ai.files.delete({
       name: file.name,
     });
-    await fsPromise.rm(attachmentPath, { force: true });
 
     return autofillGuess;
   } catch (error) {
     console.error(error);
     throw createError.BadRequest("Unable to extract info");
+  } finally {
+    await fsPromise.rm(attachmentPath, { force: true });
   }
 };
