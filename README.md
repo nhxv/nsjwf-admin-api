@@ -1,4 +1,4 @@
-# SJWH Admin API
+# NSJWF Admin API
 
 Built with Typescript, ExpressJS, Prisma, PostgreSQL
 
@@ -222,7 +222,7 @@ su nsjwfbackend
 createdb dbname
 cd ~
 mkdir -p storage/backend/ && cd storage/backend/
-git clone git@github.com:nhxv/sjwh-admin-api.git .
+git clone git@github.com:nhxv/nsjwf-admin-api.git .
 npm i
 nano .env # Or any editor you're comfortable with
 npm run prisma:apply
@@ -318,4 +318,4 @@ Host FooVPS
 
 ## Related
 
-https://github.com/nhxv/sjwh-admin
+https://github.com/nhxv/nsjwf-admin
