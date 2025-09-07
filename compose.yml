@@ -34,7 +34,7 @@ services:
     develop:
       watch:
         # sync alone doesn't seem to work, probably ts-node-dev issue
-        - action: sync+restart
+        - action: sync
           path: ./src
           target: /usr/local/app/backend/src
           ignore:
