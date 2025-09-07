@@ -820,6 +820,12 @@ export const revertVendorOrder = async (code: string) => {
 };
 
 export const autofillVendorOrder = async (image: Express.Multer.File) => {
+  /**
+   * 1. Use LLM to parse the receipt's image. Result is a formatted JSON with general info and parsed product list.
+   * 2. Correct parsed vendor's name to app vendor's name.
+   * 3. Use the app product list, app vendor's name, and parsed product list, use LLM to match parsed product to app product.
+   * 4. Match app product with parsed quantity.
+   */
   const API_KEY = process.env.GEMINI_KEY;
   const ai = new GoogleGenAI({ apiKey: API_KEY });
   const attachmentPath = path.resolve(image.path);
@@ -832,49 +838,32 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
       config: { mimeType: "image/jpeg" },
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite-preview-06-17",
+    // Don't use built-in structured output; it's unreliable
+    // For instance, the date will not format correctly. The quantity also get hallucinated.
+    const parseReceiptResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite",
       contents: createUserContent([
         createPartFromUri(file.uri, file.mimeType),
         PROMPT,
       ]),
     });
 
-    // throw "AHHHHH";
-
-    const candidates = response.candidates;
-    let test3 = null;
-    if (candidates?.length) {
-      const content = candidates[0].content;
-      if (content?.parts?.length) {
-        const resp = content.parts[0].text;
-        if (resp === "Unable to extract info") {
-          throw response;
-        }
-        test3 = JSON.parse(resp);
-      } else {
-        throw response;
-      }
-    } else {
-      throw response;
+    const rawReceiptResp = parseReceiptResponse.text;
+    if (!rawReceiptResp || rawReceiptResp === "Unable to extract info") {
+      throw parseReceiptResponse;
     }
+    const receipt = JSON.parse(rawReceiptResp);
 
-    const testobj = test3;
-    console.log("LLM response: ", testobj);
-
+    const products = await findAllProducts();
     const vendors = await findActiveVendors();
-    let products = await findAllProducts();
 
     let bestVendorGuess = vendors[0];
-    let brandGuess = "";
-    const targetVendorName = testobj.vendor_name.toLowerCase();
+    const targetVendorName = receipt.vendor_name.toLowerCase();
     const vendorMatches = closestMatch(targetVendorName, vendors, (vendor) =>
       vendor.name.toLowerCase()
     );
 
-    console.log("Preliminary match: ", vendorMatches);
-
-    // Custom rules.
+    // Custom vendor rules so it doesn't confuse transportation with actual vendor.
     let customVendorGuess = null;
     if (
       targetVendorName.includes("field fresh") ||
@@ -883,41 +872,31 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
       targetVendorName.includes("beachside") ||
       targetVendorName.includes("amaral")
     ) {
-      customVendorGuess = vendorMatches.filter((v) =>
+      customVendorGuess = vendors.find((v) =>
         v.name.toLowerCase().includes("holland")
-      )[0];
-      if (targetVendorName.includes("freshkist")) {
-        brandGuess = "fk";
-      } else if (targetVendorName.includes("beachside")) {
-        brandGuess = "beachside";
-      } else {
-        brandGuess = "field fresh";
-      }
+      );
     } else if (targetVendorName.includes("beast express")) {
-      customVendorGuess = vendorMatches.filter((v) =>
+      customVendorGuess = vendors.find((v) =>
         v.name.toLowerCase().includes("interfresh")
-      )[0];
-      brandGuess = "los pinos";
+      );
     } else if (targetVendorName.includes("s & w")) {
-      customVendorGuess = vendorMatches.filter((v) =>
+      customVendorGuess = vendors.find((v) =>
         v.name.toLowerCase().includes("redwood")
-      )[0];
+      );
     } else {
       customVendorGuess = vendorMatches[0];
-      brandGuess = bestVendorGuess.name;
     }
 
     if (customVendorGuess) {
       bestVendorGuess = customVendorGuess;
     }
 
-    console.log("Best vendor guess: ", bestVendorGuess);
-
+    // Return early for Gaia
     if (bestVendorGuess.name.includes("Gaia")) {
       const productPallet = products.find((p) =>
         p.name.includes("Transportation")
       );
-      const quantity = testobj.products.reduce(
+      const quantity = receipt.products.reduce(
         (total, val) => total + +val.quantity,
         0
       );
@@ -931,69 +910,54 @@ export const autofillVendorOrder = async (image: Express.Multer.File) => {
               unit_code: `${productPallet.id}_BOX`,
             },
           ],
-          date_received: new Date(testobj.date_received),
-          manualCode: testobj.receipt_number,
+          date_received: new Date(receipt.date_received),
+          manualCode: receipt.receipt_number,
         };
       }
     }
 
-    const productMatches = [];
-    for (const product of testobj.products) {
-      const target = product.name.toLowerCase();
-      console.log("Evaluating: ", target);
+    const appProductNames: string[] = products.map((p) => p.name);
+    const parsedProductNames: string[] = receipt.products.map((p) => p.name);
+    const str1 = JSON.stringify(appProductNames);
+    const str2 = JSON.stringify(parsedProductNames);
+    const PROMPT2 = `I have two lists of product names. List A is ${str1}. List B is ${str2}. Given the vendor name is ${bestVendorGuess.name}, for every element in list B, find the most related product in list A. Do not trim any products in list A. Organize the result into JSON without Markdown. Follow this format: {"productInListB": "productInListA", ...}. If fail to, respond with "Unable to match"`;
 
-      // 1. Fuzzy match the product only; no brand or type whatsoever.
-      const targetFirstFewWords = target.split(" ", 3).join(" ");
-      let matches = closestMatch(targetFirstFewWords, products, (p) => {
-        const splits = p.name.split(" ", 3);
-        return splits.map((word) => word.toLowerCase()).join(" ");
-      });
+    const matchProductResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite",
+      contents: createUserContent([PROMPT2]),
+    });
+    const rawMatchResp = matchProductResponse.text;
+    if (!rawMatchResp || rawMatchResp === "Unable to match") {
+      throw matchProductResponse;
+    }
+    const matcher = JSON.parse(rawMatchResp);
 
-      // 2. Start matching brand name.
-      const productWithVendor = `${targetFirstFewWords} ${brandGuess.toLowerCase()}`;
-      const brandMatches = closestMatch(productWithVendor, matches, (p) =>
-        p.name.toLowerCase()
-      );
-
-      if (brandMatches.length > 1) {
-        // 3. Give priority for strings that has the vendor's name in its name.
-        let first = 0;
-        for (let i = 0; i < brandMatches.length; ++i) {
-          if (
-            brandMatches[i].name
-              .toLowerCase()
-              .includes(brandGuess.toLowerCase())
-          ) {
-            let temp = brandMatches[first];
-            brandMatches[first] = brandMatches[i];
-            brandMatches[i] = temp;
-            ++first;
-          }
-        }
-
-        // 4. Custom rules
-        // TODO: to be implemented
+    const finalProductGuess = [];
+    for (const parsedProduct of receipt.products) {
+      const isMatched = matcher[parsedProduct.name];
+      if (!isMatched) {
+        continue;
       }
 
-      productMatches.push(brandMatches[0]);
-      // brandMatches are references so we can soft compare with !=
-      products = products.filter((p) => p != brandMatches[0]);
-    }
+      const isMatchResultValid = products.find((p) => p.name === isMatched);
+      if (!isMatchResultValid) {
+        continue;
+      }
 
-    const bestProductGuesses = [];
-    for (let i = 0; i < testobj.products.length; ++i) {
-      bestProductGuesses.push({
-        name: productMatches[i].name,
-        quantity: +testobj.products[i].quantity,
-        unit_code: `${productMatches[i].id}_BOX`,
+      finalProductGuess.push({
+        name: isMatchResultValid.name,
+        quantity: +parsedProduct.quantity,
+        unit_code: `${isMatchResultValid.id}_BOX`,
       });
+      const i = products.indexOf(isMatchResultValid);
+      products.splice(i, 1);
     }
 
     const autofillGuess = {
       vendor_name: bestVendorGuess.name,
-      products: bestProductGuesses,
-      date_received: new Date(testobj.date_received),
-      manualCode: testobj.receipt_number,
+      products: finalProductGuess,
+      date_received: new Date(receipt.date_received),
+      manualCode: receipt.receipt_number,
     };
 
     // Cleanup
