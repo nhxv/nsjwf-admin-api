@@ -7,6 +7,8 @@ RUN chown node:node uploads/ backend/
 
 ### Dev
 FROM node:22 AS deps
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -32,6 +34,8 @@ CMD npm run prisma:apply && npm run dev
 
 ### Prod
 FROM node:22 AS deps-prod
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -40,6 +44,8 @@ RUN npm pkg delete scripts.prepare && npm i --omit=dev
 
 # Build to JS
 FROM node:22 AS build-prod
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 # Need tsc to compile to js
