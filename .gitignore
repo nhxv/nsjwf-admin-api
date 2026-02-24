@@ -4,3 +4,5 @@ dist
 deploy
 # Keep environment variables out of version control
 .env
+
+container/*/secrets
