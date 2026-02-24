@@ -1,0 +1,71 @@
+# TODO:
+# - Separate logs for postgres and backend
+
+name: nsjwf
+
+secrets:
+  db-postgres-password:
+    file: ../container/secrets/.postgres_pw
+  db-app-password:
+    file: ../container/secrets/.app_pw
+
+volumes:
+  db-data:
+    external: true
+    name: "nsjwf-pg"
+  uploads:
+    external: true
+    name: "nsjwf-uploads"
+
+services:
+  postgresql:
+    image: postgres:16
+    container_name: "pg16"
+    ports:
+      # HostPort:ContainerPort
+      - "9000:5432"
+    # Automatically mounted at /run/secrets/<name>
+    secrets:
+      - db-postgres-password
+      - db-app-password
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-postgres-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - type: bind
+        source: ../container/pg16/scripts/initdb.sh
+        target: /docker-entrypoint-initdb.d/initdb.sh
+        read_only: true
+
+  backend:
+    init: true
+    container_name: "node_backend"
+    build:
+      context: ..
+      target: dev # if use "prod", don't use --watch flag when using docker compose up
+      # Fix docker fails to reach debian.org
+      network: host # https://stackoverflow.com/a/66714888
+    ports:
+      # HostPort:ContainerPort
+      - "3000:3000"
+    volumes:
+      - uploads:/usr/local/app/uploads
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    develop:
+      watch:
+        # sync alone doesn't seem to work, probably ts-node-dev issue
+        - action: sync
+          path: ./src
+          target: /usr/local/app/backend/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+        - action: sync+restart
+          path: .env
+          target: /usr/local/app/backend/.env
