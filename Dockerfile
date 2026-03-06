@@ -25,9 +25,7 @@ COPY --chown=node package.json package-lock.json ./
 COPY --chown=node prisma ./prisma/
 COPY --chown=node src ./src/
 COPY --chown=node .env ./
-COPY --chown=node container/node_backend/scripts/ ./scripts/
 EXPOSE 8000
-ENTRYPOINT [ "bash", "scripts/docker-entry.sh" ]
 # No need to prisma:generate cuz it's done earlier.
 CMD npm run prisma:apply && npm run dev
 
@@ -65,7 +63,5 @@ COPY --from=build-prod /usr/local/app/backend/dist ./dist
 COPY --chown=node package.json package-lock.json ./
 COPY --chown=node prisma ./prisma/
 COPY --chown=node .env ./
-COPY --chown=node container/node_backend/scripts/ ./scripts/
 EXPOSE 8000
-ENTRYPOINT [ "bash", "scripts/docker-entry.sh" ]
 CMD npm run prisma:apply && npm run prisma:generate && node dist/src/index.js
