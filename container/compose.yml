@@ -1,0 +1,87 @@
+# TODO:
+# - Separate logs for postgres and backend
+
+name: nsjwf
+
+secrets:
+  db-postgres-password:
+    file: ../container/secrets/.postgres_pw
+  db-app-password:
+    file: ../container/secrets/.app_pw
+
+volumes:
+  db-data:
+    external: true
+    name: "nsjwf-pg"
+  uploads:
+    external: true
+    name: "nsjwf-uploads"
+
+services:
+  postgresql:
+    image: postgres:16
+    container_name: "pg16"
+    ports:
+      # HostPort:ContainerPort
+      - "9000:5432"
+    # Automatically mounted at /run/secrets/<name>
+    secrets:
+      - db-postgres-password
+      - db-app-password
+    environment:
+      PG_DATABASE: defaultdb
+      PG_USER: nsjwfbackend
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-postgres-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - type: bind
+        source: ../container/postgresql/scripts/initdb.sh
+        target: /docker-entrypoint-initdb.d/initdb.sh
+        read_only: true
+    # Make sure postgres is ready before starting backend.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${PG_USER} -d $${PG_DATABASE} -h 127.0.0.1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 2s
+
+  backend:
+    init: true
+    container_name: "node_backend"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    build:
+      context: ..
+      target: dev # if use "prod", don't use --watch flag when using docker compose up
+      # Fix docker fails to reach debian.org
+      network: host # https://stackoverflow.com/a/66714888
+    ports:
+      # HostPort:ContainerPort
+      - "8000:8000"
+    volumes:
+      - uploads:/usr/local/app/uploads
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    develop:
+      watch:
+        # sync alone doesn't seem to work, probably ts-node-dev issue
+        - action: sync
+          path: ./src
+          target: /usr/local/app/backend/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+        - action: sync+restart
+          path: .env
+          target: /usr/local/app/backend/.env

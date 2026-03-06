@@ -7,6 +7,8 @@ RUN chown node:node uploads/ backend/
 
 ### Dev
 FROM node:22 AS deps
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -23,15 +25,15 @@ COPY --chown=node package.json package-lock.json ./
 COPY --chown=node prisma ./prisma/
 COPY --chown=node src ./src/
 COPY --chown=node .env ./
-COPY --chown=node scripts/ ./scripts/
 EXPOSE 8000
-ENTRYPOINT [ "bash", "scripts/docker-entry.sh" ]
 # No need to prisma:generate cuz it's done earlier.
 CMD npm run prisma:apply && npm run dev
 
 
 ### Prod
 FROM node:22 AS deps-prod
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 COPY --chown=node package.json package-lock.json ./
@@ -40,6 +42,8 @@ RUN npm pkg delete scripts.prepare && npm i --omit=dev
 
 # Build to JS
 FROM node:22 AS build-prod
+WORKDIR /usr/local/app
+RUN mkdir uploads backend && chown node:node uploads/ backend/
 USER node
 WORKDIR /usr/local/app/backend
 # Need tsc to compile to js
@@ -59,7 +63,5 @@ COPY --from=build-prod /usr/local/app/backend/dist ./dist
 COPY --chown=node package.json package-lock.json ./
 COPY --chown=node prisma ./prisma/
 COPY --chown=node .env ./
-COPY --chown=node scripts ./scripts/
 EXPOSE 8000
-ENTRYPOINT [ "bash", "scripts/docker-entry.sh" ]
 CMD npm run prisma:apply && npm run prisma:generate && node dist/src/index.js
