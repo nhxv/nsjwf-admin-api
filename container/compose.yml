@@ -35,7 +35,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - type: bind
-        source: ../container/pg16/scripts/initdb.sh
+        source: ../container/postgresql/scripts/initdb.sh
         target: /docker-entrypoint-initdb.d/initdb.sh
         read_only: true
     # Make sure postgres is ready before starting backend.
@@ -63,7 +63,7 @@ services:
       network: host # https://stackoverflow.com/a/66714888
     ports:
       # HostPort:ContainerPort
-      - "3000:3000"
+      - "8000:8000"
     volumes:
       - uploads:/usr/local/app/uploads
     deploy:
