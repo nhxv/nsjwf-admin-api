@@ -20,7 +20,6 @@ COPY --chown=node package*.json ./
 # Relevant discussion: https://github.com/prisma/prisma/issues/2584#issuecomment-1411794452
 COPY --chown=node prisma ./prisma/
 COPY --chown=node src ./src/
-COPY --chown=node .env ./
 EXPOSE 8000
 CMD npm run prisma:apply && npm run prisma:generate && npm run dev
 
@@ -47,6 +46,5 @@ COPY --from=build-prod /usr/local/app/backend/dist ./dist
 # No need to copy source files.
 COPY --chown=node package*.json ./
 COPY --chown=node prisma ./prisma/
-COPY --chown=node .env ./
 EXPOSE 8000
 CMD npm run prisma:apply && npm run prisma:generate && node dist/src/index.js
