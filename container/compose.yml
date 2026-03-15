@@ -60,7 +60,7 @@ services:
       context: ..
       target: prod # if use "prod", don't use --watch flag when using docker compose up
       # Fix docker fails to reach debian.org
-      network: host # https://stackoverflow.com/a/66714888
+      # network: host # https://stackoverflow.com/a/66714888
     ports:
       # HostPort:ContainerPort
       - "8000:8000"
