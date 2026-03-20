@@ -1,0 +1,5 @@
+backend:
+  hosts:
+    prod:
+      ansible_host: "{{ lookup('env', 'SERVER_IP') }}"
+      ansible_user: nsjwfbackend

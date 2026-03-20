@@ -9,21 +9,38 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Used by Ansible
+      SERVER_IP: ${{ secrets.HOST }}
     steps:
-      # ssh-action@v1.0.3
-      - uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.PKEY }}
-          script_stop: true
-          script: |
-            cd ~/storage/backend
-            git switch main && git branch previous-deploy
-            git fetch origin main
-            git branch new-deploy && git switch new-deploy
-            git merge --ff-only origin/main
-            python3 deploy.py
-            git switch main
-            git branch -d new-deploy && git branch -d previous-deploy
-            systemctl --user restart nsjwf
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install pipx
+        run: |
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+
+      - name: Install Ansible and dependencies
+        run: |
+          pipx install ansible-core
+          ansible-galaxy collection install community.docker
+
+      - name: Configure SSH
+        run: |
+          mkdir ~/.ssh && chmod 0700
+          echo "${{ secrets.PKEY }}" > ~/.ssh/id_ed25519
+          chmod 0600 ~/.ssh/id_ed25519
+          echo "${{ secrets.HOST }} ssh-ed25519 ${{ secrets.HOST_PUBLIC_KEY }}" > ~/.ssh/known_hosts
+
+      - name: Check Ansible playbook
+        run: |
+          ansible-playbook -i ansible/inventory.yml --syntax-check ansible/deploy-playbook.yml
+
+      - name: Test Ansible connection
+        run: |
+          ansible backend -m ping -i ansible/inventory.yml
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook -i ansible/inventory.yml ansible/deploy-playbook.yml -e "force=true"
