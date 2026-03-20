@@ -1,0 +1,159 @@
+---
+# TODO: A separate bootstrap playbook
+- name: Deploy backend with Docker Compose
+  hosts: backend
+  gather_facts: true
+  become: false
+
+  vars:
+    # These variables are safe to override with -e. "force=true" in particular is a supported pattern.
+
+    # Should be SSH version, not HTTPS
+    repo_url: "git@github.com:nhxv/nsjwf-admin-api.git"
+    # Can be branch, tag, hash.
+    version: "main"
+    app_dir: "{{ ansible_facts.env.HOME }}/storage/backend"
+    # Relative to app_dir
+    compose_file: "container/compose.yml"
+    # Whether to build regardless if there are any changes to the repository
+    force: false
+
+    # These variables are NOT safe to override with -e
+
+    # Rootless Docker socket for the logged-in user
+    DOCKER_ROOTLESS_SOCKET: "/run/user/{{ ansible_facts.user_uid }}/docker.sock"
+    # Just to make sure we're talking to the rootless Docker; Ansible doesn't load .bashrc
+    DOCKER_HOST: "unix://{{ DOCKER_ROOTLESS_SOCKET }}"
+    # Coerce to bool to be on the safe side
+    FORCE_FINAL: "{{ force | bool }}"
+    COMPOSE_FILE_FINAL: "{{ (app_dir, compose_file) | path_join }}"
+
+  collections:
+    - community.docker
+
+  tasks:
+    - name: Show the remote user Ansible connected as
+      ansible.builtin.debug:
+        msg: "Connected as {{ ansible_facts.user_id }} (uid={{ ansible_facts.user_uid }})"
+
+    - name: Ensure Docker CLI exists
+      ansible.builtin.command: which docker
+      register: docker_cli_check
+      changed_when: false
+      failed_when: docker_cli_check.rc != 0
+
+    - name: Ensure Docker Compose exists
+      ansible.builtin.command: docker compose version
+      register: docker_compose_check
+      changed_when: false
+      failed_when: docker_compose_check.rc != 0
+      environment:
+        DOCKER_HOST: "{{ DOCKER_HOST }}"
+
+    - name: Ensure rootless Docker socket exists
+      ansible.builtin.stat:
+        path: "{{ DOCKER_ROOTLESS_SOCKET }}"
+      register: docker_socket_stat
+
+    - name: Fail if rootless Docker socket is missing
+      ansible.builtin.fail:
+        msg: >-
+          Rootless Docker socket not found at {{ DOCKER_ROOTLESS_SOCKET }}.
+          Make sure Docker rootless is installed and running for user {{ ansible_facts.user_id }}.
+      when: not docker_socket_stat.stat.exists
+
+    - name: Ensure Docker is talking to a rootless daemon
+      ansible.builtin.command:
+        argv:
+          - docker
+          - info
+          - "--format"
+          - "{{ '{{json .SecurityOptions}}' }}"
+      register: docker_info_security
+      changed_when: false
+      environment:
+        DOCKER_HOST: "{{ DOCKER_HOST }}"
+
+    - name: Fail if Docker daemon does not appear to be rootless
+      ansible.builtin.fail:
+        msg: >-
+          Docker is reachable at {{ DOCKER_HOST }}, but does not report rootless mode.
+          SecurityOptions={{ docker_info_security.stdout }}
+      when: "'rootless' not in docker_info_security.stdout"
+
+    - name: Ensure git exists
+      ansible.builtin.command: which git
+      register: git_check
+      changed_when: false
+      failed_when: git_check.rc != 0
+
+    - name: Ensure application parent directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir | dirname }}"
+        state: directory
+        mode: "0700"
+
+    - name: Clone or update repository from GitHub
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ version }}"
+        update: true
+        force: false
+      register: git_pull_result
+
+    - name: Warn if remote changed
+      ansible.builtin.debug:
+        msg: "WARNING: Repository remote changed"
+      when: git_pull_result.remote_url_changed
+
+    - name: Ensure Compose file exists
+      ansible.builtin.stat:
+        path: "{{ COMPOSE_FILE_FINAL }}"
+      register: compose_file_stat
+
+    - name: Fail if Compose file is missing
+      ansible.builtin.fail:
+        msg: "Compose file not found: {{ COMPOSE_FILE_FINAL }}"
+      when: not compose_file_stat.stat.exists
+
+    - name: Ensure password files are protected
+      ansible.builtin.file:
+        path: "{{ app_dir }}/container/secrets"
+        state: directory
+        mode: "0700"
+
+    - name: Build Compose
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - "-f"
+          - "{{ COMPOSE_FILE_FINAL }}"
+          - build
+      args:
+        chdir: "{{ app_dir }}"
+      when: FORCE_FINAL or git_pull_result.after != git_pull_result.before
+      register: compose_build
+      changed_when: "'Successfully built' in compose_build.stdout or 'writing image' in compose_build.stdout | lower"
+      environment:
+        DOCKER_HOST: "{{ DOCKER_HOST }}"
+
+    - name: Compose up
+      community.docker.docker_compose_v2:
+        # Weird behavior: usually when cwd is backend/ the ../container in secrets
+        # is wrt the compose file, not to the cwd. This is wrt to cwd, so need to add /container.
+        project_src: "{{ app_dir }}/container"
+        state: present
+        build: never
+      register: compose_up
+      environment:
+        DOCKER_HOST: "{{ DOCKER_HOST }}"
+      when: FORCE_FINAL or (compose_build.rc is defined and compose_build.rc == 0)
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Git updated: {{ git_pull_result.changed }}"
+          - "Build rc: {{ compose_build.rc | default(false) }}"
+          - "Compose up changed: {{ compose_up.changed | default(false) }}"

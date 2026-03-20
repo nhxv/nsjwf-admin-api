@@ -58,14 +58,18 @@ services:
         condition: service_healthy
     build:
       context: ..
-      target: dev # if use "prod", don't use --watch flag when using docker compose up
+      target: prod # if use "prod", don't use --watch flag when using docker compose up
       # Fix docker fails to reach debian.org
-      network: host # https://stackoverflow.com/a/66714888
+      # network: host # https://stackoverflow.com/a/66714888
     ports:
       # HostPort:ContainerPort
       - "8000:8000"
     volumes:
       - uploads:/usr/local/app/uploads
+      - type: bind
+        source: ../.env
+        target: /usr/local/app/backend/.env
+        read_only: true
     deploy:
       restart_policy:
         condition: on-failure

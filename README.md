@@ -98,7 +98,7 @@ src/
 
 ### Environment file
 
-For `FILE_STORAGE` in `.env`, use `"../uploads"`. For `PORT` in `.env`, use `8000`. For `DATABASE_URL` in `.env`, use `DATABASE_URL="postgresql://nsjwfbackend:<password>@pg16:5432/defaultdb?schema=public"`. For password, use the value defined in `container/secrets/.app_pw`.
+For `FILE_STORAGE` in `.env`, use `"../uploads"`. For `PORT` in `.env`, use `8000`. For `DATABASE_URL` in `.env`, use `DATABASE_URL="postgresql://nsjwfbackend:{password}@pg16:5432/defaultdb?schema=public"`. For password, use the value defined in `container/secrets/.app_pw`.
 
 ### Set up
 
@@ -114,7 +114,7 @@ $ docker volume create nsjwf-uploads
 Start the services. After this, two images `postgres:<version>` and `node_backend` should be created (you can check using command `docker images`).
 
 ```sh
-$ docker compose -f container/compose.yml up --watch
+$ docker compose -f container/compose.yml up
 ```
 
 Remove containers:
@@ -137,7 +137,10 @@ If you have an existing dump created by `pg_dump`, you can import to your local 
 In a terminal, bring up a postgres container:
 
 ```sh
-$ docker run --volume nsjwf-pg:/var/lib/postgresql/data --name tempdb postgres:16
+$ docker run \
+    --volume nsjwf-pg:/var/lib/postgresql/data \
+    --name tempdb \
+    postgres:16
 ```
 
 In another terminal, access to `psql` and empty the existing database:
@@ -157,7 +160,10 @@ postgres=# \q
 Assuming your dump is located at `./backup.dump`, use the following command to restore it:
 
 ```sh
-$ docker exec -i tempdb pg_restore -d defaultdb -h localhost -U nsjwfbackend < backup.dump
+$ docker exec -i tempdb pg_restore \
+    -d defaultdb \
+    -h localhost \
+    -U nsjwfbackend < backup.dump
 ```
 
 ## Deployment
