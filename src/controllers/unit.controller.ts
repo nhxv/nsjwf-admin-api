@@ -16,20 +16,16 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
-router.put(
-  `/units/:id`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await updateUnit(+req.params.id, req.body);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.put(`/units/:id`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await updateUnit(+req.params.id, req.body);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 export default router;

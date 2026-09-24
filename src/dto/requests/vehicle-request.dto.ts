@@ -10,16 +10,9 @@ export interface VehicleRequestDto {
 }
 
 export const vehicleSchema = Joi.object<VehicleRequestDto>({
-  licensePlate: Joi.string()
-    .trim()
-    .required()
-    .max(20)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  licensePlate: Joi.string().trim().required().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
   available: Joi.boolean().required(),
   discontinued: Joi.boolean().required(),
-  nickname: Joi.string()
-    .allow("")
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  nickname: Joi.string().allow("").max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   volume: Joi.number().min(0),
 });

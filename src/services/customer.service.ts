@@ -1,10 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { handleValidationError } from "../commons/http.exception";
-import {
-  CustomerRequestDto,
-  customerSchema,
-} from "../dto/requests/customer-request.dto";
+import { CustomerRequestDto, customerSchema } from "../dto/requests/customer-request.dto";
 
 export const findAllCustomers = async () => {
   try {
@@ -51,9 +48,7 @@ export const findCustomerById = async (id: number) => {
     });
     return customer;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find customer with the given data."
-    );
+    throw new createError.BadRequest("Cannot find customer with the given data.");
   }
 };
 
@@ -69,24 +64,18 @@ export const findCustomerTendencyByName = async (name: string) => {
     });
     return tendency;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find customer tendency with the given data."
-    );
+    throw new createError.BadRequest("Cannot find customer tendency with the given data.");
   }
 };
 
 export const createCustomer = async (customerDto: CustomerRequestDto) => {
   try {
-    const customerData: CustomerRequestDto = await customerSchema.validateAsync(
-      customerDto
-    );
-    const productTendencies = customerData.customerProductTendencies.map(
-      (product) => ({
-        name: product.productName,
-        quantity: product.quantity,
-        unit_code: product.unitCode,
-      })
-    );
+    const customerData: CustomerRequestDto = await customerSchema.validateAsync(customerDto);
+    const productTendencies = customerData.customerProductTendencies.map((product) => ({
+      name: product.productName,
+      quantity: product.quantity,
+      unit_code: product.unitCode,
+    }));
     const newCustomer = await prisma.customer.create({
       data: {
         name: customerData.name,
@@ -105,27 +94,18 @@ export const createCustomer = async (customerDto: CustomerRequestDto) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot add customer with the given data."
-    );
+    throw new createError.BadRequest("Cannot add customer with the given data.");
   }
 };
 
-export const updateCustomer = async (
-  customerDto: CustomerRequestDto,
-  id: number
-) => {
+export const updateCustomer = async (customerDto: CustomerRequestDto, id: number) => {
   try {
-    const customerData: CustomerRequestDto = await customerSchema.validateAsync(
-      customerDto
-    );
-    const productTendencies = customerData.customerProductTendencies.map(
-      (product) => ({
-        name: product.productName,
-        quantity: product.quantity,
-        unit_code: product.unitCode,
-      })
-    );
+    const customerData: CustomerRequestDto = await customerSchema.validateAsync(customerDto);
+    const productTendencies = customerData.customerProductTendencies.map((product) => ({
+      name: product.productName,
+      quantity: product.quantity,
+      unit_code: product.unitCode,
+    }));
     return await prisma.$transaction(async (tx) => {
       const updatedCustomer = await prisma.customer.update({
         where: {
@@ -185,8 +165,6 @@ export const updateCustomer = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update customer with the given data."
-    );
+    throw new createError.BadRequest("Cannot update customer with the given data.");
   }
 };

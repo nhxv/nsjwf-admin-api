@@ -11,33 +11,10 @@ export interface CustomerSaleRequestDto {
 }
 
 export const customerSaleSchema = Joi.object<CustomerSaleRequestDto>({
-  code: Joi.string()
-    .max(6)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  start_date: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  end_date: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  customer: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  product: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  date_type: Joi.string()
-    .max(16)
-    .optional()
-    .allow("", "expected_at", "updated_at"),
+  code: Joi.string().max(6).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  start_date: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  end_date: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  customer: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  product: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  date_type: Joi.string().max(16).optional().allow("", "expected_at", "updated_at"),
 });

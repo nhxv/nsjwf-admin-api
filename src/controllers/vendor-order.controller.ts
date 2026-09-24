@@ -1,50 +1,33 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
 import { hasAnyRole } from "../services/auth/authorization.service";
-import {
-  autofillVendorOrder,
-  createVendorOrder,
-  revertVendorOrder,
-  updateVendorOrder,
-} from "../services/vendor-order.service";
+import { autofillVendorOrder, createVendorOrder, revertVendorOrder, updateVendorOrder } from "../services/vendor-order.service";
 import { ProductVendorOrderResponseDto } from "./../dto/responses/product-vendor-order-response.dto";
 import { VendorSaleResponseDto } from "./../dto/responses/vendor-sale-response.dto";
 import { verifyAccessToken } from "./../services/auth/token.service";
-import {
-  findDailyVendorOrder,
-  findVendorOrderByCode,
-  findVendorSale,
-} from "./../services/vendor-order.service";
+import { findDailyVendorOrder, findVendorOrderByCode, findVendorSale } from "./../services/vendor-order.service";
 import { imageReceiver } from "../commons/file";
 
 const router = Router();
 
-router.get(
-  `/vendor-orders/daily`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response: any = await findDailyVendorOrder();
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.get(`/vendor-orders/daily`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response: any = await findDailyVendorOrder();
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // find vendor order by code
-router.get(
-  `/vendor-orders/:code`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findVendorOrderByCode(req.params.code);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.get(`/vendor-orders/:code`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await findVendorOrderByCode(req.params.code);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // search vendor sale
 router.get(
@@ -52,13 +35,7 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let [code, start_date, end_date, vendorName, productName] = [
-        "",
-        "",
-        "",
-        "",
-        "",
-      ];
+      let [code, start_date, end_date, vendorName, productName] = ["", "", "", "", ""];
       // NOTE: The query is already decoded, so special characters are already turn into special characters.
       // Not entirely sure if there are any issues using these strings directly.
       if (Object.keys(req.query).length === 0) {
@@ -113,12 +90,12 @@ router.get(
             paymentStatus: order.payment_status,
           };
           return orderRes;
-        })
+        }),
       );
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // create order to vendor
@@ -134,7 +111,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // update order to vendor by order code
@@ -150,7 +127,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // revert vendor order by code
@@ -164,7 +141,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 router.post(
@@ -184,7 +161,7 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 export default router;

@@ -34,11 +34,7 @@ export function distance(a: string, b: string) {
   return row[a.length];
 }
 
-export function closestMatch<T>(
-  target: string,
-  array: T[],
-  transformer: (o: T) => string
-) {
+export function closestMatch<T>(target: string, array: T[], transformer: (o: T) => string) {
   if (array.length === 0) return [];
 
   const vars = array.map((s) => distance(target, transformer(s)));

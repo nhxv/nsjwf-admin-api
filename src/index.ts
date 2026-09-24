@@ -11,7 +11,7 @@ const app = express();
 app.use(
   cors({
     origin: process.env.CORS,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -25,22 +25,15 @@ app.use(async (req, res, next) => {
   next(new createError.NotFound("Route not found"));
 });
 
-app.use(
-  async (
-    err: HttpException,
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    res.status(err.status || 500);
-    res.send({
-      error: {
-        status: err.status || 500,
-        message: err.message,
-      },
-    });
-  }
-);
+app.use(async (err: HttpException, req: Request, res: Response, next: NextFunction) => {
+  res.status(err.status || 500);
+  res.send({
+    error: {
+      status: err.status || 500,
+      message: err.message,
+    },
+  });
+});
 
 // Start server
 const PORT = process.env.PORT || 3001;

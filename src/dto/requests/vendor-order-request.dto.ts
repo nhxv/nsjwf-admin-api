@@ -28,10 +28,7 @@ const attachmentSchema = Joi.object<MulterFileDto>({
 });
 
 const productVendorOrderSchema = Joi.object<ProductVendorOrderRequestDto>({
-  productName: Joi.string()
-    .required()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   quantity: Joi.number().integer().positive().required(),
   unitCode: Joi.string().trim().max(21).required(),
   unitPrice: Joi.string().allow(""),
@@ -57,14 +54,8 @@ export interface VendorOrderRequestDto {
 }
 
 export const vendorOrderSchema = Joi.object<VendorOrderRequestDto>({
-  vendorName: Joi.string()
-    .required()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
-  productVendorOrders: Joi.array()
-    .items(productVendorOrderSchema)
-    .min(1)
-    .optional(),
+  vendorName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
+  productVendorOrders: Joi.array().items(productVendorOrderSchema).min(1).optional(),
   isTest: Joi.boolean().required(),
   expectedAt: Joi.date().required(),
   id: Joi.number().integer().positive(),

@@ -32,21 +32,13 @@ export const nukeOperation = async () => {
   try {
     const deletedCustomerOrder = await prisma.customerOrder.deleteMany({});
     const deletedCustomerReturn = await prisma.customerReturn.deleteMany({});
-    const deletedCustomerReturnRemain =
-      await prisma.customerReturnRemain.deleteMany({});
-    const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany(
-      {}
-    );
-    const deletedProductCustomerOrder =
-      await prisma.productCustomerOrder.deleteMany({});
-    const deletedProductCustomerReturn =
-      await prisma.productCustomerReturn.deleteMany({});
-    const deletedProductCustomerReturnRemain =
-      await prisma.productCustomerReturnRemain.deleteMany({});
-    const deletedProductStockChangeHistory =
-      await prisma.stockChangeHistory.deleteMany({});
-    const deletedProductVendorOrder =
-      await prisma.productVendorOrder.deleteMany({});
+    const deletedCustomerReturnRemain = await prisma.customerReturnRemain.deleteMany({});
+    const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany({});
+    const deletedProductCustomerOrder = await prisma.productCustomerOrder.deleteMany({});
+    const deletedProductCustomerReturn = await prisma.productCustomerReturn.deleteMany({});
+    const deletedProductCustomerReturnRemain = await prisma.productCustomerReturnRemain.deleteMany({});
+    const deletedProductStockChangeHistory = await prisma.stockChangeHistory.deleteMany({});
+    const deletedProductVendorOrder = await prisma.productVendorOrder.deleteMany({});
     const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
     const deletedCustomerPayment = await prisma.customerPayment.deleteMany({});
     const deletedVendorPayment = await prisma.vendorPayment.deleteMany({});

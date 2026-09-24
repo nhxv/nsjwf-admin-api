@@ -6,31 +6,23 @@ import { findStock, updateStock } from "../services/stock.service";
 
 const router = Router();
 
-router.get(
-  `/stock`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findStock();
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.get(`/stock`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await findStock();
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // update stock by product name & status
-router.put(
-  `/stock`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await updateStock(req.body.stock, req.body.reason);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.put(`/stock`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await updateStock(req.body.stock, req.body.reason);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 export default router;

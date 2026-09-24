@@ -10,29 +10,9 @@ export interface VendorSaleRequestDto {
 }
 
 export const vendorSaleSchema = Joi.object<VendorSaleRequestDto>({
-  code: Joi.string()
-    .max(50)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  start_date: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  end_date: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  vendor: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
-  product: Joi.string()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true })
-    .optional()
-    .allow(""),
+  code: Joi.string().max(50).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  start_date: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  end_date: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  vendor: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
+  product: Joi.string().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }).optional().allow(""),
 });
