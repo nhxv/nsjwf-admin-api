@@ -18,24 +18,28 @@
     "prisma:pull": "prisma db pull",
     "prisma:reset": "prisma migrate reset",
     "prisma:deploy": "prisma migrate deploy",
-    "prepare": "husky install"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
   },
   "author": "nhxv",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "^1.10.0",
+    "@google/genai": "^1.52.0",
     "@prisma/client": "^5.20.0",
-    "@types/multer": "^1.4.12",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.21.0",
+    "express": "^4.22.3",
     "fraction.js": "^4.3.7",
     "http-errors": "^2.0.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.5.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^2.4.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -44,9 +48,11 @@
     "@types/http-errors": "^2.0.4",
     "@types/jsonwebtoken": "^8.5.9",
     "@types/luxon": "^3.4.2",
+    "@types/multer": "^2.2.0",
     "@types/node": "^18.19.54",
-    "husky": "^8.0.3",
-    "prettier": "2.8.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.9",
     "prisma": "^5.20.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
