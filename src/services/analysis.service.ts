@@ -1,23 +1,14 @@
+import prisma from "../../prisma/prisma-client";
 import createError from "http-errors";
 import { OrderStatus } from "../commons/enums/order-status.enum";
 import { convertLocalInterval } from "../commons/utils/time.util";
-import {
-  CustomerProductRankingDto,
-  ProductRankingDto,
-  customerProductRankingSchema,
-  productRankingSchema,
-} from "../dto/requests/analysis-request.dto";
+import { CustomerProductRankingDto, ProductRankingDto, customerProductRankingSchema, productRankingSchema } from "../dto/requests/analysis-request.dto";
 
-export const rankCustomersByProduct = async (
-  searchObject: CustomerProductRankingDto
-) => {
+export const rankCustomersByProduct = async (searchObject: CustomerProductRankingDto) => {
   try {
-    const { start_date, end_date, product } =
-      await customerProductRankingSchema.validateAsync(searchObject);
+    const { start_date, end_date, product } = await customerProductRankingSchema.validateAsync(searchObject);
 
-    const { start: start, end: _e } = convertLocalInterval(
-      new Date(start_date)
-    );
+    const { start: start, end: _e } = convertLocalInterval(new Date(start_date));
     const { start: _s, end: end } = convertLocalInterval(new Date(end_date));
     const orders = await prisma.customerOrder.findMany({
       where: {
@@ -48,9 +39,7 @@ export const rankCustomersByProduct = async (
       },
     });
 
-    const ordersWithProduct = orders.filter(
-      (co) => co.productCustomerOrders.length !== 0
-    );
+    const ordersWithProduct = orders.filter((co) => co.productCustomerOrders.length !== 0);
 
     let customerSales = {};
     for (const co of ordersWithProduct) {
@@ -62,8 +51,7 @@ export const rankCustomersByProduct = async (
         const unit = productOrder.unit_code.split("_")[1];
         if (unit === "BOX") {
           customerSales[co.customer_name].boxCount += productOrder.quantity;
-          customerSales[co.customer_name].avgPrice +=
-            productOrder.unit_price.toNumber() * productOrder.quantity;
+          customerSales[co.customer_name].avgPrice += productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
@@ -75,9 +63,7 @@ export const rankCustomersByProduct = async (
         result.push({
           customerName: customer,
           boxCount: customerSales[customer].boxCount,
-          avgPrice: (
-            customerSales[customer].avgPrice / customerSales[customer].boxCount
-          ).toFixed(2),
+          avgPrice: (customerSales[customer].avgPrice / customerSales[customer].boxCount).toFixed(2),
         });
       }
     }
@@ -90,13 +76,9 @@ export const rankCustomersByProduct = async (
 
 export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
   try {
-    const { start_date, end_date } = await productRankingSchema.validateAsync(
-      searchObject
-    );
+    const { start_date, end_date } = await productRankingSchema.validateAsync(searchObject);
 
-    const { start: start, end: _e } = convertLocalInterval(
-      new Date(start_date)
-    );
+    const { start: start, end: _e } = convertLocalInterval(new Date(start_date));
     const { start: _s, end: end } = convertLocalInterval(new Date(end_date));
 
     const orders = await prisma.customerOrder.findMany({
@@ -134,10 +116,8 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
 
         const unit = productOrder.unit_code.split("_")[1];
         if (unit === "BOX") {
-          productSales[productOrder.product_name].boxCount +=
-            productOrder.quantity;
-          productSales[productOrder.product_name].avgPrice +=
-            productOrder.unit_price.toNumber() * productOrder.quantity;
+          productSales[productOrder.product_name].boxCount += productOrder.quantity;
+          productSales[productOrder.product_name].avgPrice += productOrder.unit_price.toNumber() * productOrder.quantity;
         }
       }
     }
@@ -149,9 +129,7 @@ export const rankProductsByCount = async (searchObject: ProductRankingDto) => {
         result.push({
           productName: product,
           boxCount: productSales[product].boxCount,
-          avgPrice: (
-            productSales[product].avgPrice / productSales[product].boxCount
-          ).toFixed(2),
+          avgPrice: (productSales[product].avgPrice / productSales[product].boxCount).toFixed(2),
         });
       }
     }

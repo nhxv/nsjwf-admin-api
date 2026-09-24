@@ -1,12 +1,10 @@
+import prisma from "../../prisma/prisma-client";
 import createError from "http-errors";
 import { Role } from "../commons/enums/role.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { OrderStatus } from "./../commons/enums/order-status.enum";
 import { convertLocalStart } from "./../commons/utils/time.util";
-import {
-  EmployeeRequestDto,
-  employeeSchema,
-} from "./../dto/requests/employee-request.dto";
+import { EmployeeRequestDto, employeeSchema } from "./../dto/requests/employee-request.dto";
 import * as bcrypt from "bcryptjs";
 
 export const findAllEmployees = async () => {
@@ -77,14 +75,9 @@ export const findActiveEmployeeTasks = async (status: string) => {
   }
 };
 
-export const updateEmployee = async (
-  id: number,
-  employeeDto: EmployeeRequestDto
-) => {
+export const updateEmployee = async (id: number, employeeDto: EmployeeRequestDto) => {
   try {
-    const employeeData: EmployeeRequestDto = await employeeSchema.validateAsync(
-      employeeDto
-    );
+    const employeeData: EmployeeRequestDto = await employeeSchema.validateAsync(employeeDto);
     const hashedPw = bcrypt.hashSync(employeeData.password, 12);
     const updatedEmployee = await prisma.account.update({
       where: {

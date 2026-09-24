@@ -1,10 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { handleValidationError } from "../commons/http.exception";
-import {
-  VendorRequestDto,
-  vendorSchema,
-} from "../dto/requests/vendor-request.dto";
+import { VendorRequestDto, vendorSchema } from "../dto/requests/vendor-request.dto";
 import fsPromise from "node:fs/promises";
 import path from "node:path";
 
@@ -73,24 +70,18 @@ export const findVendorTendencyByName = async (name: string) => {
     });
     return tendency;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find vendor tendency with the given data."
-    );
+    throw new createError.BadRequest("Cannot find vendor tendency with the given data.");
   }
 };
 
 export const createVendor = async (vendorDto: VendorRequestDto) => {
   try {
-    const vendorData: VendorRequestDto = await vendorSchema.validateAsync(
-      vendorDto
-    );
-    const productTendencies = vendorData.vendorProductTendencies.map(
-      (product) => ({
-        name: product.productName,
-        quantity: product.quantity,
-        unit_code: product.unitCode,
-      })
-    );
+    const vendorData: VendorRequestDto = await vendorSchema.validateAsync(vendorDto);
+    const productTendencies = vendorData.vendorProductTendencies.map((product) => ({
+      name: product.productName,
+      quantity: product.quantity,
+      unit_code: product.unitCode,
+    }));
     const newVendor = await prisma.vendor.create({
       data: {
         name: vendorData.name,
@@ -127,16 +118,12 @@ export const createVendor = async (vendorDto: VendorRequestDto) => {
 
 export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
   try {
-    const vendorData: VendorRequestDto = await vendorSchema.validateAsync(
-      vendorDto
-    );
-    const productTendencies = vendorData.vendorProductTendencies.map(
-      (product) => ({
-        name: product.productName,
-        quantity: product.quantity,
-        unit_code: product.unitCode,
-      })
-    );
+    const vendorData: VendorRequestDto = await vendorSchema.validateAsync(vendorDto);
+    const productTendencies = vendorData.vendorProductTendencies.map((product) => ({
+      name: product.productName,
+      quantity: product.quantity,
+      unit_code: product.unitCode,
+    }));
     return await prisma.$transaction(async (tx) => {
       const updatedVendor = await prisma.vendor.update({
         where: {
@@ -196,8 +183,6 @@ export const updateVendor = async (vendorDto: VendorRequestDto, id: number) => {
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update vendor with the given data."
-    );
+    throw new createError.BadRequest("Cannot update vendor with the given data.");
   }
 };

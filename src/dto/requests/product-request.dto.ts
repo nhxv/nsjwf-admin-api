@@ -9,11 +9,7 @@ export interface ProductRequestDto {
 }
 
 export const productSchema = Joi.object<ProductRequestDto>({
-  name: Joi.string()
-    .trim()
-    .required()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  name: Joi.string().trim().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   location: Joi.string()
     .trim()
     .max(20)

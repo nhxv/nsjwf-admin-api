@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import { Prisma } from "@prisma/client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
@@ -20,10 +21,7 @@ import {
 } from "./../commons/utils/time.util";
 import { CustomerOrderPriorityRequestDto } from "./../dto/requests/customer-order-priority-request.dto";
 import { customerOrderSchema } from "./../dto/requests/customer-order-request.dto";
-import {
-  CustomerSaleRequestDto,
-  customerSaleSchema,
-} from "../dto/requests/customer-sale-request.dto";
+import { CustomerSaleRequestDto, customerSaleSchema } from "../dto/requests/customer-sale-request.dto";
 
 // There are roughly 20-25 orders a day, let's take 25 as the higher value.
 // 25 * 30 (days) * 12 (months) = 9000. Take 10000 for a nice number;
@@ -85,18 +83,13 @@ export const findCustomerOrderByCode = async (code: string) => {
     });
     return customerOrder;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find customer order with the given code."
-    );
+    throw new createError.BadRequest("Cannot find customer order with the given code.");
   }
 };
 
-export const findCustomerSale = async (
-  searchObject: CustomerSaleRequestDto
-) => {
+export const findCustomerSale = async (searchObject: CustomerSaleRequestDto) => {
   try {
-    const { code, start_date, end_date, customer, product, date_type } =
-      await customerSaleSchema.validateAsync(searchObject);
+    const { code, start_date, end_date, customer, product, date_type } = await customerSaleSchema.validateAsync(searchObject);
 
     // Construct dynamic query for prisma.
     // Note that there's no known way to not select an entry based on a condition on a relation
@@ -123,12 +116,8 @@ export const findCustomerSale = async (
       }
 
       if (start_date && end_date) {
-        const { start: start, end: _e } = convertLocalInterval(
-          new Date(start_date)
-        );
-        const { start: _s, end: end } = convertLocalInterval(
-          new Date(end_date)
-        );
+        const { start: start, end: _e } = convertLocalInterval(new Date(start_date));
+        const { start: _s, end: end } = convertLocalInterval(new Date(end_date));
         whereClause.set(date_col, { gte: start, lte: end });
       } else if (start_date || end_date) {
         const date = start_date ? start_date : end_date;
@@ -159,11 +148,7 @@ export const findCustomerSale = async (
       // Limit this because it's very possible to take all completed orders.
       take: MAX_ORDER_COUNT,
     });
-    const customerSolds = result.filter((co) =>
-      co.productCustomerOrders.some((pco) =>
-        pco.product_name.toLowerCase().includes(product.toLowerCase())
-      )
-    );
+    const customerSolds = result.filter((co) => co.productCustomerOrders.some((pco) => pco.product_name.toLowerCase().includes(product.toLowerCase())));
     // Truncate array in a fast way.
     customerSolds.length = Math.min(customerSolds.length, 100);
 
@@ -175,10 +160,7 @@ export const findCustomerSale = async (
         order_code: sold.code,
         manual_code: sold.manual_code ? sold.manual_code : "",
         customer_name: sold.customer_name,
-        sale: sold.productCustomerOrders.reduce(
-          (prev, curr: any) => prev + curr.quantity * curr.unit_price,
-          0
-        ),
+        sale: sold.productCustomerOrders.reduce((prev, curr: any) => prev + curr.quantity * curr.unit_price, 0),
         expected_at: sold.expected_at,
         updated_at: sold.updated_at,
         payment_status: sold.customerPayment.status,
@@ -188,9 +170,7 @@ export const findCustomerSale = async (
 
     return reports;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find customer sale with the given data."
-    );
+    throw new createError.BadRequest("Cannot find customer sale with the given data.");
   }
 };
 
@@ -227,18 +207,11 @@ export const findEmployeeTask = async (nickname: string, status: string) => {
   }
 };
 
-export const createCustomerOrder = async (
-  customerOrderDto: CustomerOrderRequestDto
-) => {
+export const createCustomerOrder = async (customerOrderDto: CustomerOrderRequestDto) => {
   try {
     // Validate customer order
-    const customerOrderData: CustomerOrderRequestDto =
-      await customerOrderSchema.validateAsync(customerOrderDto);
-    if (
-      !(Object.values(OrderStatus) as string[]).includes(
-        customerOrderData.status
-      )
-    ) {
+    const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
+    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
     // Validate unique unit code
@@ -256,19 +229,15 @@ export const createCustomerOrder = async (
       },
     });
     const { code, time } = generateCode();
-    const productOrders = customerOrderData.productCustomerOrders.map(
-      (productOrder) => ({
-        product_name: productOrder.productName,
-        order_code: productOrder.orderCode,
-        unit_code: productOrder.unitCode,
-        quantity: productOrder.quantity,
-        unit_price: !productOrder.unitPrice
-          ? null
-          : new Prisma.Decimal(productOrder.unitPrice),
-        created_at: time,
-        updated_at: time,
-      })
-    );
+    const productOrders = customerOrderData.productCustomerOrders.map((productOrder) => ({
+      product_name: productOrder.productName,
+      order_code: productOrder.orderCode,
+      unit_code: productOrder.unitCode,
+      quantity: productOrder.quantity,
+      unit_price: !productOrder.unitPrice ? null : new Prisma.Decimal(productOrder.unitPrice),
+      created_at: time,
+      updated_at: time,
+    }));
 
     return await prisma.$transaction(async (tx) => {
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
@@ -278,9 +247,7 @@ export const createCustomerOrder = async (
         const newCustomerPayment = await tx.customerPayment.create({
           data: {
             code: code,
-            status: customerOrderData.isTest
-              ? PaymentStatus.CASH
-              : PaymentStatus.RECEIVABLE,
+            status: customerOrderData.isTest ? PaymentStatus.CASH : PaymentStatus.RECEIVABLE,
             created_at: time,
             updated_at: time,
           },
@@ -318,14 +285,10 @@ export const createCustomerOrder = async (
             },
           });
           const newRatio = new Fraction(unit.ratio);
-          const productOrderQuantity = newRatio.mul(
-            new Fraction(productOrder.quantity)
-          );
+          const productOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity =
-            currentStockQuantity.sub(productOrderQuantity);
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
+          const newStockQuantity = currentStockQuantity.sub(productOrderQuantity);
+          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
@@ -366,9 +329,7 @@ export const createCustomerOrder = async (
           assign_to: employee.nickname,
           priority: 0,
           is_sold: isCompleted,
-          manual_code: customerOrderData.manualCode
-            ? customerOrderData.manualCode
-            : null,
+          manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
           note: customerOrderData.note,
           payment_code: isCompleted ? code : undefined,
           productCustomerOrders: {
@@ -386,25 +347,15 @@ export const createCustomerOrder = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot create customer order with the given data."
-    );
+    throw new createError.BadRequest("Cannot create customer order with the given data.");
   }
 };
 
-export const updateCustomerOrder = async (
-  code: string,
-  customerOrderDto: CustomerOrderRequestDto
-) => {
+export const updateCustomerOrder = async (code: string, customerOrderDto: CustomerOrderRequestDto) => {
   try {
     // Validate customer order
-    const customerOrderData: CustomerOrderRequestDto =
-      await customerOrderSchema.validateAsync(customerOrderDto);
-    if (
-      !(Object.values(OrderStatus) as string[]).includes(
-        customerOrderData.status
-      )
-    ) {
+    const customerOrderData: CustomerOrderRequestDto = await customerOrderSchema.validateAsync(customerOrderDto);
+    if (!(Object.values(OrderStatus) as string[]).includes(customerOrderData.status)) {
       throw `Please don't attack us.`;
     }
     if (customerOrderData.code !== code) {
@@ -425,18 +376,14 @@ export const updateCustomerOrder = async (
       },
     });
     const time = generateCurrentTime();
-    const productOrders = customerOrderData.productCustomerOrders.map(
-      (productOrder) => ({
-        product_name: productOrder.productName,
-        order_code: customerOrderData.code,
-        quantity: productOrder.quantity,
-        unit_code: productOrder.unitCode,
-        unit_price: !productOrder.unitPrice
-          ? null
-          : new Prisma.Decimal(productOrder.unitPrice),
-        updated_at: time,
-      })
-    );
+    const productOrders = customerOrderData.productCustomerOrders.map((productOrder) => ({
+      product_name: productOrder.productName,
+      order_code: customerOrderData.code,
+      quantity: productOrder.quantity,
+      unit_code: productOrder.unitCode,
+      unit_price: !productOrder.unitPrice ? null : new Prisma.Decimal(productOrder.unitPrice),
+      updated_at: time,
+    }));
     return await prisma.$transaction(async (tx) => {
       const isCompleted = customerOrderData.status === OrderStatus.COMPLETED;
 
@@ -446,9 +393,7 @@ export const updateCustomerOrder = async (
         newCustomerPayment = await tx.customerPayment.create({
           data: {
             code: code,
-            status: customerOrderData.isTest
-              ? PaymentStatus.CASH
-              : PaymentStatus.RECEIVABLE,
+            status: customerOrderData.isTest ? PaymentStatus.CASH : PaymentStatus.RECEIVABLE,
             created_at: time,
             updated_at: time,
           },
@@ -475,9 +420,7 @@ export const updateCustomerOrder = async (
             is_test: customerOrderData.isTest,
             assign_to: employee.nickname,
             is_sold: isCompleted,
-            manual_code: customerOrderData.manualCode
-              ? customerOrderData.manualCode
-              : null,
+            manual_code: customerOrderData.manualCode ? customerOrderData.manualCode : null,
             note: customerOrderData.note,
             expected_at: convertLocalExpected(customerOrderData.expectedAt),
             payment_code: isCompleted ? newCustomerPayment.code : undefined,
@@ -498,9 +441,7 @@ export const updateCustomerOrder = async (
           unit_price: productOrder.unit_price,
           updated_at: productOrder.updated_at,
         });
-        const found = productOrders.find(
-          (po) => po.unit_code === productOrder.unit_code
-        );
+        const found = productOrders.find((po) => po.unit_code === productOrder.unit_code);
         if (!found) {
           const deletedProductOrder = await tx.productCustomerOrder.delete({
             where: {
@@ -528,11 +469,7 @@ export const updateCustomerOrder = async (
       for (const productOrder of productOrders) {
         if (isCompleted) {
           // validate unit price when completing order
-          if (
-            !productOrder ||
-            !productOrder.unit_price ||
-            productOrder.unit_price.comparedTo(0) < 0
-          ) {
+          if (!productOrder || !productOrder.unit_price || productOrder.unit_price.comparedTo(0) < 0) {
             throw `Price needs to be at least 0.`;
           }
 
@@ -550,15 +487,10 @@ export const updateCustomerOrder = async (
             },
           });
           const newRatio = new Fraction(unit.ratio);
-          const newProductOrderQuantity = newRatio.mul(
-            new Fraction(productOrder.quantity)
-          );
+          const newProductOrderQuantity = newRatio.mul(new Fraction(productOrder.quantity));
           const currentStockQuantity = new Fraction(currentStock.quantity);
-          const newStockQuantity = currentStockQuantity.sub(
-            newProductOrderQuantity
-          );
-          const stockQuantityChange =
-            newStockQuantity.sub(currentStockQuantity);
+          const newStockQuantity = currentStockQuantity.sub(newProductOrderQuantity);
+          const stockQuantityChange = newStockQuantity.sub(currentStockQuantity);
 
           if (newStockQuantity.compare(0) < 0) {
             throw `${productOrder.product_name}: Only ${currentStock.quantity} box in stock.`;
@@ -585,9 +517,7 @@ export const updateCustomerOrder = async (
         }
 
         // find current product order
-        const currentProductOrder = existingProductOrders.get(
-          productOrder.unit_code
-        );
+        const currentProductOrder = existingProductOrders.get(productOrder.unit_code);
 
         if (!currentProductOrder) {
           // create new product order
@@ -628,9 +558,7 @@ export const updateCustomerOrder = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update customer order with the given data."
-    );
+    throw new createError.BadRequest("Cannot update customer order with the given data.");
   }
 };
 
@@ -660,44 +588,20 @@ export const reportTask = async (nickname: string) => {
         },
       },
     });
-    const pickingDaily = daily.filter(
-      (task) => task.type === OrderStatus.PICKING
-    );
-    const pickingWeekly = weekly.filter(
-      (task) => task.type === OrderStatus.PICKING
-    );
-    const pickingMonthly = monthly.filter(
-      (task) => task.type === OrderStatus.PICKING
-    );
+    const pickingDaily = daily.filter((task) => task.type === OrderStatus.PICKING);
+    const pickingWeekly = weekly.filter((task) => task.type === OrderStatus.PICKING);
+    const pickingMonthly = monthly.filter((task) => task.type === OrderStatus.PICKING);
 
-    const shippingDaily = daily.filter(
-      (task) => task.type === OrderStatus.SHIPPING
-    );
-    const shippingWeekly = weekly.filter(
-      (task) => task.type === OrderStatus.SHIPPING
-    );
-    const shippingMonthly = monthly.filter(
-      (task) => task.type === OrderStatus.SHIPPING
-    );
+    const shippingDaily = daily.filter((task) => task.type === OrderStatus.SHIPPING);
+    const shippingWeekly = weekly.filter((task) => task.type === OrderStatus.SHIPPING);
+    const shippingMonthly = monthly.filter((task) => task.type === OrderStatus.SHIPPING);
 
-    const employeePickingDaily = pickingDaily.filter(
-      (task) => task.employee_name !== nickname
-    );
-    const employeeShippingDaily = shippingDaily.filter(
-      (task) => task.employee_name !== nickname
-    );
-    const employeePickingWeekly = pickingWeekly.filter(
-      (task) => task.employee_name !== nickname
-    );
-    const employeeShippingWeekly = shippingWeekly.filter(
-      (task) => task.employee_name !== nickname
-    );
-    const employeePickingMonthly = pickingMonthly.filter(
-      (task) => task.employee_name !== nickname
-    );
-    const employeeShippingMonthly = shippingMonthly.filter(
-      (task) => task.employee_name !== nickname
-    );
+    const employeePickingDaily = pickingDaily.filter((task) => task.employee_name !== nickname);
+    const employeeShippingDaily = shippingDaily.filter((task) => task.employee_name !== nickname);
+    const employeePickingWeekly = pickingWeekly.filter((task) => task.employee_name !== nickname);
+    const employeeShippingWeekly = shippingWeekly.filter((task) => task.employee_name !== nickname);
+    const employeePickingMonthly = pickingMonthly.filter((task) => task.employee_name !== nickname);
+    const employeeShippingMonthly = shippingMonthly.filter((task) => task.employee_name !== nickname);
     return {
       employeePickingDaily: employeePickingDaily.length,
       employeeShippingDaily: employeeShippingDaily.length,
@@ -720,9 +624,7 @@ export const reportTask = async (nickname: string) => {
   }
 };
 
-export const updatePriority = async (
-  customerOrderPriorityRequestDto: CustomerOrderPriorityRequestDto[]
-) => {
+export const updatePriority = async (customerOrderPriorityRequestDto: CustomerOrderPriorityRequestDto[]) => {
   try {
     return await prisma.$transaction(async (tx) => {
       for (const employee of customerOrderPriorityRequestDto) {
@@ -775,10 +677,7 @@ export const startDoingTask = async (code: string, nickname: string) => {
         code: code,
       },
     });
-    if (
-      currentOrder.status !== OrderStatus.PICKING &&
-      currentOrder.status !== OrderStatus.SHIPPING
-    ) {
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
     }
     if (currentOrder.assign_to !== nickname) {
@@ -809,10 +708,7 @@ export const stopDoingTask = async (code: string) => {
         code: code,
       },
     });
-    if (
-      currentOrder.status !== OrderStatus.PICKING &&
-      currentOrder.status !== OrderStatus.SHIPPING
-    ) {
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
     }
     const time = generateCurrentTime();
@@ -840,10 +736,7 @@ export const finishTask = async (code: string) => {
         code: code,
       },
     });
-    if (
-      currentOrder.status !== OrderStatus.PICKING &&
-      currentOrder.status !== OrderStatus.SHIPPING
-    ) {
+    if (currentOrder.status !== OrderStatus.PICKING && currentOrder.status !== OrderStatus.SHIPPING) {
       throw `Please don't hack us.`;
     }
     const time = generateCurrentTime();
@@ -854,10 +747,7 @@ export const finishTask = async (code: string) => {
           code: code,
         },
         data: {
-          status:
-            currentOrder.status === OrderStatus.PICKING
-              ? OrderStatus.CHECKING
-              : OrderStatus.DELIVERED,
+          status: currentOrder.status === OrderStatus.PICKING ? OrderStatus.CHECKING : OrderStatus.DELIVERED,
           is_doing: false,
           updated_at: time,
         },
@@ -942,8 +832,7 @@ export const revertCustomerOrder = async (code: string) => {
         });
         const currentStockQuantity = new Fraction(stock.quantity);
         const stockQuantityChange = new Fraction(stockChange.quantity_change);
-        const revertedStockQuantity =
-          currentStockQuantity.sub(stockQuantityChange);
+        const revertedStockQuantity = currentStockQuantity.sub(stockQuantityChange);
         const updatedStock = await tx.stock.update({
           where: {
             id: stockChange.stock_id,
@@ -972,12 +861,7 @@ export const revertCustomerOrder = async (code: string) => {
 };
 
 export const patchCustomerOrderStatus = async (code, statusStr) => {
-  if (
-    !code ||
-    !statusStr ||
-    typeof code !== "string" ||
-    typeof statusStr !== "string"
-  ) {
+  if (!code || !statusStr || typeof code !== "string" || typeof statusStr !== "string") {
     throw "Missing required parameters.";
   }
 

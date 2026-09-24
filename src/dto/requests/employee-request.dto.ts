@@ -13,9 +13,6 @@ export const employeeSchema = Joi.object<EmployeeRequestDto>({
     .max(32)
     .regex(/[$\(\)<>]/, { invert: true }),
   password: Joi.string().regex(/[$\(\)<>]/, { invert: true }),
-  nickname: Joi.string()
-    .trim()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  nickname: Joi.string().trim().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   active: Joi.boolean().required(),
 });

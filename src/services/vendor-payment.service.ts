@@ -1,16 +1,13 @@
+import prisma from "../../prisma/prisma-client";
 import { VendorPaymentRequestDto } from "./../dto/requests/vendor-payment-request.dto";
 import { vendorPaymentSchema } from "./../dto/requests/vendor-payment-request.dto";
 import { handleValidationError } from "../commons/http.exception";
 import createError from "http-errors";
 import { generateCurrentTime } from "../commons/utils/time.util";
 
-export const updatePaymentStatus = async (
-  code: string,
-  vendorPaymentDto: VendorPaymentRequestDto
-) => {
+export const updatePaymentStatus = async (code: string, vendorPaymentDto: VendorPaymentRequestDto) => {
   try {
-    const vendorPaymentData: VendorPaymentRequestDto =
-      await vendorPaymentSchema.validateAsync(vendorPaymentDto);
+    const vendorPaymentData: VendorPaymentRequestDto = await vendorPaymentSchema.validateAsync(vendorPaymentDto);
     const time = generateCurrentTime();
     const updatedVendorPayment = await prisma.vendorPayment.update({
       where: {

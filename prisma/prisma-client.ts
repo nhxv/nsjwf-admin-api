@@ -1,14 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  var prisma: PrismaClient;
-}
+// Reuse the client across ts-node-dev restarts in dev to avoid exhausting connections.
+// Not declared as an ambient global so a missing import is a compile error.
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// const prisma = globalThis.prisma || new PrismaClient({log: ["query"]});
-const prisma = globalThis.prisma || new PrismaClient();
+// const prisma = globalForPrisma.prisma || new PrismaClient({log: ["query"]});
+const prisma = globalForPrisma.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV === "dev") {
-  globalThis.prisma = prisma;
+  globalForPrisma.prisma = prisma;
 }
 
 export default prisma;

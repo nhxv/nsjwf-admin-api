@@ -17,7 +17,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 export default router;

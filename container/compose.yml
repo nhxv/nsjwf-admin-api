@@ -40,11 +40,7 @@ services:
         read_only: true
     # Make sure postgres is ready before starting backend.
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U $${PG_USER} -d $${PG_DATABASE} -h 127.0.0.1 || exit 1",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U $${PG_USER} -d $${PG_DATABASE} -h 127.0.0.1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

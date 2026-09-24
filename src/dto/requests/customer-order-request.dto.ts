@@ -19,23 +19,15 @@ export interface CustomerOrderRequestDto {
 }
 
 export const customerOrderSchema = Joi.object<CustomerOrderRequestDto>({
-  customerName: Joi.string()
-    .required()
-    .max(255)
-    .regex(GENERAL_TEXT_REGEX, { invert: true }),
+  customerName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
   productCustomerOrders: Joi.array()
     .items({
-      productName: Joi.string()
-        .required()
-        .max(255)
-        .regex(GENERAL_TEXT_REGEX, { invert: true }),
+      productName: Joi.string().required().max(255).regex(GENERAL_TEXT_REGEX, { invert: true }),
       quantity: Joi.number().integer().required().invalid(0),
       unitCode: Joi.string().trim().max(21).required(),
       unitPrice: Joi.string().allow(""),
       id: Joi.number().integer().positive(),
-      orderCode: Joi.string()
-        .max(20)
-        .regex(GENERAL_TEXT_REGEX, { invert: true }),
+      orderCode: Joi.string().max(20).regex(GENERAL_TEXT_REGEX, { invert: true }),
       createdAt: Joi.date(),
       updatedAt: Joi.date(),
       isRemove: Joi.boolean(),

@@ -1,10 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { Role } from "../commons/enums/role.enum";
 import createError from "http-errors";
-import {
-  CustomerSaleInvoiceResponseDto,
-  CustomerSaleResponseDto,
-} from "../dto/responses/customer-sale-response.dto";
+import { CustomerSaleInvoiceResponseDto, CustomerSaleResponseDto } from "../dto/responses/customer-sale-response.dto";
 import { hasAnyRole } from "../services/auth/authorization.service";
 import { CustomerOrderResponseDto } from "./../dto/responses/customer-order-response.dto";
 import { ProductCustomerOrderResponseDto } from "./../dto/responses/product-customer-order-response.dto";
@@ -27,32 +24,24 @@ import {
 
 const router = Router();
 
-router.get(
-  `/customer-orders/daily`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response: any = await findDailyCustomerOrder();
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.get(`/customer-orders/daily`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response: any = await findDailyCustomerOrder();
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // find customer order by code
-router.get(
-  `/customer-orders/:code`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await findCustomerOrderByCode(req.params.code);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.get(`/customer-orders/:code`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await findCustomerOrderByCode(req.params.code);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // search customer sale
 router.get(
@@ -60,14 +49,7 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let [code, start_date, end_date, customerName, productName, dateType] = [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-      ];
+      let [code, start_date, end_date, customerName, productName, dateType] = ["", "", "", "", "", ""];
       // NOTE: The query is already decoded, so special characters are already turn into special characters.
       // Not entirely sure if there are any issues using these strings directly.
       if (Object.keys(req.query).length === 0) {
@@ -108,15 +90,10 @@ router.get(
         let curr = prev;
         for (const product of order.productCustomerOrders) {
           if (
-            product.product_name
-              .toLowerCase()
-              .includes(productName.toLowerCase()) &&
+            product.product_name.toLowerCase().includes(productName.toLowerCase()) &&
             product.unit_code.split("_")[1].toLowerCase() === "box" // NOTE: Hard code this thing.
           ) {
-            if (
-              productName === "" &&
-              product.product_name.toLowerCase().includes("bean sprout")
-            ) {
+            if (productName === "" && product.product_name.toLowerCase().includes("bean sprout")) {
               // special customers
               curr += product.quantity * 0.5;
             } else {
@@ -157,7 +134,7 @@ router.get(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // find employee task
@@ -166,10 +143,7 @@ router.get(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await findEmployeeTask(
-        req.query.nickname as string,
-        req.query.status as string
-      );
+      const response = await findEmployeeTask(req.query.nickname as string, req.query.status as string);
       res.send(
         response.map((order) => {
           const orderRes: CustomerOrderResponseDto = {
@@ -194,12 +168,12 @@ router.get(
             manualCode: order.manual_code,
           };
           return orderRes;
-        })
+        }),
       );
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 router.get(
@@ -212,36 +186,28 @@ router.get(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // create customer order
-router.post(
-  `/customer-orders`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await createCustomerOrder(req.body);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.post(`/customer-orders`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await createCustomerOrder(req.body);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // update customer order by order code
-router.put(
-  `/customer-orders/:code`,
-  [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])],
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const response = await updateCustomerOrder(req.params.code, req.body);
-      res.send(response);
-    } catch (error) {
-      next(error);
-    }
+router.put(`/customer-orders/:code`, [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN])], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const response = await updateCustomerOrder(req.params.code, req.body);
+    res.send(response);
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // when employee start doing task assigned to them
 router.put(
@@ -249,15 +215,12 @@ router.put(
   [verifyAccessToken, hasAnyRole([Role.MASTER, Role.ADMIN, Role.OPERATOR])],
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const response = await startDoingTask(
-        req.query.code as string,
-        req.query.nickname as string
-      );
+      const response = await startDoingTask(req.query.code as string, req.query.nickname as string);
       res.send(response);
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // when employee stop doing task assigned to them
@@ -271,7 +234,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // when employee finish task assigned to them
@@ -285,7 +248,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // when update employee task priority
@@ -299,7 +262,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // revert customer order by code
@@ -313,7 +276,7 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 router.patch(
@@ -332,7 +295,7 @@ router.patch(
         next(error);
       }
     }
-  }
+  },
 );
 
 export default router;

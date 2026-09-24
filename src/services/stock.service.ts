@@ -1,12 +1,10 @@
+import prisma from "../../prisma/prisma-client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { StockChangeReason } from "../commons/enums/stock-change-reason.enum";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
-import {
-  StockRequestDto,
-  stockSchema,
-} from "../dto/requests/stock-request.dto";
+import { StockRequestDto, stockSchema } from "../dto/requests/stock-request.dto";
 
 export const findStock = async () => {
   try {
@@ -36,10 +34,7 @@ export const findStock = async () => {
 };
 
 // change stock manually
-export const updateStock = async (
-  stockDto: StockRequestDto[],
-  reason: string
-) => {
+export const updateStock = async (stockDto: StockRequestDto[], reason: string) => {
   try {
     const stockData: StockRequestDto[] = [];
     // validate each product stock
@@ -99,12 +94,9 @@ export const updateStock = async (
 
         // validate if quantity change make sense
         if (
-          (reason === StockChangeReason.SELF_ADD &&
-            stockQuantityChange.compare(0) < 0) ||
-          (reason === StockChangeReason.DAMAGED &&
-            stockQuantityChange.compare(0) > 0) ||
-          (reason === StockChangeReason.SELF_USE &&
-            stockQuantityChange.compare(0) > 0)
+          (reason === StockChangeReason.SELF_ADD && stockQuantityChange.compare(0) < 0) ||
+          (reason === StockChangeReason.DAMAGED && stockQuantityChange.compare(0) > 0) ||
+          (reason === StockChangeReason.SELF_USE && stockQuantityChange.compare(0) > 0)
         ) {
           throw `Change doesn't make sense with reason ${reason}.`;
         }
@@ -142,8 +134,6 @@ export const updateStock = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update stock with the given data."
-    );
+    throw new createError.BadRequest("Cannot update stock with the given data.");
   }
 };

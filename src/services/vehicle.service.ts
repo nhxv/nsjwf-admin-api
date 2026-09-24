@@ -1,10 +1,7 @@
 import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { handleValidationError } from "../commons/http.exception";
-import {
-  VehicleRequestDto,
-  vehicleSchema,
-} from "../dto/requests/vehicle-request.dto";
+import { VehicleRequestDto, vehicleSchema } from "../dto/requests/vehicle-request.dto";
 
 export const findVehiclesByName = async (keyword: string) => {
   try {
@@ -21,17 +18,13 @@ export const findVehiclesByName = async (keyword: string) => {
     });
     return vehicles;
   } catch (error) {
-    throw new createError.BadRequest(
-      "Cannot find vehicle with the given data."
-    );
+    throw new createError.BadRequest("Cannot find vehicle with the given data.");
   }
 };
 
 export const createVehicle = async (vehicleDto: VehicleRequestDto) => {
   try {
-    const vehicleData: VehicleRequestDto = await vehicleSchema.validateAsync(
-      vehicleDto
-    );
+    const vehicleData: VehicleRequestDto = await vehicleSchema.validateAsync(vehicleDto);
     const newVehicle = await prisma.vehicle.create({
       data: {
         license_plate: vehicleData.licensePlate,
@@ -50,14 +43,9 @@ export const createVehicle = async (vehicleDto: VehicleRequestDto) => {
   }
 };
 
-export const updateVehicle = async (
-  vehicleDto: VehicleRequestDto,
-  id: number
-) => {
+export const updateVehicle = async (vehicleDto: VehicleRequestDto, id: number) => {
   try {
-    const vehicleData: VehicleRequestDto = await vehicleSchema.validateAsync(
-      vehicleDto
-    );
+    const vehicleData: VehicleRequestDto = await vehicleSchema.validateAsync(vehicleDto);
     const updatedVehicle = await prisma.vehicle.update({
       where: {
         id: id,
@@ -75,8 +63,6 @@ export const updateVehicle = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update vehicle with the given data."
-    );
+    throw new createError.BadRequest("Cannot update vehicle with the given data.");
   }
 };

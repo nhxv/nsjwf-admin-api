@@ -1,17 +1,13 @@
+import prisma from "../../prisma/prisma-client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { handleValidationError } from "../commons/http.exception";
 import { generateCurrentTime } from "../commons/utils/time.util";
 import { UnitRequestDto, unitSchema } from "../dto/requests/unit-request.dto";
 
-export const createUnit = async (
-  productId: number,
-  unitRequestDto: UnitRequestDto
-) => {
+export const createUnit = async (productId: number, unitRequestDto: UnitRequestDto) => {
   try {
-    const unitData: UnitRequestDto = await unitSchema.validateAsync(
-      unitRequestDto
-    );
+    const unitData: UnitRequestDto = await unitSchema.validateAsync(unitRequestDto);
     const unitName = unitData.name.replace(/\s/g, "").toUpperCase();
     if (unitName === "BOX") {
       throw `Box is the default unit.`;
@@ -57,14 +53,9 @@ export const createUnit = async (
   }
 };
 
-export const updateUnit = async (
-  id: number,
-  unitRequestDto: UnitRequestDto
-) => {
+export const updateUnit = async (id: number, unitRequestDto: UnitRequestDto) => {
   try {
-    const unitData: UnitRequestDto = await unitSchema.validateAsync(
-      unitRequestDto
-    );
+    const unitData: UnitRequestDto = await unitSchema.validateAsync(unitRequestDto);
     const currentUnit = await prisma.unit.findUniqueOrThrow({
       where: {
         id: id,

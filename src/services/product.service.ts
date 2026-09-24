@@ -2,10 +2,7 @@ import createError from "http-errors";
 import prisma from "../../prisma/prisma-client";
 import { Location } from "../commons/enums/location.enum";
 import { handleValidationError } from "../commons/http.exception";
-import {
-  ProductRequestDto,
-  productSchema,
-} from "../dto/requests/product-request.dto";
+import { ProductRequestDto, productSchema } from "../dto/requests/product-request.dto";
 import { generateCurrentTime } from "./../commons/utils/time.util";
 
 export const findAllProducts = async () => {
@@ -87,9 +84,7 @@ export const findProductById = async (id: number) => {
 
 export const createProduct = async (productDto: ProductRequestDto) => {
   try {
-    const productData: ProductRequestDto = await productSchema.validateAsync(
-      productDto
-    );
+    const productData: ProductRequestDto = await productSchema.validateAsync(productDto);
     return await prisma.$transaction(async (tx) => {
       const time = generateCurrentTime();
 
@@ -97,9 +92,7 @@ export const createProduct = async (productDto: ProductRequestDto) => {
       const addedProduct = await tx.product.create({
         data: {
           name: productData.name,
-          location_name: productData.location
-            ? productData.location
-            : Location.OTHERS,
+          location_name: productData.location ? productData.location : Location.OTHERS,
           discontinued: productData.discontinued,
         },
       });
@@ -135,23 +128,16 @@ export const createProduct = async (productDto: ProductRequestDto) => {
   }
 };
 
-export const updateProduct = async (
-  productDto: ProductRequestDto,
-  id: number
-) => {
+export const updateProduct = async (productDto: ProductRequestDto, id: number) => {
   try {
-    const productData: ProductRequestDto = await productSchema.validateAsync(
-      productDto
-    );
+    const productData: ProductRequestDto = await productSchema.validateAsync(productDto);
     const updatedProduct = await prisma.product.update({
       where: {
         id: id,
       },
       data: {
         name: productData.name,
-        location_name: productData.location
-          ? productData.location
-          : Location.COOLER_1,
+        location_name: productData.location ? productData.location : Location.COOLER_1,
         discontinued: productData.discontinued,
       },
     });
@@ -159,8 +145,6 @@ export const updateProduct = async (
     if (error.details?.length > 0) {
       handleValidationError(error);
     }
-    throw new createError.BadRequest(
-      "Cannot update product with the given data."
-    );
+    throw new createError.BadRequest("Cannot update product with the given data.");
   }
 };

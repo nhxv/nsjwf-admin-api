@@ -30,45 +30,41 @@ export const nukeConfigure = async () => {
 
 export const nukeOperation = async () => {
   try {
-    const deletedCustomerOrder = await prisma.customerOrder.deleteMany({});
-    const deletedCustomerReturn = await prisma.customerReturn.deleteMany({});
-    const deletedCustomerReturnRemain =
-      await prisma.customerReturnRemain.deleteMany({});
-    const deletedOrderTaskHistory = await prisma.orderTaskHistory.deleteMany(
-      {}
-    );
-    const deletedProductCustomerOrder =
-      await prisma.productCustomerOrder.deleteMany({});
-    const deletedProductCustomerReturn =
-      await prisma.productCustomerReturn.deleteMany({});
-    const deletedProductCustomerReturnRemain =
-      await prisma.productCustomerReturnRemain.deleteMany({});
-    const deletedProductStockChangeHistory =
-      await prisma.stockChangeHistory.deleteMany({});
-    const deletedProductVendorOrder =
-      await prisma.productVendorOrder.deleteMany({});
-    const deletedVendorOrder = await prisma.vendorOrder.deleteMany({});
-    const deletedCustomerPayment = await prisma.customerPayment.deleteMany({});
-    const deletedVendorPayment = await prisma.vendorPayment.deleteMany({});
-    const updatedProducts = await prisma.product.updateMany({
-      data: {
-        recent_cost: null,
-      },
-    });
-    return await prisma.$transaction(async (tx) => {
-      const allStocks = await tx.stock.findMany();
-      for (const stock of allStocks) {
-        const updatedStock = await tx.stock.update({
-          where: {
-            id: stock.id,
-          },
+    return await prisma.$transaction(
+      async (tx) => {
+        await tx.customerOrder.deleteMany({});
+        await tx.customerReturn.deleteMany({});
+        await tx.customerReturnRemain.deleteMany({});
+        await tx.orderTaskHistory.deleteMany({});
+        await tx.productCustomerOrder.deleteMany({});
+        await tx.productCustomerReturn.deleteMany({});
+        await tx.productCustomerReturnRemain.deleteMany({});
+        await tx.stockChangeHistory.deleteMany({});
+        await tx.productVendorOrder.deleteMany({});
+        await tx.vendorOrder.deleteMany({});
+        await tx.customerPayment.deleteMany({});
+        await tx.vendorPayment.deleteMany({});
+        await tx.product.updateMany({
           data: {
-            quantity: "0",
-            updated_at: stock.created_at,
+            recent_cost: null,
           },
         });
-      }
-    });
+        const allStocks = await tx.stock.findMany();
+        for (const stock of allStocks) {
+          await tx.stock.update({
+            where: {
+              id: stock.id,
+            },
+            data: {
+              quantity: "0",
+              updated_at: stock.created_at,
+            },
+          });
+        }
+      },
+      // Deleting all operation data can exceed the default 5s interactive transaction timeout.
+      { timeout: 60_000 },
+    );
   } catch (error) {
     throw new createError.BadRequest(error);
   }
