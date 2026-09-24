@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import { VendorPaymentRequestDto } from "./../dto/requests/vendor-payment-request.dto";
 import { vendorPaymentSchema } from "./../dto/requests/vendor-payment-request.dto";
 import { handleValidationError } from "../commons/http.exception";

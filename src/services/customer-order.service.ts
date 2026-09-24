@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import { Prisma } from "@prisma/client";
 import Fraction from "fraction.js";
 import createError from "http-errors";

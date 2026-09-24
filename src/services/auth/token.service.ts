@@ -5,7 +5,7 @@ import JWT from "jsonwebtoken";
 export const signAccessToken = (accountId: number, roleId: number) => {
   return new Promise<string>((resolve, reject) => {
     const payload = { account: { id: accountId, roleId: roleId } };
-    const secret = process.env.ACCESS_TOKEN_SECRET || "nhxv";
+    const secret = process.env.ACCESS_TOKEN_SECRET;
     const options = {
       expiresIn: process.env.ACCESS_TOKEN_EXPIRE,
       audience: `${accountId}`,
@@ -28,7 +28,7 @@ export const verifyAccessToken = (req: Request, res: Response, next: NextFunctio
   const bearerToken = authHeader.split(" ");
   const token = bearerToken[1];
 
-  JWT.verify(token, process.env.ACCESS_TOKEN_SECRET || "nhxv", async (err, payload) => {
+  JWT.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, payload) => {
     if (err) {
       const message = err.name === "JsonWebTokenError" ? "Unauthorized" : err.message;
       return next(new createError.Unauthorized(message));

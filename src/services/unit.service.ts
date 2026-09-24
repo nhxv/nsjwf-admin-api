@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import Fraction from "fraction.js";
 import createError from "http-errors";
 import { handleValidationError } from "../commons/http.exception";

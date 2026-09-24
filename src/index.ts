@@ -6,6 +6,10 @@ import routes from "./routes/routes";
 
 require("dotenv").config();
 
+if (!process.env.ACCESS_TOKEN_SECRET) {
+  throw new Error("ACCESS_TOKEN_SECRET is not set.");
+}
+
 const app = express();
 
 app.use(
@@ -26,11 +30,16 @@ app.use(async (req, res, next) => {
 });
 
 app.use(async (err: HttpException, req: Request, res: Response, next: NextFunction) => {
-  res.status(err.status || 500);
+  const status = err.status || 500;
+  if (status >= 500) {
+    console.error(err);
+  }
+  res.status(status);
   res.send({
     error: {
-      status: err.status || 500,
-      message: err.message,
+      status: status,
+      // Don't leak internal error details (e.g. Prisma messages) to the client.
+      message: err.status ? err.message : "Internal server error.",
     },
   });
 });

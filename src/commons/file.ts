@@ -1,4 +1,7 @@
+import createError from "http-errors";
 import multer from "multer";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 const imageStorage = multer.diskStorage({
   destination: (req, file, callback) => {
@@ -6,7 +9,9 @@ const imageStorage = multer.diskStorage({
     callback(null, savePath);
   },
   filename: (req, file, callback) => {
-    callback(null, file.originalname);
+    // Temporary name only; services move the file to its final path.
+    // Unique so concurrent uploads with the same original name don't overwrite each other.
+    callback(null, `${randomUUID()}${path.extname(file.originalname)}`);
   },
 });
 export const imageReceiver = multer({
@@ -17,8 +22,7 @@ export const imageReceiver = multer({
   },
   fileFilter: (req, file, callback) => {
     if (!file.mimetype.startsWith("image/")) {
-      // Raise exception here instead of silently ignore?
-      callback(null, false);
+      return callback(new createError.BadRequest("Attachment must be an image."));
     }
     callback(null, true);
   },

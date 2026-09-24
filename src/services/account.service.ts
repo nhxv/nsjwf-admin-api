@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import createError from "http-errors";
 import { Role } from "../commons/enums/role.enum";
 import { handleValidationError } from "../commons/http.exception";

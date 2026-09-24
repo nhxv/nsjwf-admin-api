@@ -1,3 +1,4 @@
+import prisma from "../../prisma/prisma-client";
 import createError from "http-errors";
 import path from "node:path";
 
